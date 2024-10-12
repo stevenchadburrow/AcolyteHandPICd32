@@ -1,4 +1,4 @@
-<b>Hand PIC'd 32 Computer</b>
+<b>Acolyte Hand PIC'd 32 Computer</b>
 
 Using the PIC32MZ2048EFH144T microcontroller, this new computer will be running at 200 MHz, with internal memory of 512KB of RAM and 2MB of Flash ROM.  
 
