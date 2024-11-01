@@ -75,7 +75,7 @@ unsigned int VirtToPhys(volatile void* p) // changed 'const' to 'volatile'
 void DelayMS(unsigned int s)
 {
     // Convert microseconds us into how many clock ticks it will take
-	unsigned int count = s * 1000 * SYS_FREQ / 1000000 / 2; // Core Timer updates every 2 ticks
+	unsigned long count = s * SYS_FREQ / 25; // Core Timer updates every 2 ticks??
        
     _CP0_SET_COUNT(0); // Set Core Timer count to 0
     
@@ -200,8 +200,8 @@ unsigned int screen_scanline = 601; // start of vertical blank
 unsigned int dma_constant_init = 0x01A3; // turns on DMA channel 1
 unsigned int dma_constant_zero = 0x0000; // black during blanking period
 
-void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs), nomips16)) oc3_handler()
-{
+void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7auto))) oc3_handler()
+{		
     IFS0bits.OC3IF = 0;  // clear interrupt flag
 	
 	screen_scanline = screen_scanline + 1; // increment scanline
@@ -223,9 +223,11 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs), nomips
 	{
 		DCH1SSA = VirtToPhys(screen_buffer[screen_scanline>>1]);
 	}
+	
+	return;
 }
 
-void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl6srs), nomips16)) cnd_handler()
+void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl6auto))) cnd_handler()
 {
 	IFS3bits.CNDIF = 0;  // clear interrupt flag
 	
@@ -252,28 +254,36 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl6srs), nomips1
 			
 		}
 	}
+	
+	return;
 }
 
-void __attribute__((vector(_UART3_RX_VECTOR), interrupt(ipl5srs), nomips16)) u3rx_handler()
-{
+void __attribute__((vector(_UART3_RX_VECTOR), interrupt(ipl5auto))) u3rx_handler() //, nomips16)) u3rx_handler()
+{	
 	IFS4bits.U3RXIF = 0;  // clear interrupt flag
 	
 	// check for errors
-	if(U1STAbits.FERR == 1)
+	if(U3STAbits.FERR == 1)
 	{
 		return;
 	}
 		
 	// clear overrun error
-	if(U1STAbits.OERR == 1)
+	if(U3STAbits.OERR == 1)
 	{
-		U1STAbits.OERR = 0;
+		U3STAbits.OERR = 0;
 		return;
 	}
 	
-	unsigned char data = U1RXREG; // get character
+	// check if there is a character ready to read
+	if(U3STAbits.URXDA == 1)
+	{
+		unsigned char data = U3RXREG; // get character
 			
-	U1TXREG = data; // echo character received
+		U3TXREG = data; // echo character received
+	}
+	
+	return;
 }
 
 
@@ -1387,65 +1397,28 @@ int main()
 	TRISD = 0xB640; // MISO, KEY, LED, MOUSE, and UART
 	TRISJ = 0xFCFF; // JOY-A, JOY-B, and BUTTON
 	CNPUD = 0xC000; // pull-ups for UART
-	
-	// change system and peripheral clocks
-	SYSKEY = 0x0;
-	SYSKEY = 0xAA996655;
-	SYSKEY = 0x556699AA;
-	OSCCON = 0x0; // unlock clock and PLL
-	SYSKEY = 0x0;
-	SYSKEY = 0xAA996655;
-	SYSKEY = 0x556699AA;
-	SPLLCON = 0x01330085; // use PLL to bring internal 8 MHz into 200 MHz
-	SYSKEY = 0x0;
-	SYSKEY = 0xAA996655;
-	SYSKEY = 0x556699AA;
-	OSCCON = 0x8; // lock clock and PLL
-	SYSKEY = 0x0;
-	SYSKEY = 0xAA996655;
-	SYSKEY = 0x556699AA;
+
+	// set oscillator and timers
+	SYSKEY = 0x0; // reset
+	SYSKEY = 0xAA996655; // unlock key #1
+	SYSKEY = 0x556699AA; // unlock key #2
+	CFGCONbits.DMAPRI = 1; // DMA does have highest priority (?)
+	CFGCONbits.CPUPRI = 0; // CPU does not have highest priority (?)
+	CFGCONbits.OCACLK = 1; // use alternate OC/TMR table
+	PB2DIV = 0x00008007; // change PB2 clock to 200 / 8 = 25 MHz for SPI and UART
 	PB3DIV = 0x00008800; // set OC and TMR clock to no division
-	SYSKEY = 0x0;
-	SYSKEY = 0xAA996655;
-	SYSKEY = 0x556699AA;
-	OSCCON = 0x00001000; // set new clock setting to use PLL
-	SYSKEY = 0x0;
-	SYSKEY = 0xAA996655;
-	SYSKEY = 0x556699AA;
-	OSCCON = 0x00000001; // use new clock setting
-	SYSKEY = 0x0;
+	SPLLCON = 0x01330084; // use PLL to bring internal 8 MHz into 200 MHz
+	OSCCONbits.NOSC = 0x1; // switch to SPLL
+	OSCCONbits.OSWEN = 1; // enable the switch
+	SYSKEY = 0x0; // re-lock
 	
 	while (OSCCONbits.OSWEN != 0) { } // wait for clock switch to complete
-	
-	// change PB clocks
-	SYSKEY = 0x0;
-	SYSKEY = 0xAA996655;
-	SYSKEY = 0x556699AA;
-	PB2DIV = 0x00008007; // change PB2 clock to 200 / 8 = 25 MHz for SPI and UART
-	SYSKEY = 0x0;
-	
-	
-	// set CPU and DMA priority for timer 2
-	SYSKEY = 0x0;
-	SYSKEY = 0xAA996655;
-	SYSKEY = 0x556699AA;
-	CFGCONbits.DMAPRI = 1; // DMA does have highest priority (?)
-	SYSKEY = 0x0;
-	SYSKEY = 0xAA996655;
-	SYSKEY = 0x556699AA;
-	CFGCONbits.CPUPRI = 0; // CPU does not have highest priority (?)
-	SYSKEY = 0x0;
-	
-	// set OC pins
-	SYSKEY = 0x0;
-	SYSKEY = 0xAA996655;
-	SYSKEY = 0x556699AA;
-	CFGCONbits.OCACLK = 1; // use alternate OC/TMR table
-	SYSKEY = 0x0;
-	SYSKEY = 0xAA996655;
-	SYSKEY = 0x556699AA;
-	CFGCONbits.IOLOCK = 1; // PPS is unlocked
-	SYSKEY = 0x0;
+
+	// set PPS
+	SYSKEY = 0x0; // reset
+	SYSKEY = 0xAA996655; // unlock key #1
+	SYSKEY = 0x556699AA; // unlock key #2
+	CFGCONbits.IOLOCK = 0; // PPS is unlocked
 	RPD0R = 0xC; // OC1 on pin RPD0 (pixel clock)
 	RPD5R = 0xB; // OC2 on pin RPD5 (visible clock)
 	RPD2R = 0xB; // OC3 on pin RPD2 (h-sync)
@@ -1458,18 +1431,15 @@ int main()
 	RPE8R = 0xD; // OC9 on pin RPE8 (audio 2)
 	RPD14R = 0x1; // U3TX on pin RPD14 (uart tx)
 	U3RXR = 0xB; // U3RX on pin RPD15 (uart rx)
-	SYSKEY = 0xAA996655;
-	SYSKEY = 0x556699AA;
-	CFGCONbits.IOLOCK = 0; // PPS is locked
-	SYSKEY = 0x0;
-
+	CFGCONbits.IOLOCK = 1; // PPS is locked
+	SYSKEY = 0x0; // re-lock
+	
 	// set OC1 and TMR4, pixel clock
 	OC1CON = 0x0; // reset OC1
 	OC1CON = 0x00000005; // toggle, use Timer4
 	OC1R = 0x0007; // pixel-sync rise (adjust)
 	OC1RS = 0x0009; // pixel-sync fall (adjust)
-	T4CON = 0x0; // reset Timer4
-	T4CON = 0x0; // prescale of 1:1
+	T4CON = 0x0; // rest Timer4, prescale of 1:1
 	TMR4 = 0x0; // zero out counter
 	PR4 = 0x09; // pixel-reset (minus one)
 	
@@ -1488,12 +1458,12 @@ int main()
 	
 	// set OC4 and TMR2, vertical sync clock
 	OC4CON = 0x0; // reset OC4
-	OC4CON = 0x00000005; // toggle, use Timer2
+	OC4CON = 0x00000025; // toggle, use Timer2 in 32-bit mode
 	OC4R = 0x0000; // v-sync rise
 	OC4RS = 0x00A5; // v-sync fall
-	T2CON = 0x0; // reset Timer2
-	T3CON = 0x0; // reset Timer3
+	T3CON = 0x0;
 	T2CON = 0x00000058; // prescale of 1:32, 32-bit mode
+	TMR3 = 0x00000000;
 	TMR2 = 0x00000000; // zero out counter (offset some cycles)
 	PR2 = 0x000194C3; // v-reset (minus one)
 	
@@ -1511,6 +1481,8 @@ int main()
 	TMR7 = 0x0000; // zero out counter
 	PR7 = 0x0001; // determines audio frequency
 	
+	IPC4bits.OC3IP = 0x7; // interrupt priority 7
+	IPC4bits.OC3IS = 0x0; // interrupt sub-priority 0
 	IEC0bits.OC3IE = 1; // OC3 interrupt on (set priority here?)
 	
 	OC1CONbits.ON = 1; // turn OC1 on
@@ -1519,12 +1491,14 @@ int main()
 	OC4CONbits.ON = 1; // turn OC4 on
 	OC8CONbits.ON = 1; // turn OC8 on
 	OC9CONbits.ON = 1; // turn OC9 on
-	
+
 	// set up PS/2 Keyboard and Mouse on PORTD (RD9-RD10,RD12-RD13)
 	CNCONDbits.EDGEDETECT = 1; // edge detect, not mismatch
 	CNNED = 0x1200; // negative edge on RD9 and RD12
 	CNCONDbits.ON = 1; // turn on interrupt-on-change
 	
+	IPC30bits.CNDIP = 0x6; // interrupt priority 6
+	IPC30bits.CNDIS = 0x0; // interrupt sub-priority 0
 	IEC3bits.CNDIE = 1; // enable interrupts (set priority here?)
 	
 	// set up DMA here
@@ -1581,11 +1555,16 @@ int main()
 	U3MODEbits.UEN = 0x0; // just use TX and RX
 	
 	U3STAbits.UTXISEL = 0x0; // Interrupt after one TX character is transmitted
-	U3STAbits.URXISEL = 0; // interrupt after one RX character is received
+	U3STAbits.URXISEL = 0x0; // interrupt after one RX character is received
 	
 	U3STAbits.URXEN = 1; // enable RX
 	U3STAbits.UTXEN = 1; // enable TX
 	
+	IPC39bits.U3RXIP = 0x5; // U3RX interrupt priority level 5
+	IPC39bits.U3RXIS = 0x0; // U3RX interrupt sub-priority level 0
+	//IPC39bits.U3EIP = 0x5; // U3E interrupt priority level 5
+	//IPC39bits.U3EIS = 0x3; // U3E interrupt sub-priority level 3
+	IFS4bits.U3RXIF = 0;  // clear interrupt flag
 	IEC4bits.U3RXIE = 1; // U3RX interrupt on (set priority here?)
 	
 	U3MODEbits.ON = 1; // turn UART on
@@ -1612,8 +1591,20 @@ int main()
 	while (SPI1STATbits.SPIRBF == 0) { } // wait
 	sdcard_block[0] = SPI1BUF; // dummy read
 	
+	// enable multi-vector interrupts???
+	INTCONSET = _INTCON_MVEC_MASK;
+	__builtin_enable_interrupts();
 	
 	
+	
+	// turn LED off by default
+	PORTDbits.RD11 = 1;
+	
+	//// wait some time
+	DelayMS(1000);
+	
+	// just a 'hello world' over the UART
+	U3TXREG = '*';
 	
 	// set display buffer
 	for (unsigned int y=0; y<300; y++)
@@ -1636,14 +1627,30 @@ int main()
 	
 	// turn on audio timers
 	T6CONbits.ON = 1; // turn on TMR6 (audio channel)
-	T7CONbits.ON = 1; // turn on TMR7 (audio channel)
+	T7CONbits.ON = 1; // turn on TMR7 (audio channel) 
 	
 	// infinite loop
 	while (1)
 	{
+/*		
+		// check if character is ready
+		if(U3STAbits.URXDA == 1)
+		{
+			char dummy = U3RXREG; // get character
+			
+			U3TXREG = dummy; // echo character
+			
+			// blink LED
+			//PORTDbits.RD11 = 0;
+			//DelayMS(250);
+			//PORTDbits.RD11 = 1;
+		}
+*/
+			
 		// blink LED
 		PORTDbits.RD11 = 0;
 		DelayMS(500);
+		
 		PORTDbits.RD11 = 1;
 		DelayMS(500);
 	}
