@@ -693,7 +693,7 @@ const unsigned char text_bitmap[64*96] = {
 
 
 
-unsigned char screen_buffer[300][400]; // visible portion of screen
+unsigned char __attribute__((coherent,address(0x80001000))) screen_buffer[300][400]; // visible portion of screen
 
 unsigned int screen_scanline = 601; // start of vertical blank
 
@@ -710,7 +710,7 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl6auto))) oc3_
 	if (screen_scanline == 628) screen_scanline = 0;
 	
 	if (screen_scanline < 600)
-	{
+	{	
 		DCH0INTbits.CHBCIF = 0; // clear transfer complete flag
 		DCH0SSA = VirtToPhys(screen_buffer[screen_scanline>>1]); // transfer source physical address
 		DCH0CONbits.CHEN = 1; // enable channel
@@ -1988,6 +1988,44 @@ int main()
 	OC8CONbits.ON = 1; // turn OC8 on
 	OC9CONbits.ON = 1; // turn OC9 on
 
+	// DMA setup
+	IEC4bits.DMA0IE = 0; // disable interrupts
+	IFS4bits.DMA0IF = 0; // clear flags
+	IEC4bits.DMA1IE = 0; // disable interrupts
+	IFS4bits.DMA1IF = 0; // clear flags
+	DMACONbits.ON = 1; // enable the DMA controller
+	
+	DCH0CONbits.CHEN = 0; // disable channel
+	DCH0ECONbits.CHSIRQ = 24; // start on Timer 5 interrupt
+	DCH0ECONbits.SIRQEN = 1; // enable start interrupt
+	DCH0INT = 0x0000; // clear all interrupts
+	DCH0CONbits.CHCHN = 0; // disallow chaining
+	DCH0INTbits.CHBCIF = 0; // clear transfer complete flag
+	DCH0INTbits.CHBCIE = 1; // enable transfer complete interrupt
+	DCH0CONbits.CHAED = 1; // get next DMA ready for quick transition???
+	DCH0CONbits.CHPRI = 0x3; // highest priority
+	DCH0DSA = VirtToPhys(&PORTE); // transfer destination physical address
+	DCH0SSIZ = 400; // source size
+	DCH0DSIZ = 1; // dst size 
+	DCH0CSIZ = 400; // 1 byte per event
+
+	DCH1CONbits.CHEN = 0; // disable channel
+	DCH1ECONbits.CHSIRQ = 19; // start on Timer 4 interrupt
+	DCH1ECONbits.SIRQEN = 1; // enable start interrupt
+	DCH1INT = 0x0000; // clear all interrupts
+	DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+	DCH1INTbits.CHBCIE = 1; // enable transfer complete interrupt
+	DCH1CONbits.CHCHN = 1; // allow chaining
+	DCH1CONbits.CHCHNS = 0; // chain from higher channel
+	DCH1CONbits.CHAED = 1; // get next DMA ready for quick transition???
+	DCH1CONbits.CHPRI = 0x3; // highest priority
+	DCH1SSA = VirtToPhys(screen_zero); // transfer source physical address
+	DCH1DSA = VirtToPhys(&PORTE); // transfer destination physical address
+	DCH1SSIZ = 1; // source size
+	DCH1DSIZ = 1; // dst size 
+	DCH1CSIZ = 1; // 1 byte per event
+	
+	
 	// set up PS/2 Keyboard and Mouse on PORTD (RD9-RD10,RD12-RD13)
 	CNCONDbits.EDGEDETECT = 1; // edge detect, not mismatch
 	CNNED = 0x1200; // negative edge on RD9 and RD12
@@ -2047,43 +2085,6 @@ int main()
 	while (SPI1STATbits.SPIRBF == 0) { } // wait
 	sdcard_block[0] = SPI1BUF; // dummy read
 	
-	// DMA setup
-	IEC4bits.DMA0IE = 0; // disable interrupts
-	IFS4bits.DMA0IF = 0; // clear flags
-	IEC4bits.DMA1IE = 0; // disable interrupts
-	IFS4bits.DMA1IF = 0; // clear flags
-	DMACONbits.ON = 1; // enable the DMA controller
-	
-	DCH0CONbits.CHEN = 0; // disable channel
-	DCH0ECONbits.CHSIRQ = 24; // start on Timer 5 interrupt
-	DCH0ECONbits.SIRQEN = 1; // enable start interrupt
-	DCH0INT = 0x0000; // clear all interrupts
-	DCH0CONbits.CHCHN = 0; // disallow chaining
-	DCH0INTbits.CHBCIF = 0; // clear transfer complete flag
-	DCH0INTbits.CHBCIE = 1; // enable transfer complete interrupt
-	DCH0CONbits.CHAED = 1; // get next DMA ready for quick transition???
-	DCH0CONbits.CHPRI = 0x3; // highest priority
-	DCH0DSA = VirtToPhys(&PORTE); // transfer destination physical address
-	DCH0SSIZ = 400; // source size
-	DCH0DSIZ = 1; // dst size 
-	DCH0CSIZ = 400; // 1 byte per event
-
-	DCH1CONbits.CHEN = 0; // disable channel
-	DCH1ECONbits.CHSIRQ = 19; // start on Timer 4 interrupt
-	DCH1ECONbits.SIRQEN = 1; // enable start interrupt
-	DCH1INT = 0x0000; // clear all interrupts
-	DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-	DCH1INTbits.CHBCIE = 1; // enable transfer complete interrupt
-	DCH1CONbits.CHCHN = 1; // allow chaining
-	DCH1CONbits.CHCHNS = 0; // chain from higher channel
-	DCH1CONbits.CHAED = 1; // get next DMA ready for quick transition???
-	DCH1CONbits.CHPRI = 0x3; // highest priority
-	DCH1SSA = VirtToPhys(screen_zero); // transfer source physical address
-	DCH1DSA = VirtToPhys(&PORTE); // transfer destination physical address
-	DCH1SSIZ = 1; // source size
-	DCH1DSIZ = 1; // dst size 
-	DCH1CSIZ = 1; // 1 byte per event
-	
 	// enable multi-vector interrupts???
 	INTCONSET = _INTCON_MVEC_MASK;
 	__builtin_enable_interrupts();
@@ -2106,8 +2107,8 @@ int main()
 	{
 		for (unsigned int x=0; x<400; x++)
 		{
-			screen_buffer[y][x] = 0x25; // grey?
-			//screen_buffer[y][x] = splash_bitmap[y * 400 + x]; //(unsigned char)((x + y) % 256); // test pattern
+			//screen_buffer[y][x] = 0x25; // grey?
+			screen_buffer[y][x] = splash_bitmap[y * 400 + x]; //(unsigned char)((x + y) % 256); // test pattern
 			//if (x % 2 == 0) screen_buffer[y][x] = 0xFF; // white
 			//else screen_buffer[y][x] = 0x1F; // cyan
 		}
@@ -2152,23 +2153,29 @@ int main()
 /*
 		while (U3STAbits.UTXBF == 1) { }
 		U3TXREG = '@';
-*/		
-/*
-		for (unsigned int i=0; i<10000; i++)
-		{
-			for (unsigned int j=0; j<100; j++)
-			{
-				PORTDbits.RD11 = 0;
-			}
-		}
+*/
+/*		
+		unsigned char dummy = 0x00;
 		
 		for (unsigned int i=0; i<10000; i++)
 		{
-			for (unsigned int j=0; j<100; j++)
+			for (unsigned int j=0; j<1000; j++)
 			{
-				PORTDbits.RD11 = 1;
+				dummy++;
 			}
 		}
+		
+		PORTDbits.RD11 = 0;
+		
+		for (unsigned int i=0; i<10000; i++)
+		{
+			for (unsigned int j=0; j<1000; j++)
+			{
+				dummy++;
+			}
+		}
+		
+		PORTDbits.RD11 = 1;
 */
 		//asm("WAIT");
 	}
