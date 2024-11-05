@@ -1,6 +1,6 @@
 <b>Acolyte Hand PIC'd 32 Computer</b>
 
-Using the PIC32MZ2048EFH144 microcontroller, this new computer will be running at 200 MHz, with internal memory of 512KB of RAM and 2MB of Flash ROM.  
+Using the PIC32MZ2048EFH144 microcontroller, this new computer runs at 80 MHz (hoping for 160 MHz soon!), with internal memory of 512KB of RAM and 2MB of Flash ROM.  
 
 Video output of 400x300 VGA with 256-colors.  Supports 2 independent audio square-wave signals.  Input comes from 2x Genesis controllers, PS/2 Port with support for keyboard and mouse through splitter, and potential for USB HIDs such as keyboards, mice, and hopefully joysticks.  The USB port will also support flash drives, and can also be used to talk directly to a PC in device-mode.
 
