@@ -9,3 +9,5 @@ Comes with attachment possibilities for an SPI Micro SDcard Adapter and a FT232R
 <img src="BoardPopulated.jpg">
 
 <img src="TOTK-TETRA.jpg">
+
+<img src="BAD-APPLE.jpg">
