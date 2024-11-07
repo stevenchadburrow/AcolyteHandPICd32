@@ -76,7 +76,7 @@ unsigned long VirtToPhys(volatile void* p) // changed 'const' to 'volatile'
 void DelayMS(unsigned int s)
 {
     // Convert microseconds us into how many clock ticks it will take
-	unsigned long count = s * SYS_FREQ / 200; // rough!
+	unsigned long count = s * SYS_FREQ / 10000; // rough!
        
     _CP0_SET_COUNT(0); // Set Core Timer count to 0
     
@@ -390,13 +390,13 @@ const unsigned char text_bitmap[64*96] = {
 
 
 
-unsigned char __attribute__((coherent,address(0x80001000))) screen_buffer[300][400]; // visible portion of screen
+volatile unsigned char __attribute__((coherent,address(0x80001000))) screen_buffer[300][400]; // visible portion of screen
 
-unsigned int screen_scanline = 601; // start of vertical blank
+volatile unsigned int screen_scanline = 601; // start of vertical blank
 
-unsigned char screen_zero[1] = { 0x00 }; // zero value for black
+volatile unsigned char screen_zero[1] = { 0x00 }; // zero value for black
 
-unsigned int audio_counter[2] = { 0, 0 }; // audio duration
+volatile unsigned int audio_counter[2] = { 0, 0 }; // audio duration
 
 void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl6srs))) oc3_handler()
 {		
@@ -1088,7 +1088,7 @@ struct tetra_struct_vars
 
 struct tetra_struct_vars tetra_vars;
 
-void tetra()
+void Tetra()
 {	
 	for (volatile unsigned int z=0; z<2; z++)
 	{	
@@ -1646,6 +1646,159 @@ void tetra()
 };
 
 
+
+
+void BadApple()
+{ 
+    // Bad Apple Code
+  
+	int test = 0;
+	
+	for (int i=0; i<5; i++)
+	{
+		test = sdcard_initialize();
+		
+		if (test == 1) break;
+	}
+
+	
+	if (test == 1)
+	{
+		// move on
+	}
+	else
+	{
+		// lock up
+		while (1)
+		{
+			for (unsigned int i=0; i<240; i++)
+			{
+				for (unsigned int j=0; j<320; j++)
+				{
+					screen_buffer[i][j] = 0x00;
+				}
+			}
+			
+			DelayMS(100);
+			
+			for (unsigned int i=0; i<65000; i++) {
+			  for (unsigned int j=0; j<500; j++) { } }
+		
+			for (unsigned int i=0; i<240; i++)
+			{
+				for (unsigned int j=0; j<320; j++)
+				{
+					screen_buffer[i][j] = 0xFF;
+				}
+			}
+			
+			DelayMS(100);
+		}
+	}  
+  
+	unsigned int address_high = 0x0000, address_low = 0x0000;
+
+	unsigned int x = 0x0000;
+	unsigned int y = 0x0000;
+	unsigned char value = 0x00;
+	
+	unsigned char temp_value = 0x00;
+	
+	while (1) 
+	{
+		x = 40;
+		y = 40;
+
+		for (unsigned int j=0; j<2; j++)
+		{
+			//sdcard_readblock(address_high, (unsigned int)(address_low + (j * 2)));
+			
+			sdcard_disable();
+			sdcard_pump();
+			sdcard_longdelay(); // this is probably not needed
+			sdcard_enable();
+			sdcard_sendbyte(0x51); // CMD17 = 0x40 + 0x11 (17 in hex)
+			sdcard_sendbyte((address_high&0x00FF));
+			sdcard_sendbyte((((address_low+(j*2))&0xFF00) >> 8));
+			sdcard_sendbyte(((address_low+(j*2))&0x00FE)); // only blocks of 512 bytes
+			sdcard_sendbyte(0x00);
+			sdcard_sendbyte(0x01); // CRC (general)
+			temp_value = sdcard_waitresult(); // command response
+			if (temp_value == 0xFF) { break; }
+			else if (temp_value != 0x00) { break; } // expecting 0x00
+			temp_value = sdcard_waitresult(); // data packet starts with 0xFE
+			if (temp_value == 0xFF) { break; }
+			else if (temp_value != 0xFE) { break; }
+
+			for (unsigned int l=0; l<50; l++)
+			{	
+				for (unsigned int i=0; i<10; i++) // packet of 512 bytes
+				{					
+					// get value from SDcard
+					value = sdcard_receivebyte();
+
+					for (unsigned int k=0; k<8; k++)
+					{
+						if ((value & 0x01) == 0x01)
+						{
+							screen_buffer[y][x] = 0xFF;
+							screen_buffer[y][x+1] = 0xFF;
+							screen_buffer[y][x+2] = 0xFF;
+							screen_buffer[y][x+3] = 0xFF;
+							
+							screen_buffer[y+1][x] = 0xFF;
+							screen_buffer[y+1][x+1] = 0xFF;
+							screen_buffer[y+1][x+2] = 0xFF;
+							screen_buffer[y+1][x+3] = 0xFF;
+						}
+						else
+						{
+							screen_buffer[y][x] = 0x00;
+							screen_buffer[y][x+1] = 0x00;
+							screen_buffer[y][x+2] = 0x00;
+							screen_buffer[y][x+3] = 0x00;
+							
+							screen_buffer[y+1][x] = 0x00;
+							screen_buffer[y+1][x+1] = 0x00;
+							screen_buffer[y+1][x+2] = 0x00;
+							screen_buffer[y+1][x+3] = 0x00;
+						}
+
+						value = (unsigned int)(value >> 1);
+
+						x += 4;
+					}
+				}
+
+				y += 2;
+				x = 40;
+			}
+			
+			for (unsigned int i=0; i<12; i++)
+			{
+				sdcard_receivebyte();
+			}
+
+			temp_value = sdcard_receivebyte(); // data packet ends with 0x55 then 0xAA
+			temp_value = sdcard_receivebyte(); // ignore here
+			sdcard_disable();
+		}
+
+		address_low += 0x0004;
+
+		if (address_low == 0x0000) address_high++; 
+		
+		DelayMS(100);
+		DelayMS(100);
+		DelayMS(100);
+		//DelayMS(100);
+	}
+	// End of Bad Apple Code
+}
+
+
+
+
 int main()
 {
 	// turn off analog
@@ -1720,13 +1873,13 @@ int main()
 	CFGCONbits.CPUPRI = 0; // CPU does not have highest priority (?)
 	CFGCONbits.OCACLK = 1; // use alternate OC/TMR table
 	PB1DIV = 0x00008001; // divide by 2
-	PB2DIV = 0x00008007; // change PB2 clock to 200 / 8 = 25 MHz for SPI and UART
+	PB2DIV = 0x00008003; // change PB2 clock to 80 / 4 = 20 MHz for SPI and UART
 	PB3DIV = 0x00008000; // set OC and TMR clock division by 1
 	PB4DIV = 0x00008001; // divide by 2
 	PB5DIV = 0x00008001; // divide by 2
 	//PB6DIV = 0x00008001; // divide by 2
 	PB7DIV = 0x00008000; // CPU clock divide by 1
-	SPLLCON = 0x02270203; //0x01310203; // use PLL to bring external 24 MHz into 200 MHz
+	SPLLCON = 0x02270203; // use PLL to bring external 24 MHz into 200 MHz
 	OSCCONbits.SLPEN = 0; // WAIT instruction puts CPU into idle mode
 	OSCCONbits.NOSC = 0x1; // switch to SPLL
 	OSCCONbits.OSWEN = 1; // enable the switch
@@ -1756,25 +1909,25 @@ int main()
 	
 	// set OC1 and TMR4, pixel clock
 	OC1CON = 0x0; // reset OC1
-	OC1CON = 0x00000003; //0x00000005; // toggle, use Timer4
-	OC1R = 0x0001; //0x0001; //0x0002; //0x0004; //0x0006; // pixel-sync rise (adjust)
-	OC1RS = 0x0001; //0x0002; //0x0003; //0x0006; //0x0008; // pixel-sync fall (adjust)
+	OC1CON = 0x00000003; // toggle, use Timer4
+	OC1R = 0x0001; // pixel-sync rise (adjust)
+	OC1RS = 0x0001; // pixel-sync fall (adjust)
 	T4CON = 0x0; // rest Timer4, prescale of 1:1
 	TMR4 = 0x0; // zero out counter
-	PR4 = 0x01; //0x02; //0x04; //0x07; //0x09; // pixel-reset (minus one)
+	PR4 = 0x01; // pixel-reset (minus one)
 	
 	// set OC2 and OC3 and TMR5, horizontal visible and sync clocks
 	OC2CON = 0x0; // reset OC2
 	OC2CON = 0x0000000D; // toggle, use Timer5
 	OC2R = 0x0000; // h-visible rise
-	OC2RS = 0x0640; //0x0960; //0x0FA0; // h-blank fall
+	OC2RS = 0x0640; // h-blank fall
 	OC3CON = 0x0; // reset OC3
 	OC3CON = 0x0000000D; // toggle, use Timer5
-	OC3R = 0x0690; //0x09D8; //0x1068; // h-sync rise
-	OC3RS = 0x0789; //0x0B4C; //0x12D8; // h-sync fall
+	OC3R = 0x0690; // h-sync rise
+	OC3RS = 0x0789; // h-sync fall
 	T5CON = 0x0000; // reset Timer5, prescale of 1:1
 	TMR5 = 0x0000; // zero out counter (offset some cycles)
-	PR5 = 0x083F; //0x0C5F; //0x149F; // h-reset (minus one)
+	PR5 = 0x083F; // h-reset (minus one)
 	
 	// set OC4 and TMR2, vertical sync clock
 	OC4CON = 0x0; // reset OC4
@@ -1878,7 +2031,7 @@ int main()
 	IEC3bits.CNDIE = 1; // enable interrupts (set priority here?)
 
 	// set up UART here
-	U3BRG = 0x00A2; // 25 MHz to 9600 baud = 25000000/(16*9600)-1 = 161.76 = 162
+	U3BRG = 0x0081; // 20 MHz to 9600 baud = 20000000/(16*9600)-1 = 129.2 = 0x0081
 	
 	U3MODEbits.STSEL = 0; // 1-Stop bit
 	U3MODEbits.PDSEL = 0; // No Parity, 8-Data bits
@@ -1967,11 +2120,70 @@ int main()
 	T5CONbits.ON = 1; // turn on TMR5 (cycle offset pre-calculated above)
 	T2CONbits.ON = 1; // turn on TMR2/TMR3 (cycle offset pre-calculated above)
 	
-	tetra();
 	
+	
+	Tetra();
+	
+	//BadApple();
+	
+
 	// infinite loop
 	while (1)
 	{
+
+	}
+}
+
+// Unused code below
+/*	
+	unsigned int tune[16*2] = {
+		0x063A,	500,
+		0x0768,	500,
+		0x06FD,	250,
+		0x058C,	250,
+		0x058C,	500,
+		0x058C,	1000,
+		0x058C,	1000,
+		0x063A,	250,
+		0x0850,	250,
+		0x06FD,	250,
+		0x058C,	250,
+		0x058C,	500,
+		0x058C,	250,
+		0x05FD,	250,
+		0x058C,	250,
+		0x04F1,	250,
+	};
+	
+	unsigned int pos = 0;
+	unsigned int dummy = 0;
+	
+	while (1)
+	{
+		note(tune[pos], tune[pos+1] - 50, 0);
+		
+		while (audio_counter[0] > 0) { }
+		
+		note(0xFFFF, 50, 0);
+		
+		while (audio_counter[0] > 0) { }
+		
+		pos += 2;
+		
+		if (pos >= 32)
+		{
+			for (unsigned int i=0; i<10000; i++)
+			{
+				for (unsigned int j=0; j<10000; j++)
+				{
+					dummy++;
+				}
+			}
+			
+			pos = 0;
+		}
+	}
+*/	
 /*		
 		// check if character is ready
 		if(U3STAbits.URXDA == 1)
@@ -2022,5 +2234,3 @@ int main()
 		PORTDbits.RD11 = 1;
 */
 		//asm("WAIT");
-	}
-}
