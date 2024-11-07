@@ -1680,6 +1680,9 @@ void BadApple()
 			}
 			
 			DelayMS(100);
+			DelayMS(100);
+			DelayMS(100);
+			//DelayMS(100);
 			
 			for (unsigned int i=0; i<65000; i++) {
 			  for (unsigned int j=0; j<500; j++) { } }
@@ -1693,6 +1696,9 @@ void BadApple()
 			}
 			
 			DelayMS(100);
+			DelayMS(100);
+			DelayMS(100);
+			//DelayMS(100);
 		}
 	}  
   
