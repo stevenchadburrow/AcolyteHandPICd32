@@ -6,6 +6,8 @@ Video output of 400x300 VGA with 256-colors.  Supports 2 independent audio squar
 
 Comes with attachment possibilities for an SPI Micro SDcard Adapter and a FT232RL USB-to-UART Adapter.  The PIC32 is programmed through ICSP port connecting to a PICkit3.
 
+*** Board Edits: Exchange the 74HCT273 for a 74AHCT273 for faster timing responses and thus less jitter and bleeding. ***
+
 <img src="BoardPopulated.jpg">
 
 <img src="TOTK-TETRA.jpg">
