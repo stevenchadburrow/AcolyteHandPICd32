@@ -623,7 +623,7 @@ void __attribute__((vector(_TIMER_9_VECTOR), interrupt(ipl3srs))) t9_handler()
 
 
 // frequency in Hz, plays for a short duration
-void note(unsigned int frequency, unsigned int duration, unsigned char channel)
+void music_note(unsigned int frequency, unsigned int duration, unsigned char channel)
 {
 	unsigned int period = (unsigned int)(SYS_FREQ / (64 * frequency));
 	
@@ -665,24 +665,7 @@ void note(unsigned int frequency, unsigned int duration, unsigned char channel)
 	return;
 };
 
-char hex_char(unsigned char value, unsigned char pos)
-{
-	unsigned char temp = 0x00;
-	
-	if (pos == 0)
-	{
-		temp = value / 16;
-	}
-	else if (pos == 1)
-	{
-		temp = value % 16;
-	}
-	
-	if (temp < 10) return (char)(temp + '0');
-	else return (char)(temp - 10 + 'A');
-};
-
-char key()
+char keyboard_character()
 {
 	char value = 0x00;
 	
@@ -695,7 +678,71 @@ char key()
 	
 	return value;
 };
+
+void normal_character(unsigned int x, unsigned int y, unsigned char value)
+{
+	unsigned int pos = (unsigned int)(value - 32) * 64;
+  
+	for (unsigned int i=0; i<8; i++)
+	{		
+		for (unsigned int j=0; j<8; j++)
+		{
+			screen_buffer[y+i][x+j] = text_bitmap[pos+i*8+j];		
+		}
+	}
+};
+
+void inverse_character(unsigned int x, unsigned int y, unsigned char value)
+{
+	unsigned int pos = (unsigned int)(value - 32) * 64;
+  
+	for (unsigned int i=0; i<8; i++)
+	{		
+		for (unsigned int j=0; j<8; j++)
+		{
+			screen_buffer[y+i][x+j] = (unsigned char)(text_bitmap[pos+i*8+j] ^ 0xFF);		
+		}
+	}
+};
 	
+void decimal_characters(unsigned int x, unsigned int y, unsigned int value)
+{
+	volatile unsigned int temp = 0;
+	volatile unsigned int next = 0;
+	
+	next = value;
+	
+	temp = next / 10000;
+	normal_character(x, y, (unsigned char)(temp + '0'));
+	next = next - 10000 * temp;
+	
+	temp = next / 1000;
+	normal_character(x + 0x08, y, (unsigned char)(temp + '0'));
+	next = next - 1000 * temp;
+	
+	temp = next / 100;
+	normal_character(x + 0x10, y, (unsigned char)(temp + '0'));
+	next = next - 100 * temp;
+	
+	temp = next / 10;
+	normal_character(x + 0x18, y, (unsigned char)(temp + '0'));
+	next = next - 10 * temp;
+	
+	temp = next;
+	normal_character(x + 0x20, y, (unsigned char)(temp + '0'));
+};
+
+void string_characters(unsigned int x, unsigned int y, char *value)
+{
+	volatile unsigned char pos = 0;
+	
+	while (value[pos] != '\\')
+	{
+		normal_character(x + pos * 8, y, value[pos]);
+		
+		pos++;
+	}
+};
 
 
 
@@ -1137,58 +1184,6 @@ void tetra_block(unsigned int x, unsigned int y, unsigned char value)
 	}	
 };
 
-void tetra_character(unsigned int x, unsigned int y, unsigned char value)
-{
-	unsigned int pos = (unsigned int)(value - 32) * 64;
-  
-	for (unsigned int i=0; i<8; i++)
-	{		
-		for (unsigned int j=0; j<8; j++)
-		{
-			screen_buffer[y+i][x+j] = text_bitmap[pos+i*8+j];		
-		}
-	}
-};
-
-void tetra_decimal(unsigned int x, unsigned int y, unsigned int value)
-{
-	volatile unsigned int temp = 0;
-	volatile unsigned int next = 0;
-	
-	next = value;
-	
-	temp = next / 10000;
-	tetra_character(x, y, (unsigned char)(temp + '0'));
-	next = next - 10000 * temp;
-	
-	temp = next / 1000;
-	tetra_character(x + 0x08, y, (unsigned char)(temp + '0'));
-	next = next - 1000 * temp;
-	
-	temp = next / 100;
-	tetra_character(x + 0x10, y, (unsigned char)(temp + '0'));
-	next = next - 100 * temp;
-	
-	temp = next / 10;
-	tetra_character(x + 0x18, y, (unsigned char)(temp + '0'));
-	next = next - 10 * temp;
-	
-	temp = next;
-	tetra_character(x + 0x20, y, (unsigned char)(temp + '0'));
-};
-
-void tetra_string(unsigned int x, unsigned int y, char *value)
-{
-	volatile unsigned char pos = 0;
-	
-	while (value[pos] != '\\')
-	{
-		tetra_character(x + pos * 8, y, value[pos]);
-		
-		pos++;
-	}
-};
-
 const unsigned int tetra_size_x = 10;
 const unsigned int tetra_size_y = 20;
 volatile unsigned char tetra_board[2*10*20];
@@ -1552,14 +1547,14 @@ void Tetra()
 					}
 					
 					// SOUND HERE
-					note(523, 250, 0);
+					music_note(523, 250, 0);
 
 					if (tetra_vars.pos_y[z] == 4)
 					{
 						tetra_vars.game_over[z] = 1;
 						
 						// SOUND HERE
-						note(262, 250, 0);
+						music_note(262, 250, 0);
 					}
 					else
 					{
@@ -1604,7 +1599,7 @@ void Tetra()
 								}
 								
 								// SOUND HERE
-								note(1047, 250, 0);
+								music_note(1047, 250, 0);
 							}
 						}
 
@@ -1707,25 +1702,25 @@ void Tetra()
 			}
 		}
 
-		tetra_decimal((unsigned int)((horz + 0x05) * 8), vert * 8, tetra_vars.lines[0]);
+		decimal_characters((unsigned int)((horz + 0x05) * 8), vert * 8, tetra_vars.lines[0]);
 
-		if (tetra_vars.new_piece[0] == 0) tetra_character(horz * 8, vert * 8, 'I');
-		else if (tetra_vars.new_piece[0] == 1) tetra_character(horz * 8, vert * 8, 'J');
-		else if (tetra_vars.new_piece[0] == 2) tetra_character(horz * 8, vert * 8, 'L');
-		else if (tetra_vars.new_piece[0] == 3) tetra_character(horz * 8, vert * 8, 'O');
-		else if (tetra_vars.new_piece[0] == 4) tetra_character(horz * 8, vert * 8, 'S');
-		else if (tetra_vars.new_piece[0] == 5) tetra_character(horz * 8, vert * 8, 'T');
-		else if (tetra_vars.new_piece[0] == 6) tetra_character(horz * 8, vert * 8, 'Z');
+		if (tetra_vars.new_piece[0] == 0) normal_character(horz * 8, vert * 8, 'I');
+		else if (tetra_vars.new_piece[0] == 1) normal_character(horz * 8, vert * 8, 'J');
+		else if (tetra_vars.new_piece[0] == 2) normal_character(horz * 8, vert * 8, 'L');
+		else if (tetra_vars.new_piece[0] == 3) normal_character(horz * 8, vert * 8, 'O');
+		else if (tetra_vars.new_piece[0] == 4) normal_character(horz * 8, vert * 8, 'S');
+		else if (tetra_vars.new_piece[0] == 5) normal_character(horz * 8, vert * 8, 'T');
+		else if (tetra_vars.new_piece[0] == 6) normal_character(horz * 8, vert * 8, 'Z');
 
 		if (tetra_vars.game_over[0] != 0x00)
 		{
-			tetra_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "Press \\");
-			tetra_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "Button\\");
+			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "Press \\");
+			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "Button\\");
 		}
 		else
 		{
-			tetra_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "      \\");
-			tetra_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "      \\");
+			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "      \\");
+			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "      \\");
 		}
 		
 		horz = 0x25;
@@ -1761,25 +1756,25 @@ void Tetra()
 			}
 		}
 
-		tetra_decimal((unsigned int)((horz + 0x05) * 8), vert * 8, tetra_vars.lines[1]);
+		decimal_characters((unsigned int)((horz + 0x05) * 8), vert * 8, tetra_vars.lines[1]);
 
-		if (tetra_vars.new_piece[1] == 0) tetra_character(horz * 8, vert * 8, 'I');
-		else if (tetra_vars.new_piece[1] == 1) tetra_character(horz * 8, vert * 8, 'J');
-		else if (tetra_vars.new_piece[1] == 2) tetra_character(horz * 8, vert * 8, 'L');
-		else if (tetra_vars.new_piece[1] == 3) tetra_character(horz * 8, vert * 8, 'O');
-		else if (tetra_vars.new_piece[1] == 4) tetra_character(horz * 8, vert * 8, 'S');
-		else if (tetra_vars.new_piece[1] == 5) tetra_character(horz * 8, vert * 8, 'T');
-		else if (tetra_vars.new_piece[1] == 6) tetra_character(horz * 8, vert * 8, 'Z');
+		if (tetra_vars.new_piece[1] == 0) normal_character(horz * 8, vert * 8, 'I');
+		else if (tetra_vars.new_piece[1] == 1) normal_character(horz * 8, vert * 8, 'J');
+		else if (tetra_vars.new_piece[1] == 2) normal_character(horz * 8, vert * 8, 'L');
+		else if (tetra_vars.new_piece[1] == 3) normal_character(horz * 8, vert * 8, 'O');
+		else if (tetra_vars.new_piece[1] == 4) normal_character(horz * 8, vert * 8, 'S');
+		else if (tetra_vars.new_piece[1] == 5) normal_character(horz * 8, vert * 8, 'T');
+		else if (tetra_vars.new_piece[1] == 6) normal_character(horz * 8, vert * 8, 'Z');
 
 		if (tetra_vars.game_over[1] != 0x00)
 		{
-			tetra_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "Press \\");
-			tetra_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "Button\\");
+			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "Press \\");
+			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "Button\\");
 		}
 		else
 		{
-			tetra_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "      \\");
-			tetra_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "      \\");
+			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "      \\");
+			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "      \\");
 		}
 	}
 };
@@ -1827,9 +1822,6 @@ void BadApple()
 			DelayMS(100);
 			DelayMS(100);
 			//DelayMS(100);
-			
-			for (unsigned int i=0; i<65000; i++) {
-			  for (unsigned int j=0; j<500; j++) { } }
 		
 			for (unsigned int i=0; i<240; i++)
 			{
@@ -1948,32 +1940,6 @@ void BadApple()
 
 volatile char scratchpad_buffer[50][36];
 
-void scratchpad_character(unsigned int x, unsigned int y, unsigned char value)
-{
-	unsigned int pos = (unsigned int)(value - 32) * 64;
-  
-	for (unsigned int i=0; i<8; i++)
-	{		
-		for (unsigned int j=0; j<8; j++)
-		{
-			screen_buffer[y+i][x+j] = text_bitmap[pos+i*8+j];		
-		}
-	}
-};
-
-void scratchpad_inverse_character(unsigned int x, unsigned int y, unsigned char value)
-{
-	unsigned int pos = (unsigned int)(value - 32) * 64;
-  
-	for (unsigned int i=0; i<8; i++)
-	{		
-		for (unsigned int j=0; j<8; j++)
-		{
-			screen_buffer[y+i][x+j] = (unsigned char)(text_bitmap[pos+i*8+j] ^ 0xFF);		
-		}
-	}
-};
-
 void Scratchpad()
 {
 	char key_value = 0x00;
@@ -1997,11 +1963,11 @@ void Scratchpad()
 		}
 	}
 	
-	scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+	inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 	
 	while (1)
 	{
-		key_value = key();
+		key_value = keyboard_character();
 		
 		if (key_value != 0x00)
 		{
@@ -2026,11 +1992,11 @@ void Scratchpad()
 					}
 				}
 	
-				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x0D) // return
 			{
-				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				pos_x = 0x00;
 				pos_y += 8;
@@ -2069,11 +2035,11 @@ void Scratchpad()
 					pos_y -= 8;
 				}
 				
-				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x08) // backspace
 			{
-				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_x >= 8)
 				{
@@ -2082,64 +2048,64 @@ void Scratchpad()
 				
 				scratchpad_buffer[pos_x/8][pos_y/8] = ' ';
 				
-				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x11) // up
 			{
-				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_y >= 8)
 				{
 					pos_y -= 8;
 				}
 				
-				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x12) // down
 			{
-				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_y < 280)
 				{
 					pos_y += 8;
 				}
 				
-				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x13) // left
 			{
-				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_x >= 8)
 				{
 					pos_x -= 8;
 				}
 				
-				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x14) // right
 			{
-				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_x < 384)
 				{
 					pos_x += 8;
 				}
 				
-				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value >= 32)
 			{
 				scratchpad_buffer[pos_x/8][pos_y/8] = key_value;
 				
-				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_x < 384)
 				{
 					pos_x += 0x08;
 				}
 				
-				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 		}
 	}
@@ -2147,37 +2113,13 @@ void Scratchpad()
 
 
 
-
-void menu_character(unsigned int x, unsigned int y, unsigned char value)
-{
-	unsigned int pos = (unsigned int)(value - 32) * 64;
-  
-	for (unsigned int i=0; i<8; i++)
-	{		
-		for (unsigned int j=0; j<8; j++)
-		{
-			screen_buffer[y+i][x+j] = text_bitmap[pos+i*8+j];		
-		}
-	}
-};
-
-void menu_string(unsigned int x, unsigned int y, char *value)
-{
-	volatile unsigned char pos = 0;
-	
-	while (value[pos] != '\\')
-	{
-		tetra_character(x + pos * 8, y, value[pos]);
-		
-		pos++;
-	}
-};
-
 volatile unsigned char menu_pos = 0;
 volatile unsigned char menu_max = 1;
 volatile unsigned char menu_loop = 1;
 volatile unsigned char menu_key = 0;
 volatile unsigned int menu_joy = 0xFFFF;
+volatile unsigned char menu_up = 0;
+volatile unsigned char menu_down = 0;
 
 int main()
 {
@@ -2288,10 +2230,11 @@ int main()
 	SYSKEY = 0x0; // re-lock
 	
 	// set OC1 and TMR4, pixel clock
+	// I've had to adjust these values many times...
 	OC1CON = 0x0; // reset OC1
 	OC1CON = 0x00000003; // toggle, use Timer4
-	OC1R = 0x0001; // pixel-sync rise (adjust)
-	OC1RS = 0x0001; // pixel-sync fall (adjust)
+	OC1R = 0x0000; // pixel-sync rise (adjust)
+	OC1RS = 0x0000; // pixel-sync fall (adjust)
 	T4CON = 0x0; // rest Timer4, prescale of 1:1
 	TMR4 = 0x0; // zero out counter
 	PR4 = 0x01; // pixel-reset (minus one)
@@ -2505,20 +2448,48 @@ int main()
 	T2CONbits.ON = 1; // turn on TMR2/TMR3 (cycle offset pre-calculated above)
 	
 	
-	menu_string(32, 16, "Acolyte Hand PIC'd 32\\");
+	string_characters(32, 16, "Acolyte Hand PIC'd 32\\");
 	
-	menu_string(240, 200, " Tetra     \\");
-	menu_string(240, 208, " Bad Apple \\");
-	menu_string(240, 216, " Scratchpad\\");
-	menu_string(240, 224, "           \\");
+	string_characters(280, 112, " Tetra     \\");
+	string_characters(280, 120, " Bad Apple \\");
+	string_characters(280, 128, " Scratchpad\\");
+	string_characters(280, 136, "           \\");
 	
 	menu_max = 4; // number of menu items, change accordingly
 	
-	menu_character(240, 200, '>');
+	normal_character(280, 112, '>');
 	
 	while (menu_loop > 0)
 	{
-		menu_key = key();
+		if (menu_up == 1)
+		{
+			menu_up = 0;
+			
+			if (menu_pos > 0)
+			{
+				normal_character(280, 112 + menu_pos * 8, ' ');
+					
+				menu_pos--;
+					
+				normal_character(280, 112 + menu_pos * 8, '>');
+			}
+		}
+		
+		if (menu_down == 1)
+		{
+			menu_down = 0;
+			
+			if (menu_pos < menu_max-1)
+			{
+				normal_character(280, 112 + menu_pos * 8, ' ');
+
+				menu_pos++;
+
+				normal_character(280, 112 + menu_pos * 8, '>');
+			}
+		}		
+		
+		menu_key = keyboard_character();
 		
 		if (menu_key != 0x00)
 		{
@@ -2528,25 +2499,11 @@ int main()
 			}
 			else if (menu_key == 0x11) // up
 			{
-				if (menu_pos > 0)
-				{
-					menu_character(240, 200 + menu_pos * 8, ' ');
-					
-					menu_pos--;
-					
-					menu_character(240, 200 + menu_pos * 8, '>');
-				}	
+				menu_up = 1;
 			}
 			else if (menu_key == 0x12) // down
 			{
-				if (menu_pos < menu_max-1)
-				{
-					menu_character(240, 200 + menu_pos * 8, ' ');
-					
-					menu_pos++;
-					
-					menu_character(240, 200 + menu_pos * 8, '>');
-				}
+				menu_down = 1;
 			}
 		}
 		
@@ -2556,14 +2513,7 @@ int main()
 			{
 				menu_joy = (menu_joy | 0x0001);
 				
-				if (menu_pos > 0)
-				{
-					menu_character(240, 200 + menu_pos * 8, ' ');
-					
-					menu_pos--;
-					
-					menu_character(240, 200 + menu_pos * 8, '>');
-				}
+				menu_up = 1;
 			}
 		}
 		else menu_joy = (menu_joy & 0xFFFE);
@@ -2574,14 +2524,7 @@ int main()
 			{
 				menu_joy = (menu_joy | 0x0002);
 				
-				if (menu_pos < menu_max-1)
-				{
-					menu_character(240, 200 + menu_pos * 8, ' ');
-					
-					menu_pos++;
-					
-					menu_character(240, 200 + menu_pos * 8, '>');
-				}
+				menu_down = 1;
 			}
 		}
 		else menu_joy = (menu_joy & 0xFFFD);
@@ -2592,14 +2535,7 @@ int main()
 			{
 				menu_joy = (menu_joy | 0x0040);
 				
-				if (menu_pos > 0)
-				{
-					menu_character(240, 200 + menu_pos * 8, ' ');
-					
-					menu_pos--;
-					
-					menu_character(240, 200 + menu_pos * 8, '>');
-				}
+				menu_up = 1;
 			}
 		}
 		else menu_joy = (menu_joy & 0xFFBF);
@@ -2610,14 +2546,7 @@ int main()
 			{
 				menu_joy = (menu_joy | 0x0080);
 				
-				if (menu_pos < menu_max-1)
-				{
-					menu_character(240, 200 + menu_pos * 8, ' ');
-					
-					menu_pos++;
-					
-					menu_character(240, 200 + menu_pos * 8, '>');
-				}
+				menu_down = 1;
 			}
 		}
 		else menu_joy = (menu_joy & 0xFF7F);
@@ -2666,7 +2595,7 @@ int main()
 	// infinite loop
 	while (1)
 	{
-		dummy = key();
+		dummy = keyboard_character();
 		
 		if (dummy != 0x00)
 		{
@@ -2700,11 +2629,11 @@ int main()
 	
 	while (1)
 	{
-		note(tune[pos], tune[pos+1] - 50, 0);
+		music_note(tune[pos], tune[pos+1] - 50, 0);
 		
 		while (audio_counter[0] > 0) { }
 		
-		note(0xFFFF, 50, 0);
+		music_note(0xFFFF, 50, 0);
 		
 		while (audio_counter[0] > 0) { }
 		
