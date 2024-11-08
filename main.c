@@ -387,6 +387,42 @@ const unsigned char text_bitmap[64*96] = {
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
 
+const unsigned char keyboard_conversion[256] = 
+{
+  	0x00,0x16,0x0C,0x0E,0x1E,0x1C,0x1D,0x15,
+	0x00,0x18,0x07,0x0F,0x1F,0x09,0x60,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x71,0x31,0x00,
+	0x00,0x00,0x7A,0x73,0x61,0x77,0x32,0x00,
+	0x00,0x63,0x78,0x64,0x65,0x34,0x33,0x00,
+	0x00,0x20,0x76,0x66,0x74,0x72,0x35,0x00,
+	0x00,0x6E,0x62,0x68,0x67,0x79,0x36,0x00,
+	0x00,0x00,0x6D,0x6A,0x75,0x37,0x38,0x00,
+	0x00,0x2C,0x6B,0x69,0x6F,0x30,0x39,0x00,
+	0x00,0x2E,0x2F,0x6C,0x3B,0x70,0x2D,0x00,
+	0x00,0x00,0x27,0x00,0x5B,0x3D,0x00,0x00,
+	0x00,0x00,0x0D,0x5D,0x00,0x5C,0x00,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x08,0x00,
+	0x00,0x31,0x00,0x34,0x37,0x00,0x00,0x00,
+	0x30,0x2E,0x32,0x35,0x36,0x38,0x1B,0x00,
+	0x19,0x2B,0x33,0x2D,0x2A,0x39,0x00,0x00,
+
+	0x00,0x16,0x0C,0x0E,0x1E,0x1C,0x1D,0x15,
+	0x00,0x18,0x07,0x0F,0x1F,0x09,0x7E,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x51,0x21,0x00,
+	0x00,0x00,0x5A,0x53,0x41,0x57,0x40,0x00,
+	0x00,0x43,0x58,0x44,0x45,0x24,0x23,0x00,
+	0x00,0x20,0x56,0x46,0x54,0x52,0x25,0x00,
+	0x00,0x4E,0x42,0x48,0x47,0x59,0x5E,0x00,
+	0x00,0x00,0x4D,0x4A,0x55,0x26,0x2A,0x00,
+	0x00,0x3C,0x4B,0x49,0x4F,0x29,0x28,0x00,
+	0x00,0x3E,0x3F,0x4C,0x3A,0x50,0x5F,0x00,
+	0x00,0x00,0x22,0x00,0x7B,0x2B,0x00,0x00,
+	0x00,0x00,0x0D,0x7D,0x00,0x7C,0x00,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x08,0x00,
+	0x00,0x03,0x00,0x13,0x02,0x00,0x00,0x00,
+	0x1A,0x7F,0x12,0x35,0x14,0x11,0x1B,0x00,
+	0x19,0x2B,0x04,0x2D,0x2A,0x01,0x00,0x00
+};
 
 
 
@@ -397,6 +433,17 @@ volatile unsigned int screen_scanline = 601; // start of vertical blank
 volatile unsigned char screen_zero[1] = { 0x00 }; // zero value for black
 
 volatile unsigned int audio_counter[2] = { 0, 0 }; // audio duration
+
+// PS/2 keyboard variables
+volatile unsigned char keyboard_counter = 0x00;
+volatile unsigned char keyboard_buffer = 0x00;
+volatile unsigned int keyboard_port = 0x0000;
+volatile unsigned char keyboard_writepos = 0x00;
+volatile unsigned char keyboard_readpos = 0x00;
+volatile unsigned char keyboard_shift = 0x00;
+volatile unsigned char keyboard_release = 0x00;
+volatile unsigned char keyboard_extended = 0x00;
+volatile unsigned char keyboard_array[256];
 
 void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl6srs))) oc3_handler()
 {		
@@ -422,9 +469,77 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 {
 	IFS3bits.CNDIF = 0;  // clear interrupt flag
 	
-	if ((CNFD & 0x0200) == 0x0200) // PS/2 Keyboard Clock
+	keyboard_port = PORTD;
+	
+	if (((CNFD & 0x0200) == 0x0200)) // PS/2 Keyboard Clock
+	{	
+		if (keyboard_counter < 0x09)
+		{
+			keyboard_buffer = keyboard_buffer >> 1;
+			
+			if ((keyboard_port & 0x0400) == 0x0400)
+			{
+				keyboard_buffer = keyboard_buffer | 0x80;
+			} 
+		}
+
+		keyboard_counter++;
+
+		if (keyboard_counter == 0x0B)
+		{
+			keyboard_counter = 0x00;
+
+			if (keyboard_buffer == 0xF0) // release
+			{
+				keyboard_release = 0xF0;
+			}
+			else if (keyboard_buffer == 0xE0) // extended
+			{
+				keyboard_extended = 0xE0;
+			}
+			else // normal
+			{
+				if (keyboard_release == 0x00)
+				{
+					if (keyboard_extended == 0xE0)
+					{
+						keyboard_array[keyboard_writepos] = keyboard_conversion[(unsigned char)(keyboard_buffer + keyboard_shift + 0x80)];
+					
+						keyboard_writepos++;
+						
+						keyboard_extended = 0x00;
+					}
+					else
+					{
+						if (keyboard_buffer == 0x12 || keyboard_buffer == 0x59)
+						{
+							keyboard_shift = 0x80;
+						}
+						else
+						{
+							keyboard_array[keyboard_writepos] = keyboard_conversion[(unsigned char)(keyboard_buffer + keyboard_shift)];
+					
+							keyboard_writepos++;
+						}
+					}
+				}
+				else
+				{
+					if (keyboard_buffer == 0x12 || keyboard_buffer == 0x59)
+					{
+						keyboard_shift = 0x00;
+					}
+					
+					keyboard_release = 0x00;
+					keyboard_extended = 0x00;
+				}
+			}
+		}		
+	}
+	
+	if (((CNFD & 0x1000) == 0x1000)) // PS/2 Mouse Clock
 	{
-		if ((PORTD & 0x0400) == 0x0400) // high
+		if ((keyboard_port & 0x2000) == 0x2000) // high
 		{
 			
 		}
@@ -434,17 +549,7 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 		}
 	}
 	
-	if ((CNFD & 0x1000) == 0x1000) // PS/2 Mouse Clock
-	{
-		if ((PORTD & 0x2000) == 0x2000) // high
-		{
-			
-		}
-		else // low
-		{
-			
-		}
-	}
+	CNFD = 0x0000; // must clear out the flags when done
 	
 	return;
 }
@@ -556,7 +661,41 @@ void note(unsigned int frequency, unsigned int duration, unsigned char channel)
 
 		OC9CONbits.ON = 1; // turn OC8 on
 	}
+	
+	return;
 };
+
+char hex_char(unsigned char value, unsigned char pos)
+{
+	unsigned char temp = 0x00;
+	
+	if (pos == 0)
+	{
+		temp = value / 16;
+	}
+	else if (pos == 1)
+	{
+		temp = value % 16;
+	}
+	
+	if (temp < 10) return (char)(temp + '0');
+	else return (char)(temp - 10 + 'A');
+};
+
+char key()
+{
+	char value = 0x00;
+	
+	if (keyboard_readpos != keyboard_writepos)
+	{
+		value = keyboard_array[keyboard_readpos];
+			
+		keyboard_readpos++;
+	}
+	
+	return value;
+};
+	
 
 
 
@@ -1650,8 +1789,6 @@ void Tetra()
 
 void BadApple()
 { 
-    // Bad Apple Code
-  
 	int test = 0;
 	
 	for (int i=0; i<5; i++)
@@ -1799,9 +1936,207 @@ void BadApple()
 		DelayMS(100);
 		//DelayMS(100);
 	}
-	// End of Bad Apple Code
 }
 
+
+volatile char scratchpad_buffer[50][36];
+
+void scratchpad_character(unsigned int x, unsigned int y, unsigned char value)
+{
+	unsigned int pos = (unsigned int)(value - 32) * 64;
+  
+	for (unsigned int i=0; i<8; i++)
+	{		
+		for (unsigned int j=0; j<8; j++)
+		{
+			screen_buffer[y+i][x+j] = text_bitmap[pos+i*8+j];		
+		}
+	}
+};
+
+void scratchpad_inverse_character(unsigned int x, unsigned int y, unsigned char value)
+{
+	unsigned int pos = (unsigned int)(value - 32) * 64;
+  
+	for (unsigned int i=0; i<8; i++)
+	{		
+		for (unsigned int j=0; j<8; j++)
+		{
+			screen_buffer[y+i][x+j] = (unsigned char)(text_bitmap[pos+i*8+j] ^ 0xFF);		
+		}
+	}
+};
+
+void Scratchpad()
+{
+	char key_value = 0x00;
+	
+	unsigned int pos_x = 0x00;
+	unsigned int pos_y = 0x00;
+	
+	for (unsigned int y=0; y<300; y++)
+	{
+		for (unsigned int x=0; x<400; x++)
+		{
+			screen_buffer[y][x] = 0x00;
+		}
+	}
+	
+	for (unsigned int y=0; y<36; y++)
+	{
+		for (unsigned int x=0; x<50; x++)
+		{
+			scratchpad_buffer[x][y] = ' ';
+		}
+	}
+	
+	scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+	
+	while (1)
+	{
+		key_value = key();
+		
+		if (key_value != 0x00)
+		{
+			if (key_value == 0x1B) // escape
+			{
+				pos_x = 0x00;
+				pos_y = 0x00;
+	
+				for (unsigned int y=0; y<300; y++)
+				{
+					for (unsigned int x=0; x<400; x++)
+					{
+						screen_buffer[y][x] = 0x00;
+					}
+				}
+
+				for (unsigned int y=0; y<36; y++)
+				{
+					for (unsigned int x=0; x<50; x++)
+					{
+						scratchpad_buffer[x][y] = ' ';
+					}
+				}
+	
+				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+			}
+			else if (key_value == 0x0D) // return
+			{
+				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				
+				pos_x = 0x00;
+				pos_y += 8;
+				
+				if (pos_y >= 288)
+				{
+					for (unsigned int y=0; y<280; y++)
+					{
+						for (unsigned int x=0; x<400; x++)
+						{
+							screen_buffer[y][x] = screen_buffer[y+8][x];
+						}
+					}
+					
+					for (unsigned int y=280; y<288; y++)
+					{
+						for (unsigned int x=0; x<400; x++)
+						{
+							screen_buffer[y][x] = 0x00;
+						}
+					}
+					
+					for (unsigned int y=0; y<35; y++)
+					{
+						for (unsigned int x=0; x<50; x++)
+						{
+							scratchpad_buffer[x][y] = scratchpad_buffer[x][y+1];
+						}
+					}
+					
+					for (unsigned int x=0; x<50; x++)
+					{
+						scratchpad_buffer[x][35] = ' ';
+					}
+					
+					pos_y -= 8;
+				}
+				
+				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+			}
+			else if (key_value == 0x08) // backspace
+			{
+				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				
+				if (pos_x >= 8)
+				{
+					pos_x -= 8;
+				}
+				
+				scratchpad_buffer[pos_x/8][pos_y/8] = ' ';
+				
+				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+			}
+			else if (key_value == 0x11) // up
+			{
+				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				
+				if (pos_y >= 8)
+				{
+					pos_y -= 8;
+				}
+				
+				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+			}
+			else if (key_value == 0x12) // down
+			{
+				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				
+				if (pos_y < 280)
+				{
+					pos_y += 8;
+				}
+				
+				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+			}
+			else if (key_value == 0x13) // left
+			{
+				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				
+				if (pos_x >= 8)
+				{
+					pos_x -= 8;
+				}
+				
+				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+			}
+			else if (key_value == 0x14) // right
+			{
+				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				
+				if (pos_x < 384)
+				{
+					pos_x += 8;
+				}
+				
+				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+			}
+			else if (key_value >= 32)
+			{
+				scratchpad_buffer[pos_x/8][pos_y/8] = key_value;
+				
+				scratchpad_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				
+				if (pos_x < 384)
+				{
+					pos_x += 0x08;
+				}
+				
+				scratchpad_inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+			}
+		}
+	}
+}
 
 
 
@@ -2028,13 +2363,14 @@ int main()
 	
 	
 	// set up PS/2 Keyboard and Mouse on PORTD (RD9-RD10,RD12-RD13)
+	CNCONDbits.ON = 1; // turn on interrupt-on-change
 	CNCONDbits.EDGEDETECT = 1; // edge detect, not mismatch
 	CNNED = 0x1200; // negative edge on RD9 and RD12
-	CNCONDbits.ON = 1; // turn on interrupt-on-change
 	
 	IPC30bits.CNDIP = 0x5; // interrupt priority 5
 	IPC30bits.CNDIS = 0x0; // interrupt sub-priority 0
-	IEC3bits.CNDIE = 1; // enable interrupts (set priority here?)
+	IFS3bits.CNDIF = 0;  // clear interrupt flag
+	IEC3bits.CNDIE = 1; // enable interrupts
 
 	// set up UART here
 	U3BRG = 0x0081; // 20 MHz to 9600 baud = 20000000/(16*9600)-1 = 129.2 = 0x0081
@@ -2121,6 +2457,9 @@ int main()
 		}
 	}
 	
+	// clear keyboard buffer
+	for (unsigned int i=0; i<256; i++) keyboard_array[i] = 0x00;
+	
 	// turn on video timers
 	T4CONbits.ON = 1; // turn on TMR4 (independent of others)
 	T5CONbits.ON = 1; // turn on TMR5 (cycle offset pre-calculated above)
@@ -2132,11 +2471,23 @@ int main()
 	
 	//BadApple();
 	
+	//Scratchpad();
+	
+	
+	
+	
+	char dummy = 0x00;
 
 	// infinite loop
 	while (1)
 	{
-
+		dummy = key();
+		
+		if (dummy != 0x00)
+		{
+			while (U3STAbits.UTXBF == 1) { }
+			U3TXREG = dummy;
+		}
 	}
 }
 
