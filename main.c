@@ -1789,6 +1789,14 @@ void Tetra()
 
 void BadApple()
 { 
+	for (unsigned int y=0; y<300; y++)
+	{
+		for (unsigned int x=0; x<400; x++)
+		{
+			screen_buffer[y][x] = 0x25; // grey?
+		}
+	}
+	
 	int test = 0;
 	
 	for (int i=0; i<5; i++)
@@ -1797,7 +1805,6 @@ void BadApple()
 		
 		if (test == 1) break;
 	}
-
 	
 	if (test == 1)
 	{
@@ -2140,6 +2147,38 @@ void Scratchpad()
 
 
 
+
+void menu_character(unsigned int x, unsigned int y, unsigned char value)
+{
+	unsigned int pos = (unsigned int)(value - 32) * 64;
+  
+	for (unsigned int i=0; i<8; i++)
+	{		
+		for (unsigned int j=0; j<8; j++)
+		{
+			screen_buffer[y+i][x+j] = text_bitmap[pos+i*8+j];		
+		}
+	}
+};
+
+void menu_string(unsigned int x, unsigned int y, char *value)
+{
+	volatile unsigned char pos = 0;
+	
+	while (value[pos] != '\\')
+	{
+		tetra_character(x + pos * 8, y, value[pos]);
+		
+		pos++;
+	}
+};
+
+volatile unsigned char menu_pos = 0;
+volatile unsigned char menu_max = 1;
+volatile unsigned char menu_loop = 1;
+volatile unsigned char menu_key = 0;
+volatile unsigned int menu_joy = 0xFFFF;
+
 int main()
 {
 	// turn off analog
@@ -2441,16 +2480,13 @@ int main()
 	// wait some time
 	DelayMS(1000);
 	
-	// just a 'hello world' over the UART
-	U3TXREG = '*';
-	
 	// set display buffer
 	for (unsigned int y=0; y<300; y++)
 	{
 		for (unsigned int x=0; x<400; x++)
 		{
-			//screen_buffer[y][x] = splash1_bitmap[y * 400 + x];
-			screen_buffer[y][x] = 0x25; // grey?
+			screen_buffer[y][x] = splash5_bitmap[y * 400 + x];
+			//screen_buffer[y][x] = 0x25; // grey?
 			//screen_buffer[y][x] = (unsigned char)((x + y) % 256); // test pattern
 			//if (x % 2 == 0) screen_buffer[y][x] = 0xFF; // white
 			//else screen_buffer[y][x] = 0x1F; // cyan
@@ -2460,23 +2496,172 @@ int main()
 	// clear keyboard buffer
 	for (unsigned int i=0; i<256; i++) keyboard_array[i] = 0x00;
 	
+	// just a 'hello world' over the UART
+	U3TXREG = '*';
+	
 	// turn on video timers
 	T4CONbits.ON = 1; // turn on TMR4 (independent of others)
 	T5CONbits.ON = 1; // turn on TMR5 (cycle offset pre-calculated above)
 	T2CONbits.ON = 1; // turn on TMR2/TMR3 (cycle offset pre-calculated above)
 	
 	
+	menu_string(32, 16, "Acolyte Hand PIC'd 32\\");
 	
-	Tetra();
+	menu_string(240, 200, " Tetra     \\");
+	menu_string(240, 208, " Bad Apple \\");
+	menu_string(240, 216, " Scratchpad\\");
+	menu_string(240, 224, "           \\");
 	
-	//BadApple();
+	menu_max = 4; // number of menu items, change accordingly
 	
-	//Scratchpad();
+	menu_character(240, 200, '>');
 	
-	
-	
-	
-	char dummy = 0x00;
+	while (menu_loop > 0)
+	{
+		menu_key = key();
+		
+		if (menu_key != 0x00)
+		{
+			if (menu_key == 0x0D || menu_key == 0x20) // enter or space
+			{
+				menu_loop = 0;
+			}
+			else if (menu_key == 0x11) // up
+			{
+				if (menu_pos > 0)
+				{
+					menu_character(240, 200 + menu_pos * 8, ' ');
+					
+					menu_pos--;
+					
+					menu_character(240, 200 + menu_pos * 8, '>');
+				}	
+			}
+			else if (menu_key == 0x12) // down
+			{
+				if (menu_pos < menu_max-1)
+				{
+					menu_character(240, 200 + menu_pos * 8, ' ');
+					
+					menu_pos++;
+					
+					menu_character(240, 200 + menu_pos * 8, '>');
+				}
+			}
+		}
+		
+		if (PORTJbits.RJ0 == 0) // up
+		{
+			if ((menu_joy & 0x0001) == 0x0000)
+			{
+				menu_joy = (menu_joy | 0x0001);
+				
+				if (menu_pos > 0)
+				{
+					menu_character(240, 200 + menu_pos * 8, ' ');
+					
+					menu_pos--;
+					
+					menu_character(240, 200 + menu_pos * 8, '>');
+				}
+			}
+		}
+		else menu_joy = (menu_joy & 0xFFFE);
+		
+		if (PORTJbits.RJ1 == 0) // down
+		{
+			if ((menu_joy & 0x0002) == 0x0000)
+			{
+				menu_joy = (menu_joy | 0x0002);
+				
+				if (menu_pos < menu_max-1)
+				{
+					menu_character(240, 200 + menu_pos * 8, ' ');
+					
+					menu_pos++;
+					
+					menu_character(240, 200 + menu_pos * 8, '>');
+				}
+			}
+		}
+		else menu_joy = (menu_joy & 0xFFFD);
+		
+		if (PORTJbits.RJ6 == 0) // up
+		{
+			if ((menu_joy & 0x0040) == 0x0000)
+			{
+				menu_joy = (menu_joy | 0x0040);
+				
+				if (menu_pos > 0)
+				{
+					menu_character(240, 200 + menu_pos * 8, ' ');
+					
+					menu_pos--;
+					
+					menu_character(240, 200 + menu_pos * 8, '>');
+				}
+			}
+		}
+		else menu_joy = (menu_joy & 0xFFBF);
+		
+		if (PORTJbits.RJ7 == 0) // down
+		{
+			if ((menu_joy & 0x0080) == 0x0000)
+			{
+				menu_joy = (menu_joy | 0x0080);
+				
+				if (menu_pos < menu_max-1)
+				{
+					menu_character(240, 200 + menu_pos * 8, ' ');
+					
+					menu_pos++;
+					
+					menu_character(240, 200 + menu_pos * 8, '>');
+				}
+			}
+		}
+		else menu_joy = (menu_joy & 0xFF7F);
+		
+		if (PORTJbits.RJ4 == 0 || PORTJbits.RJ5 == 0) // either button
+		{
+			menu_loop = 0;
+		}
+		
+		if (PORTJbits.RJ13 == 0 || PORTJbits.RJ14 == 0) // either button
+		{
+			menu_loop = 0;
+		}
+	}	
+
+	if (menu_pos == 0) Tetra();
+	else if (menu_pos == 1) BadApple();
+	else if (menu_pos == 2) Scratchpad();
+	else if (menu_pos == 3) { }
+
+
+	while (1)
+	{
+		// blink LED
+		PORTDbits.RD11 = 0;
+		DelayMS(100);
+		DelayMS(100);
+		DelayMS(100);
+		DelayMS(100);
+		DelayMS(100);
+
+		PORTDbits.RD11 = 1;
+		DelayMS(100);
+		DelayMS(100);
+		DelayMS(100);
+		DelayMS(100);
+		DelayMS(100);
+		DelayMS(100);
+	}
+}
+
+// Unused code below
+/*
+   char dummy = 0x00;
 
 	// infinite loop
 	while (1)
@@ -2489,9 +2674,7 @@ int main()
 			U3TXREG = dummy;
 		}
 	}
-}
-
-// Unused code below
+*/
 /*	
 	unsigned int tune[16*2] = {
 		0x063A,	500,
