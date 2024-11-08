@@ -10,7 +10,7 @@ Comes with attachment possibilities for an SPI Micro SDcard Adapter and a FT232R
 
 <img src="BoardPopulated.jpg">
 
-<img src="MENU.jpg">
+<img src="MENU1.jpg">
 
 <img src="MIKU-TETRA.jpg">
 
