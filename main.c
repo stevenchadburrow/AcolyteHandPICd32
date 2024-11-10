@@ -66,7 +66,7 @@
 #include "splash.c"
 
 
-#define SYS_FREQ 160000000 // Running at 80MHz
+#define SYS_FREQ 160000000 // Running at 160MHz
 
 unsigned long VirtToPhys(volatile void* p) // changed 'const' to 'volatile'
 {
