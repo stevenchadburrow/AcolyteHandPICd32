@@ -12,10 +12,10 @@
 #pragma config FUSBIDIO = OFF           // USB USBID Selection (Controlled by Port Function)
 
 // DEVCFG2
-#pragma config FPLLIDIV = DIV_8         // System PLL Input Divider (8x Divider)
-#pragma config FPLLRNG = RANGE_21_42_MHZ// System PLL Input Range (21-42 MHz Input)
-#pragma config FPLLICLK = PLL_FRC       // System PLL Input Clock Selection (FRC is input to the System PLL)
-#pragma config FPLLMULT = MUL_128       // System PLL Multiplier (PLL Multiply by 128)
+#pragma config FPLLIDIV = DIV_3         // System PLL Input Divider (3x Divider)
+#pragma config FPLLRNG = RANGE_5_10_MHZ// System PLL Input Range (5-10 MHz Input)
+#pragma config FPLLICLK = PLL_POSC       // System PLL Input Clock Selection (FRC is input to the System PLL)
+#pragma config FPLLMULT = MUL_50       // System PLL Multiplier (PLL Multiply by 50)
 #pragma config FPLLODIV = DIV_2         // System PLL Output Clock Divider (2x Divider)
 #pragma config UPLLFSEL = FREQ_24MHZ    // USB PLL Input Frequency Selection (USB PLL input is 24 MHz)
 
@@ -39,7 +39,7 @@
 #pragma config DEBUG = OFF              // Background Debugger Enable (Debugger is disabled)
 #pragma config JTAGEN = OFF             // JTAG Enable (JTAG Disabled)
 #pragma config ICESEL = ICS_PGx1        // ICE/ICD Comm Channel Select (Communicate on PGEC1/PGED1)
-#pragma config TRCEN = ON               // Trace Enable (Trace features in the CPU are enabled)
+#pragma config TRCEN = OFF               // Trace Disable (Trace features in the CPU are disabled)
 #pragma config BOOTISA = MIPS32         // Boot ISA Selection (Boot code and Exception code is MIPS32)
 #pragma config FECCCON = ON             // Dynamic Flash ECC Configuration (Flash ECC is enabled (ECCCON bits are locked))
 #pragma config FSLEEP = VREGS           // Flash Sleep Mode (Flash power down is controlled by the VREGS bit)
@@ -66,7 +66,7 @@
 #include "splash.c"
 
 
-#define SYS_FREQ 80000000 // Running at 80MHz
+#define SYS_FREQ 160000000 // Running at 80MHz
 
 unsigned long VirtToPhys(volatile void* p) // changed 'const' to 'volatile'
 {
@@ -75,12 +75,14 @@ unsigned long VirtToPhys(volatile void* p) // changed 'const' to 'volatile'
 
 void DelayMS(unsigned int s)
 {
-    // Convert microseconds us into how many clock ticks it will take
-	unsigned long count = s * SYS_FREQ / 10000; // rough!
+	unsigned long count = 0x00000000;
+	
+	// Convert microseconds us into how many clock ticks it will take
+	count = (unsigned long)(s * SYS_FREQ / 1000 / 2); // rough!
        
-    _CP0_SET_COUNT(0); // Set Core Timer count to 0
+	_CP0_SET_COUNT(0); // Set Core Timer count to 0
     
-    while (count > _CP0_GET_COUNT()); // Wait until Core Timer count reaches the number we calculated earlier
+	while (count > _CP0_GET_COUNT()); // Wait until Core Timer count reaches the number we calculated earlier
 }
 
 /*
@@ -426,7 +428,7 @@ const unsigned char keyboard_conversion[256] =
 
 
 
-volatile unsigned char __attribute__((coherent,address(0x80001000))) screen_buffer[300][400]; // visible portion of screen
+volatile unsigned char __attribute__((coherent,address(0x80001000))) screen_buffer[300][800]; //screen_buffer[300][400]; // visible portion of screen
 
 volatile unsigned int screen_scanline = 601; // start of vertical blank
 
@@ -687,7 +689,8 @@ void normal_character(unsigned int x, unsigned int y, unsigned char value)
 	{		
 		for (unsigned int j=0; j<8; j++)
 		{
-			screen_buffer[y+i][x+j] = text_bitmap[pos+i*8+j];		
+			screen_buffer[y+i][(x+j)*2] = (text_bitmap[pos+i*8+j] | 0x20);
+			screen_buffer[y+i][(x+j)*2+1] = (text_bitmap[pos+i*8+j] | 0x20);	
 		}
 	}
 };
@@ -700,7 +703,8 @@ void inverse_character(unsigned int x, unsigned int y, unsigned char value)
 	{		
 		for (unsigned int j=0; j<8; j++)
 		{
-			screen_buffer[y+i][x+j] = (unsigned char)(text_bitmap[pos+i*8+j] ^ 0xFF);		
+			screen_buffer[y+i][(x+j)*2] = (unsigned char)((text_bitmap[pos+i*8+j] ^ 0xFF) | 0x20);
+			screen_buffer[y+i][(x+j)*2+1] = (unsigned char)((text_bitmap[pos+i*8+j] ^ 0xFF) | 0x20);	
 		}
 	}
 };
@@ -748,11 +752,11 @@ void string_characters(unsigned int x, unsigned int y, char *value)
 
 // SDcard commands below
 // This was used for the Arduino, but has been modified to work here.
-unsigned char sdcard_block[512];
+volatile unsigned char sdcard_block[512];
 
 void sdcard_longdelay(void)
 {
-	DelayMS(10); // arbitrary amount of time to delay, should be around 10ms
+	DelayMS(1); // arbitrary amount of time to delay, should be around 10ms???
 }
 
 void sdcard_sendbyte(unsigned int value)
@@ -1161,11 +1165,11 @@ const char tetra_map[448] =
 // solid is one single value
 void tetra_solid(unsigned int x, unsigned int y, unsigned char value)
 {	
-	for (unsigned int i=y*8; i<y*8+8; i++)
+	for (unsigned int i=0; i<8; i++)
 	{
-		for (unsigned int j=x*8; j<x*8+8; j++)
+		for (unsigned int j=0; j<16; j++)
 		{
-			screen_buffer[i][j] = value;
+			screen_buffer[y*8+i][x*16+j] = value;
 		}
 	}		
 };
@@ -1173,13 +1177,13 @@ void tetra_solid(unsigned int x, unsigned int y, unsigned char value)
 // block is fancy looking
 void tetra_block(unsigned int x, unsigned int y, unsigned char value)
 {
-	for (unsigned int i=y*8; i<y*8+8; i++)
+	for (unsigned int i=0; i<8; i++)
 	{
-		for (unsigned int j=x*8; j<x*8+8; j++)
+		for (unsigned int j=0; j<16; j++)
 		{
-			if (i == y*8) screen_buffer[i][j] = 0xFF;
-			else if (j == x*8) screen_buffer[i][j] = 0xFF;
-			else screen_buffer[i][j] = value;
+			if (i == 0) screen_buffer[y*8+i][x*16+j] = 0xFF;
+			else if (j == 0 || j == 1) screen_buffer[y*8+i][x*16+j] = 0xFF;
+			else screen_buffer[y*8+i][x*16+j] = value;
 		}
 	}	
 };
@@ -1278,9 +1282,10 @@ void Tetra()
 	// set background
 	for (unsigned int y=0; y<300; y++)
 	{
-		for (unsigned int x=0; x<400; x++)
+		for (unsigned int x=0; x<800; x+=2)
 		{
-			screen_buffer[y][x] = splash1_bitmap[y * 400 + x];
+			screen_buffer[y][x] = splash1_bitmap[y * 400 + (x>>1)];
+			screen_buffer[y][x+1] = splash1_bitmap[y * 400 + (x>>1)];
 		}
 	}
 	
@@ -1298,12 +1303,17 @@ void Tetra()
 			else
 			{
 				// set background
-				for (unsigned int x=0; x<400; x++)
+				for (unsigned int x=0; x<800; x+=2)
 				{
-					if (tetra_vars.background == 1) screen_buffer[tetra_vars.background_trans][x] = splash1_bitmap[tetra_vars.background_trans * 400 + x];
-					else if (tetra_vars.background == 2) screen_buffer[tetra_vars.background_trans][x] = splash2_bitmap[tetra_vars.background_trans * 400 + x];
-					else if (tetra_vars.background == 3) screen_buffer[tetra_vars.background_trans][x] = splash3_bitmap[tetra_vars.background_trans * 400 + x];
-					else if (tetra_vars.background == 4) screen_buffer[tetra_vars.background_trans][x] = splash4_bitmap[tetra_vars.background_trans * 400 + x];
+					if (tetra_vars.background == 1) screen_buffer[tetra_vars.background_trans][x] = splash1_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
+					else if (tetra_vars.background == 2) screen_buffer[tetra_vars.background_trans][x] = splash2_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
+					else if (tetra_vars.background == 3) screen_buffer[tetra_vars.background_trans][x] = splash3_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
+					else if (tetra_vars.background == 4) screen_buffer[tetra_vars.background_trans][x] = splash4_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
+					
+					if (tetra_vars.background == 1) screen_buffer[tetra_vars.background_trans][x+1] = splash1_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
+					else if (tetra_vars.background == 2) screen_buffer[tetra_vars.background_trans][x+1] = splash2_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
+					else if (tetra_vars.background == 3) screen_buffer[tetra_vars.background_trans][x+1] = splash3_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
+					else if (tetra_vars.background == 4) screen_buffer[tetra_vars.background_trans][x+1] = splash4_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
 				}
 
 				tetra_vars.background_trans--;
@@ -1679,7 +1689,7 @@ void Tetra()
 				{
 					case ' ':
 					{
-						tetra_solid(j + horz, i + 0x02 + vert, 0x00); // black
+						tetra_solid(j + horz, i + 0x02 + vert, 0x20); // black
 						break;
 					}
 					case '*':
@@ -1733,7 +1743,7 @@ void Tetra()
 				{
 					case ' ':
 					{
-						tetra_solid(j + horz, i + 0x02 + vert, 0x00); // black
+						tetra_solid(j + horz, i + 0x02 + vert, 0x20); // black
 						break;
 					}
 					case '*':
@@ -1786,7 +1796,7 @@ void BadApple()
 { 
 	for (unsigned int y=0; y<300; y++)
 	{
-		for (unsigned int x=0; x<400; x++)
+		for (unsigned int x=0; x<800; x++)
 		{
 			screen_buffer[y][x] = 0x25; // grey?
 		}
@@ -1812,28 +1822,28 @@ void BadApple()
 		{
 			for (unsigned int i=0; i<240; i++)
 			{
-				for (unsigned int j=0; j<320; j++)
+				for (unsigned int j=0; j<640; j++)
 				{
 					screen_buffer[i][j] = 0x00;
 				}
 			}
 			
 			DelayMS(100);
-			DelayMS(100);
-			DelayMS(100);
+			//DelayMS(100);
+			//DelayMS(100);
 			//DelayMS(100);
 		
 			for (unsigned int i=0; i<240; i++)
 			{
-				for (unsigned int j=0; j<320; j++)
+				for (unsigned int j=0; j<640; j++)
 				{
 					screen_buffer[i][j] = 0xFF;
 				}
 			}
 			
 			DelayMS(100);
-			DelayMS(100);
-			DelayMS(100);
+			//DelayMS(100);
+			//DelayMS(100);
 			//DelayMS(100);
 		}
 	}  
@@ -1848,7 +1858,7 @@ void BadApple()
 	
 	while (1) 
 	{
-		x = 40;
+		x = 80;
 		y = 40;
 
 		for (unsigned int j=0; j<2; j++)
@@ -1887,11 +1897,19 @@ void BadApple()
 							screen_buffer[y][x+1] = 0xFF;
 							screen_buffer[y][x+2] = 0xFF;
 							screen_buffer[y][x+3] = 0xFF;
+							screen_buffer[y][x+4] = 0xFF;
+							screen_buffer[y][x+5] = 0xFF;
+							screen_buffer[y][x+6] = 0xFF;
+							screen_buffer[y][x+7] = 0xFF;
 							
 							screen_buffer[y+1][x] = 0xFF;
 							screen_buffer[y+1][x+1] = 0xFF;
 							screen_buffer[y+1][x+2] = 0xFF;
 							screen_buffer[y+1][x+3] = 0xFF;
+							screen_buffer[y+1][x+4] = 0xFF;
+							screen_buffer[y+1][x+5] = 0xFF;
+							screen_buffer[y+1][x+6] = 0xFF;
+							screen_buffer[y+1][x+7] = 0xFF;
 						}
 						else
 						{
@@ -1899,16 +1917,24 @@ void BadApple()
 							screen_buffer[y][x+1] = 0x00;
 							screen_buffer[y][x+2] = 0x00;
 							screen_buffer[y][x+3] = 0x00;
+							screen_buffer[y][x+4] = 0x00;
+							screen_buffer[y][x+5] = 0x00;
+							screen_buffer[y][x+6] = 0x00;
+							screen_buffer[y][x+7] = 0x00;
 							
 							screen_buffer[y+1][x] = 0x00;
 							screen_buffer[y+1][x+1] = 0x00;
 							screen_buffer[y+1][x+2] = 0x00;
 							screen_buffer[y+1][x+3] = 0x00;
+							screen_buffer[y+1][x+4] = 0x00;
+							screen_buffer[y+1][x+5] = 0x00;
+							screen_buffer[y+1][x+6] = 0x00;
+							screen_buffer[y+1][x+7] = 0x00;
 						}
 
 						value = (unsigned int)(value >> 1);
 
-						x += 4;
+						x += 8;
 					}
 				}
 
@@ -1932,7 +1958,7 @@ void BadApple()
 		
 		DelayMS(100);
 		DelayMS(100);
-		DelayMS(100);
+		//DelayMS(100);
 		//DelayMS(100);
 	}
 }
@@ -1949,9 +1975,9 @@ void Scratchpad()
 	
 	for (unsigned int y=0; y<300; y++)
 	{
-		for (unsigned int x=0; x<400; x++)
+		for (unsigned int x=0; x<800; x++)
 		{
-			screen_buffer[y][x] = 0x00;
+			screen_buffer[y][x] = 0x20; // black
 		}
 	}
 	
@@ -1973,14 +1999,16 @@ void Scratchpad()
 		{
 			if (key_value == 0x1B) // escape
 			{
+				music_note(262, 250, 0);
+				
 				pos_x = 0x00;
 				pos_y = 0x00;
 	
 				for (unsigned int y=0; y<300; y++)
 				{
-					for (unsigned int x=0; x<400; x++)
+					for (unsigned int x=0; x<800; x++)
 					{
-						screen_buffer[y][x] = 0x00;
+						screen_buffer[y][x] = 0x20; // black
 					}
 				}
 
@@ -2005,7 +2033,7 @@ void Scratchpad()
 				{
 					for (unsigned int y=0; y<280; y++)
 					{
-						for (unsigned int x=0; x<400; x++)
+						for (unsigned int x=0; x<800; x++)
 						{
 							screen_buffer[y][x] = screen_buffer[y+8][x];
 						}
@@ -2013,9 +2041,9 @@ void Scratchpad()
 					
 					for (unsigned int y=280; y<288; y++)
 					{
-						for (unsigned int x=0; x<400; x++)
+						for (unsigned int x=0; x<800; x++)
 						{
-							screen_buffer[y][x] = 0x00;
+							screen_buffer[y][x] = 0x20; // black
 						}
 					}
 					
@@ -2195,13 +2223,13 @@ int main()
 	CFGCONbits.CPUPRI = 0; // CPU does not have highest priority (?)
 	CFGCONbits.OCACLK = 1; // use alternate OC/TMR table
 	PB1DIV = 0x00008001; // divide by 2
-	PB2DIV = 0x00008003; // change PB2 clock to 80 / 4 = 20 MHz for SPI and UART
+	PB2DIV = 0x00008007; //0x00008003; // change PB2 clock to 80 / 4 = 20 MHz for SPI and UART
 	PB3DIV = 0x00008000; // set OC and TMR clock division by 1
 	PB4DIV = 0x00008001; // divide by 2
 	PB5DIV = 0x00008001; // divide by 2
 	//PB6DIV = 0x00008001; // divide by 2
 	PB7DIV = 0x00008000; // CPU clock divide by 1
-	SPLLCON = 0x02270203; // use PLL to bring external 24 MHz into 200 MHz
+	SPLLCON = 0x01270203; //0x02270203; // use PLL to bring external 24 MHz into 200 MHz
 	OSCCONbits.SLPEN = 0; // WAIT instruction puts CPU into idle mode
 	OSCCONbits.NOSC = 0x1; // switch to SPLL
 	OSCCONbits.OSWEN = 1; // enable the switch
@@ -2233,35 +2261,35 @@ int main()
 	// I've had to adjust these values many times...
 	OC1CON = 0x0; // reset OC1
 	OC1CON = 0x00000003; // toggle, use Timer4
-	OC1R = 0x0000; // pixel-sync rise (adjust)
-	OC1RS = 0x0000; // pixel-sync fall (adjust)
+	OC1R = 0x0001; //0x0000; // pixel-sync rise (adjust)
+	OC1RS = 0x0001; //0x0000; // pixel-sync fall (adjust)
 	T4CON = 0x0; // rest Timer4, prescale of 1:1
 	TMR4 = 0x0; // zero out counter
-	PR4 = 0x01; // pixel-reset (minus one)
+	PR4 = 0x03; //0x01; // pixel-reset (minus one)
 	
 	// set OC2 and OC3 and TMR5, horizontal visible and sync clocks
 	OC2CON = 0x0; // reset OC2
 	OC2CON = 0x0000000D; // toggle, use Timer5
 	OC2R = 0x0000; // h-visible rise
-	OC2RS = 0x0640; // h-blank fall
+	OC2RS = 0x0C80; //0x0640; // h-blank fall
 	OC3CON = 0x0; // reset OC3
 	OC3CON = 0x0000000D; // toggle, use Timer5
-	OC3R = 0x0690; // h-sync rise
-	OC3RS = 0x0789; // h-sync fall
+	OC3R = 0x0D20; //0x0690; // h-sync rise
+	OC3RS = 0x0F12; //0x0789; // h-sync fall
 	T5CON = 0x0000; // reset Timer5, prescale of 1:1
 	TMR5 = 0x0000; // zero out counter (offset some cycles)
-	PR5 = 0x083F; // h-reset (minus one)
+	PR5 = 0x107F; //0x083F; // h-reset (minus one)
 	
 	// set OC4 and TMR2, vertical sync clock
 	OC4CON = 0x0; // reset OC4
 	OC4CON = 0x00000025; // toggle, use Timer2 in 32-bit mode
 	OC4R = 0x0000; // v-sync rise
-	OC4RS = 0x0042; //0x0063; //0x00A5; // v-sync fall
+	OC4RS = 0x0084; //0x0042; // v-sync fall
 	T3CON = 0x0;
 	T2CON = 0x00000058; // prescale of 1:32, 32-bit mode
 	TMR3 = 0x00000000;
 	TMR2 = 0x00000000; // zero out counter (offset some cycles)
-	PR2 = 0x0000A1E7; //0x0000F2DB; //0x000194C3; // v-reset (minus one)
+	PR2 = 0x000143CF; //0x0000A1E7; // v-reset (minus one)
 	
 	// set OC8 and OC9 and TMR6/7, audio channels
 	OC8CON = 0x0; // reset OC2
@@ -2323,9 +2351,9 @@ int main()
 	DCH0CONbits.CHAED = 1; // get next DMA ready for quick transition???
 	DCH0CONbits.CHPRI = 0x3; // highest priority
 	DCH0DSA = VirtToPhys(&PORTE); // transfer destination physical address
-	DCH0SSIZ = 400; // source size
+	DCH0SSIZ = 800; //400; // source size
 	DCH0DSIZ = 1; // dst size 
-	DCH0CSIZ = 400; // 1 byte per event
+	DCH0CSIZ = 800; //400; // 1 byte per event
 
 	DCH1CONbits.CHEN = 0; // disable channel
 	DCH1ECONbits.CHSIRQ = 19; // start on Timer 4 interrupt
@@ -2426,9 +2454,10 @@ int main()
 	// set display buffer
 	for (unsigned int y=0; y<300; y++)
 	{
-		for (unsigned int x=0; x<400; x++)
+		for (unsigned int x=0; x<800; x+=2)
 		{
-			screen_buffer[y][x] = splash5_bitmap[y * 400 + x];
+			screen_buffer[y][x] = splash5_bitmap[y * 400 + (x>>1)];
+			screen_buffer[y][x+1] = splash5_bitmap[y * 400 + (x>>1)];
 			//screen_buffer[y][x] = 0x25; // grey?
 			//screen_buffer[y][x] = (unsigned char)((x + y) % 256); // test pattern
 			//if (x % 2 == 0) screen_buffer[y][x] = 0xFF; // white
@@ -2439,8 +2468,12 @@ int main()
 	// clear keyboard buffer
 	for (unsigned int i=0; i<256; i++) keyboard_array[i] = 0x00;
 	
+	
 	// just a 'hello world' over the UART
+	//while (U3STAbits.UTXBF == 1) { }
 	U3TXREG = '*';
+	
+	
 	
 	// turn on video timers
 	T4CONbits.ON = 1; // turn on TMR4 (independent of others)
@@ -2448,16 +2481,18 @@ int main()
 	T2CONbits.ON = 1; // turn on TMR2/TMR3 (cycle offset pre-calculated above)
 	
 	
-	string_characters(32, 16, "Acolyte Hand PIC'd 32\\");
 	
-	string_characters(280, 112, " Tetra     \\");
-	string_characters(280, 120, " Bad Apple \\");
-	string_characters(280, 128, " Scratchpad\\");
-	string_characters(280, 136, "           \\");
+	string_characters(24, 16, "Acolyte Hand PIC'd 32\\");
+	
+	string_characters(24, 32, " Tetra     \\");
+	string_characters(24, 40, " Bad Apple \\");
+	string_characters(24, 48, " Scratchpad\\");
+	string_characters(24, 56, "           \\");
 	
 	menu_max = 4; // number of menu items, change accordingly
 	
-	normal_character(280, 112, '>');
+	normal_character(24, 32, '>');
+	
 	
 	while (menu_loop > 0)
 	{
@@ -2467,11 +2502,13 @@ int main()
 			
 			if (menu_pos > 0)
 			{
-				normal_character(280, 112 + menu_pos * 8, ' ');
+				normal_character(24, 32 + menu_pos * 8, ' ');
 					
 				menu_pos--;
 					
-				normal_character(280, 112 + menu_pos * 8, '>');
+				normal_character(24, 32 + menu_pos * 8, '>');
+				
+				music_note(523, 250, 0);
 			}
 		}
 		
@@ -2481,11 +2518,13 @@ int main()
 			
 			if (menu_pos < menu_max-1)
 			{
-				normal_character(280, 112 + menu_pos * 8, ' ');
+				normal_character(24, 32 + menu_pos * 8, ' ');
 
 				menu_pos++;
 
-				normal_character(280, 112 + menu_pos * 8, '>');
+				normal_character(24, 32 + menu_pos * 8, '>');
+				
+				music_note(523, 250, 0);
 			}
 		}		
 		
@@ -2560,13 +2599,16 @@ int main()
 		{
 			menu_loop = 0;
 		}
-	}	
+	}
+
+	music_note(1047, 250, 0);
+
 
 	if (menu_pos == 0) Tetra();
 	else if (menu_pos == 1) BadApple();
 	else if (menu_pos == 2) Scratchpad();
 	else if (menu_pos == 3) { }
-
+	
 
 	while (1)
 	{
