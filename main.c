@@ -689,8 +689,8 @@ void normal_character(unsigned int x, unsigned int y, unsigned char value)
 	{		
 		for (unsigned int j=0; j<8; j++)
 		{
-			screen_buffer[y+i][(x+j)*2] = (text_bitmap[pos+i*8+j] | 0x20);
-			screen_buffer[y+i][(x+j)*2+1] = (text_bitmap[pos+i*8+j] | 0x20);	
+			screen_buffer[y+i][(x+j)*2] = (text_bitmap[pos+i*8+j]);
+			screen_buffer[y+i][(x+j)*2+1] = (text_bitmap[pos+i*8+j]);	
 		}
 	}
 };
@@ -703,8 +703,8 @@ void inverse_character(unsigned int x, unsigned int y, unsigned char value)
 	{		
 		for (unsigned int j=0; j<8; j++)
 		{
-			screen_buffer[y+i][(x+j)*2] = (unsigned char)((text_bitmap[pos+i*8+j] ^ 0xFF) | 0x20);
-			screen_buffer[y+i][(x+j)*2+1] = (unsigned char)((text_bitmap[pos+i*8+j] ^ 0xFF) | 0x20);	
+			screen_buffer[y+i][(x+j)*2] = (unsigned char)((text_bitmap[pos+i*8+j] ^ 0xFF));
+			screen_buffer[y+i][(x+j)*2+1] = (unsigned char)((text_bitmap[pos+i*8+j] ^ 0xFF));	
 		}
 	}
 };
@@ -1680,6 +1680,24 @@ void Tetra()
 		
 		unsigned int vert = 0x06;
 		unsigned int horz = 0x02;
+		
+		for (unsigned int i=0; i<(tetra_size_y-1)*8; i++)
+		{
+			for (unsigned int j=0; j<8; j++)
+			{
+				screen_buffer[i+(vert+2)*8][j+horz*16-8] = 0x92; // light grey
+				screen_buffer[i+(vert+2)*8][j+horz*16+tetra_size_x*16] = 0x92; // light grey
+			}
+		}
+		
+		for (unsigned int i=0; i<4; i++)
+		{
+			for (unsigned int j=0; j<(tetra_size_x+1)*16; j++)
+			{
+				screen_buffer[i+(vert+2)*8-4][j+horz*16-8] = 0x92; // light grey
+				screen_buffer[i+(vert+2)*8+(tetra_size_y-1)*8][j+horz*16-8] = 0x92; // light grey
+			}
+		}
 
 		for (volatile unsigned int i=0; i<tetra_size_y-1; i++)
 		{
@@ -1689,7 +1707,7 @@ void Tetra()
 				{
 					case ' ':
 					{
-						tetra_solid(j + horz, i + 0x02 + vert, 0x20); // black
+						tetra_solid(j + horz, i + 0x02 + vert, 0x00); // black
 						break;
 					}
 					case '*':
@@ -1733,7 +1751,26 @@ void Tetra()
 			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "      \\");
 		}
 		
+		vert = 0x06;
 		horz = 0x25;
+		
+		for (unsigned int i=0; i<(tetra_size_y-1)*8; i++)
+		{
+			for (unsigned int j=0; j<8; j++)
+			{
+				screen_buffer[i+(vert+2)*8][j+horz*16-8] = 0x92; // light grey
+				screen_buffer[i+(vert+2)*8][j+horz*16+tetra_size_x*16] = 0x92; // light grey
+			}
+		}
+		
+		for (unsigned int i=0; i<4; i++)
+		{
+			for (unsigned int j=0; j<(tetra_size_x+1)*16; j++)
+			{
+				screen_buffer[i+(vert+2)*8-4][j+horz*16-8] = 0x92; // light grey
+				screen_buffer[i+(vert+2)*8+(tetra_size_y-1)*8][j+horz*16-8] = 0x92; // light grey
+			}
+		}
 
 		for (volatile unsigned int i=0; i<tetra_size_y-1; i++)
 		{
@@ -1743,7 +1780,7 @@ void Tetra()
 				{
 					case ' ':
 					{
-						tetra_solid(j + horz, i + 0x02 + vert, 0x20); // black
+						tetra_solid(j + horz, i + 0x02 + vert, 0x00); // black
 						break;
 					}
 					case '*':
@@ -1977,7 +2014,7 @@ void Scratchpad()
 	{
 		for (unsigned int x=0; x<800; x++)
 		{
-			screen_buffer[y][x] = 0x20; // black
+			screen_buffer[y][x] = 0x00; // black
 		}
 	}
 	
@@ -2008,7 +2045,7 @@ void Scratchpad()
 				{
 					for (unsigned int x=0; x<800; x++)
 					{
-						screen_buffer[y][x] = 0x20; // black
+						screen_buffer[y][x] = 0x00; // black
 					}
 				}
 
@@ -2043,7 +2080,7 @@ void Scratchpad()
 					{
 						for (unsigned int x=0; x<800; x++)
 						{
-							screen_buffer[y][x] = 0x20; // black
+							screen_buffer[y][x] = 0x00; // black
 						}
 					}
 					
