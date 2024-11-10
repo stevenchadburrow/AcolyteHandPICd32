@@ -1939,7 +1939,7 @@ void BadApple()
 				}
 
 				y += 2;
-				x = 40;
+				x = 80;
 			}
 			
 			for (unsigned int i=0; i<12; i++)
