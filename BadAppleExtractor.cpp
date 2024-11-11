@@ -51,6 +51,9 @@ int main()
 		return 0;
 	}
 
+	fclose(output);
+
+
 	char command[512];
 
 	unsigned char picture[49152];
@@ -60,16 +63,16 @@ int main()
 	unsigned char shift;
 
 	FILE *video = NULL;
-
-	pos = 24 * min_frames;
 	
-	for (unsigned long frame=(single==0?min_frames:max_frames-1); frame<max_frames; frame+=1) // change to 13138 frames in the video
+	for (unsigned long frame=(single==0?min_frames:max_frames-1); frame<max_frames; frame+=2) // change to 13138 frames in the video
 	{
 		if (frame % 10 == 0) printf("Frame %lu/%lu\n", frame, max_frames);
 
 		sprintf(command, "ffmpeg -i TouhouBadApple-Compressed.mp4 -y -hide_banner -loglevel error -vf 'select=eq(n\\,%lu)' -vframes 1 Frame.bmp;", frame);
 
 		system(command);
+
+		video = NULL;
 
 		video = fopen("Frame.bmp", "rb");
 		if (!video)
@@ -103,6 +106,16 @@ int main()
 
 		fclose(video);
 
+		output = NULL;
+
+		output = fopen("TouhouBadApple-Single.bin", "wb");
+		if (!output)
+		{
+			printf("Error!\n");
+		
+			return 0;
+		}
+
 		shift = 0x00;
 
 		for (int i=192-1; i>=0; i--) // invert y-values
@@ -121,10 +134,15 @@ int main()
 				fprintf(output, "%c", shift);
 			}
 		}
+
+		fclose(output);
+
+		sprintf(command, "cat TouhouBadApple-Single.bin >> TouhouBadApple-Final.bin");
+
+		system(command);
 	}
 
-	fclose(output);
-
+	
 	printf("Success!\n");
 
 	return 1;

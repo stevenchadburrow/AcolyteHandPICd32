@@ -3421,7 +3421,7 @@ void BadApple()
 			//sdcard_longdelay(); // this is probably not needed
 			sdcard_enable();
 			sdcard_sendbyte(0x51); // CMD17 = 0x40 + 0x11 (17 in hex)
-			sdcard_sendbyte((address_high&0x00FF));
+			sdcard_sendbyte(((address_high)&0x00FF));
 			sdcard_sendbyte((((address_low)&0xFF00) >> 8));
 			sdcard_sendbyte(((address_low)&0x00FE)); // only blocks of 512 bytes
 			sdcard_sendbyte(0x00);
@@ -3468,14 +3468,20 @@ void BadApple()
 			sdcard_disable();
 			
 			address_low += 0x0002;
-			if (address_low == 0x0000) address_high++; 
+			if (address_low == 0x0000) 
+			{
+				address_high += 1; 
+			}
 		}
 		
 		// skip next frame entirely!
 		for (unsigned int l=0; l<12; l++)
 		{
 			address_low += 0x0002;
-			if (address_low == 0x0000) address_high++; 
+			if (address_low == 0x0000)
+			{
+				address_high += 1; 
+			}
 		}
 		
 		// fine tune delay here
