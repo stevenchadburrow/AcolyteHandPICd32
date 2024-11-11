@@ -77,8 +77,7 @@ void DelayMS(unsigned int s)
 {
 	unsigned long count = 0x00000000;
 	
-	// Convert microseconds us into how many clock ticks it will take
-	count = (unsigned long)(s * SYS_FREQ / 1000 / 2); // rough!
+	count = (unsigned long)((unsigned long)((SYS_FREQ / 1000) * s) / 2); // Convert microseconds us into how many clock ticks it will take
        
 	_CP0_SET_COUNT(0); // Set Core Timer count to 0
     
@@ -2182,7 +2181,13 @@ volatile unsigned char sdcard_block[512];
 
 void sdcard_longdelay(void)
 {
-	DelayMS(1); // arbitrary amount of time to delay, only using 1ms here, should be around 10ms???
+	//DelayMS(1); // arbitrary amount of time to delay, only using 1ms here, should be around 10ms???
+	
+	// fine tune delay here
+	unsigned long count = 0x00000000;
+	count = (unsigned long)((unsigned long)((SYS_FREQ / 1000) * 1) / 4); // Convert microseconds us into how many clock ticks it will take
+	_CP0_SET_COUNT(0); // Set Core Timer count to 0
+	while (count > _CP0_GET_COUNT()); // Wait until Core Timer count reaches the number we calculated earlier
 }
 
 void sdcard_sendbyte(unsigned int value)
@@ -3345,147 +3350,167 @@ void Tetra()
 
 void BadApple()
 { 
-	for (unsigned int y=0; y<300; y++)
+	while (1)
 	{
-		for (unsigned int x=0; x<800; x++)
+		for (unsigned int y=0; y<300; y++)
 		{
-			screen_buffer[y][x] = 0x25; // grey?
-		}
-	}
-	
-	int test = 0;
-	
-	for (int i=0; i<5; i++)
-	{
-		test = sdcard_initialize();
-		
-		if (test == 1) break;
-	}
-	
-	if (test == 1)
-	{
-		// move on
-	}
-	else
-	{
-		// lock up
-		while (1)
-		{
-			for (unsigned int i=0; i<300; i++)
+			for (unsigned int x=0; x<800; x++)
 			{
-				for (unsigned int j=0; j<800; j++)
-				{
-					screen_buffer[i][j] = 0x00;
-				}
+				screen_buffer[y][x] = 0x25; // grey?
 			}
-			
-			DelayMS(100);
-			DelayMS(100);
-			DelayMS(100);
-			DelayMS(100);
-		
-			for (unsigned int i=0; i<300; i++)
-			{
-				for (unsigned int j=0; j<800; j++)
-				{
-					screen_buffer[i][j] = 0xFF;
-				}
-			}
-			
-			DelayMS(100);
-			DelayMS(100);
-			DelayMS(100);
-			DelayMS(100);
 		}
-	}  
-  
-	unsigned int address_high = 0x0000, address_low = 0x0000;
 
-	unsigned int x = 0x0000;
-	unsigned int y = 0x0000;
-	unsigned char value = 0x00;
-	
-	unsigned char temp_value = 0x00;
-	
-	while (1) 
-	{
-		x = 144;
-		y = 25;
+		int test = 0;
 
-		for (unsigned int l=0; l<12; l++)
+		for (int i=0; i<5; i++)
 		{
-			//sdcard_readblock(address_high, (unsigned int)(address_low + (j * 2)));
+			test = sdcard_initialize();
 
-			sdcard_disable();
-			sdcard_pump();
-			//sdcard_longdelay(); // this is probably not needed
-			sdcard_enable();
-			sdcard_sendbyte(0x51); // CMD17 = 0x40 + 0x11 (17 in hex)
-			sdcard_sendbyte(((address_high)&0x00FF));
-			sdcard_sendbyte((((address_low)&0xFF00) >> 8));
-			sdcard_sendbyte(((address_low)&0x00FE)); // only blocks of 512 bytes
-			sdcard_sendbyte(0x00);
-			sdcard_sendbyte(0x01); // CRC (general)
-			temp_value = sdcard_waitresult(); // command response
-			if (temp_value == 0xFF) { break; }
-			else if (temp_value != 0x00) { break; } // expecting 0x00
-			temp_value = sdcard_waitresult(); // data packet starts with 0xFE
-			if (temp_value == 0xFF) { break; }
-			else if (temp_value != 0xFE) { break; }
+			if (test == 1) break;
+		}
 
-			for (unsigned int i=0; i<16; i++)
+		if (test == 1)
+		{
+			// move on
+		}
+		else
+		{
+			// lock up
+			while (1)
 			{
-				for (unsigned int j=0; j<32; j++) // packet of 512 bytes
-				{					
-					// get value from SDcard
-					value = sdcard_receivebyte();
-
-					for (unsigned int k=0; k<8; k++)
+				for (unsigned int i=0; i<300; i++)
+				{
+					for (unsigned int j=0; j<800; j++)
 					{
-						if ((value & 0x01) == 0x01)
-						{
-							screen_buffer[y][x] = 0xFF;
-							screen_buffer[y][x+1] = 0xFF;
-						}
-						else
-						{
-							screen_buffer[y][x] = 0x00;
-							screen_buffer[y][x+1] = 0x00;
-						}
-
-						value = (unsigned int)(value >> 1);
-
-						x += 2;
+						screen_buffer[i][j] = 0x00;
 					}
 				}
 
-				y += 1;
-				x = 144;
+				DelayMS(100);
+				DelayMS(100);
+				DelayMS(100);
+				DelayMS(100);
+
+				for (unsigned int i=0; i<300; i++)
+				{
+					for (unsigned int j=0; j<800; j++)
+					{
+						screen_buffer[i][j] = 0xFF;
+					}
+				}
+
+				DelayMS(100);
+				DelayMS(100);
+				DelayMS(100);
+				DelayMS(100);
+			}
+		}  
+
+		unsigned int address_high = 0x0000, address_low = 0x0000;
+
+		unsigned int x = 0x0000;
+		unsigned int y = 0x0000;
+		unsigned char value = 0x00;
+
+		unsigned char temp_value = 0x00;
+
+		unsigned int frames = 0;
+
+		while (frames < 13138) // total frames in the video
+		{
+			frames += 2; // only 30 FPS
+			
+			x = 144;
+			y = 50;
+
+			for (unsigned int l=0; l<12; l++)
+			{
+				//sdcard_readblock(address_high, (unsigned int)(address_low + (j * 2)));
+
+				sdcard_disable();
+				sdcard_pump();
+				sdcard_longdelay(); // this is probably not needed
+				sdcard_enable();
+				sdcard_sendbyte(0x51); // CMD17 = 0x40 + 0x11 (17 in hex)
+				sdcard_sendbyte((unsigned char)((address_high)&0x00FF));
+				sdcard_sendbyte((unsigned char)(((address_low)&0xFF00) >> 8));
+				sdcard_sendbyte((unsigned char)((address_low)&0x00FE)); // only blocks of 512 bytes
+				sdcard_sendbyte(0x00);
+				sdcard_sendbyte(0x01); // CRC (general)
+				temp_value = sdcard_waitresult(); // command response
+				if (temp_value == 0xFF) { break; }
+				else if (temp_value != 0x00) { break; } // expecting 0x00
+				temp_value = sdcard_waitresult(); // data packet starts with 0xFE
+				if (temp_value == 0xFF) { break; }
+				else if (temp_value != 0xFE) { break; }
+
+				for (unsigned int i=0; i<16; i++)
+				{
+					for (unsigned int j=0; j<32; j++) // packet of 512 bytes
+					{					
+						// get value from SDcard
+						value = sdcard_receivebyte();
+
+						for (unsigned int k=0; k<8; k++)
+						{
+							if ((value & 0x01) == 0x01)
+							{
+								screen_buffer[y][x] = 0xFF;
+								screen_buffer[y][x+1] = 0xFF;
+							}
+							else
+							{
+								screen_buffer[y][x] = 0x00;
+								screen_buffer[y][x+1] = 0x00;
+							}
+
+							value = (unsigned int)(value >> 1);
+
+							x += 2;
+						}
+					}
+
+					y += 1;
+					x = 144;
+				}
+
+				temp_value = sdcard_receivebyte(); // data packet ends with 0x55 then 0xAA
+				temp_value = sdcard_receivebyte(); // ignore here
+				sdcard_disable();
+
+				if (address_low == 0xFFFE)
+				{
+					address_low = 0;
+					
+					address_high += 1; 
+				}
+				else
+				{
+					address_low += 2;
+				}
 			}
 
-			temp_value = sdcard_receivebyte(); // data packet ends with 0x55 then 0xAA
-			temp_value = sdcard_receivebyte(); // ignore here
-			sdcard_disable();
+			// uncomment if you want to skip next frame entirely!
+			//for (unsigned int l=0; l<12; l++)
+			//{
+			//	if (address_low == 0xFFFE)
+			//	{
+			//		address_low = 0;
+			//		
+			//		address_high += 1; 
+			//	}
+			//	else
+			//	{
+			//		address_low += 2;
+			//	}
+			//}
 			
-			address_low += 0x0002;
-			if (address_low == 0x0000) 
-			{
-				address_high += 1; 
-			}
+			// fine tune delay here
+			unsigned long count = 0x00000000;
+			count = (unsigned long)(((unsigned long)((SYS_FREQ / 1000) * 17) / 5) / 2); // Convert microseconds us into how many clock ticks it will take
+			_CP0_SET_COUNT(0); // Set Core Timer count to 0
+			while (count > _CP0_GET_COUNT()); // Wait until Core Timer count reaches the number we calculated earlier
 		}
-		
-		// skip next frame entirely!
-		for (unsigned int l=0; l<12; l++)
-		{
-			address_low += 0x0002;
-			if (address_low == 0x0000)
-			{
-				address_high += 1; 
-			}
-		}
-		
-		// fine tune delay here
-		DelayMS(3);
 	}
 }
 
@@ -4104,8 +4129,6 @@ int main()
 	USB_init(); // initialize USB
            
     DelayMS(1000); // settling delay, avoid garbage characters
-	
-	
 	
 	
 	display_string(24, 16, "Acolyte Hand PIC'd 32\\");
