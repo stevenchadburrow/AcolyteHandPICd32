@@ -85,6 +85,16 @@ void DelayMS(unsigned int s)
 	while (count > _CP0_GET_COUNT()); // Wait until Core Timer count reaches the number we calculated earlier
 }
 
+void SendHex(unsigned char value)
+{
+	while (U3STAbits.UTXBF == 1) { }
+	if (value/16 >= 10) U3TXREG = (char)(value/16 + 'A' - 10);
+	else U3TXREG = (char)(value/16 + '0');
+	while (U3STAbits.UTXBF == 1) { }
+	if (value%16 >= 10) U3TXREG = (char)(value%16 + 'A' - 10);
+	else U3TXREG = (char)(value%16 + '0');
+}
+
 /*
 SVGA Signal 800 x 600 @ 60 Hz timing
 
@@ -150,8 +160,8 @@ Pin109,RD1,SCK1
 Pin118,RD4,CS
 
 // PS/2 Keyboard/Mouse
-Pin98,RD10,KEY-CLK
-Pin99,RD11,KEY-DAT
+Pin98,RD9,KEY-CLK
+Pin99,RD10,KEY-DAT
 Pin112,RD12,MOUSE-CLK
 Pin113,RD13,MOUSE-DAT
 
@@ -188,7 +198,7 @@ Pin69,RD14,U3TX
 Pin70,RD15,U3RX
 
 // LED
-Pin97,RD9,LED
+Pin97,RD11,LED
 
 // Button
 Pin27,RJ11,BUTTON
@@ -510,7 +520,7 @@ const unsigned char text_bitmap[64*96] = {
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
 
-const unsigned char keyboard_conversion[256] = 
+const unsigned char ps2_conversion[256] = 
 {
   	0x00,0x16,0x0C,0x0E,0x1E,0x1C,0x1D,0x15,
 	0x00,0x18,0x07,0x0F,0x1F,0x09,0x60,0x00,
@@ -547,6 +557,179 @@ const unsigned char keyboard_conversion[256] =
 	0x19,0x2B,0x04,0x2D,0x2A,0x01,0x00,0x00
 };
 
+const unsigned char usb_conversion[256] = 
+{
+	0x00,0x00,0x00,0x00,0x61,0x62,0x63,0x64,
+	0x65,0x66,0x67,0x68,0x69,0x6A,0x6B,0x6C,
+	0x6D,0x6E,0x6F,0x70,0x71,0x72,0x73,0x74,
+	0x75,0x76,0x77,0x78,0x79,0x7A,0x30,0x31,
+	0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,
+	0x0D,0x1B,0x08,0x09,0x20,0x2D,0x3D,0x5B,
+	0x5D,0x5C,0x00,0x3B,0x27,0x60,0x2C,0x2E,
+	0x2F,0x00,0x1C,0x1D,0x1E,0x1F,0x0E,0x0F,
+	0x17,0x07,0x16,0x18,0x19,0x15,0x00,0x00,
+	0x00,0x1A,0x02,0x01,0x7F,0x03,0x04,0x14,
+	0x13,0x12,0x11,0x00,0x2F,0x2A,0x2D,0x2B,
+	0x0D,0x30,0x31,0x32,0x33,0x34,0x35,0x36,
+	0x37,0x38,0x39,0x2E,0x00,0x00,0x00,0x3D,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+
+	0x00,0x00,0x00,0x00,0x41,0x42,0x43,0x44,
+	0x45,0x46,0x47,0x48,0x49,0x4A,0x4B,0x4C,
+	0x4D,0x4E,0x4F,0x50,0x51,0x52,0x53,0x54,
+	0x55,0x56,0x57,0x58,0x59,0x5A,0x21,0x40,
+	0x23,0x24,0x25,0x5E,0x26,0x2A,0x28,0x29,
+	0x0D,0x1B,0x08,0x09,0x20,0x5F,0x2B,0x7B,
+	0x7D,0x7C,0x00,0x3A,0x22,0x7E,0x3C,0x3E,
+	0x3F,0x00,0x1C,0x1D,0x1E,0x1F,0x0E,0x0F,
+	0x17,0x07,0x16,0x18,0x19,0x15,0x00,0x00,
+	0x00,0x1A,0x02,0x01,0x7F,0x03,0x04,0x14,
+	0x13,0x12,0x11,0x00,0x2F,0x2A,0x2D,0x2B,
+	0x0D,0x30,0x31,0x32,0x33,0x34,0x35,0x36,
+	0x37,0x38,0x39,0x2E,0x00,0x00,0x00,0x3D,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
+};
+
+
+void ps2_command(unsigned char command, unsigned char port)
+{
+	CNCONDbits.ON = 0; // turn off interrupt-on-change
+	
+	unsigned char copy = command;
+	
+	unsigned char parity_count = 0x00;
+	
+	for (unsigned char i=0; i<8; i++)
+	{
+		if ((copy & 0x01) == 0x01) parity_count++;
+		
+		copy = (copy >> 1);
+	}
+	
+	if (port == 0) // primary port
+	{
+		PORTDbits.RD9 = 0; // when not floating, ground them
+		PORTDbits.RD10 = 0;
+		TRISDbits.TRISD9 = 1; // normally they are both floating though
+		TRISDbits.TRISD10 = 1; 
+
+		DelayMS(1000); // wait a while for mouse to send it's initial code
+
+		TRISDbits.TRISD9 = 0; // ground clock
+
+		DelayMS(1000); // delay for at least 100 ms
+
+		TRISDbits.TRISD10 = 0; // ground data
+		TRISDbits.TRISD9 = 1; // release clock
+
+		while (PORTDbits.RD9 == 0) { } // wait until clock is high
+
+		while (PORTDbits.RD9 == 1) { } // wait until clock is low
+
+		for (unsigned char i=0; i<8; i++)
+		{
+			if ((command & 0x01) == 0x00)
+			{
+				TRISDbits.TRISD10 = 0; // ground data
+			}
+			else
+			{
+				TRISDbits.TRISD10 = 1; // float data to high
+			}
+
+			command = (command >> 1);
+
+			while (PORTDbits.RD9 == 0) { } // wait until clock is high
+
+			while (PORTDbits.RD9 == 1) { } // wait until clock is low
+		}
+
+		if (parity_count % 2 == 1) TRISDbits.TRISD10 = 0; // ground data (for parity)
+		else TRISDbits.TRISD10 = 1; // float data high (for parity)
+
+		while (PORTDbits.RD9 == 0) { } // wait until clock is high
+
+		while (PORTDbits.RD9 == 1) { } // wait until clock is low
+
+		TRISDbits.TRISD10 = 1; // release data line
+
+		while (PORTDbits.RD10 == 0) { } // wait until data is high
+
+		while (PORTDbits.RD10 == 1) { } // wait until data is low
+
+		while (PORTDbits.RD9 == 1) { } // wait until clock is low
+
+		while (PORTDbits.RD10 == 0) { } // wait until data is high
+
+		while (PORTDbits.RD9 == 0) { } // wait until clock is high
+	}
+	else if (port == 1) // secondary port (from splitter)
+	{
+		PORTDbits.RD12 = 0; // when not floating, ground them
+		PORTDbits.RD13 = 0;
+		TRISDbits.TRISD12 = 1; // normally they are both floating though
+		TRISDbits.TRISD13 = 1; 
+
+		DelayMS(1000); // wait a while for mouse to send it's initial code
+
+		TRISDbits.TRISD12 = 0; // ground clock
+
+		DelayMS(1000); // delay for at least 100 ms
+
+		TRISDbits.TRISD13 = 0; // ground data
+		TRISDbits.TRISD12 = 1; // release clock
+
+		while (PORTDbits.RD12 == 0) { } // wait until clock is high
+
+		while (PORTDbits.RD12 == 1) { } // wait until clock is low
+
+		for (unsigned char i=0; i<8; i++)
+		{
+			if ((command & 0x01) == 0x00)
+			{
+				TRISDbits.TRISD13 = 0; // ground data
+			}
+			else
+			{
+				TRISDbits.TRISD13 = 1; // float data to high
+			}
+
+			command = (command >> 1);
+
+			while (PORTDbits.RD12 == 0) { } // wait until clock is high
+
+			while (PORTDbits.RD12 == 1) { } // wait until clock is low
+		}
+		
+		if (parity_count % 2 == 1) TRISDbits.TRISD13 = 0; // ground data (for parity)
+		else TRISDbits.TRISD13 = 1; // float data high (for parity)
+
+		while (PORTDbits.RD12 == 0) { } // wait until clock is high
+
+		while (PORTDbits.RD12 == 1) { } // wait until clock is low
+
+		TRISDbits.TRISD13 = 1; // release data line
+
+		while (PORTDbits.RD13 == 0) { } // wait until data is high
+
+		while (PORTDbits.RD13 == 1) { } // wait until data is low
+
+		while (PORTDbits.RD12 == 1) { } // wait until clock is low
+
+		while (PORTDbits.RD13 == 0) { } // wait until data is high
+
+		while (PORTDbits.RD12 == 0) { } // wait until clock is high
+	}
+	
+	CNCONDbits.ON = 1; // turn on interrupt-on-change
+	
+	return;
+}
+
 
 
 volatile unsigned char __attribute__((coherent,address(0x80001000))) screen_buffer[300][800]; //screen_buffer[300][400]; // visible portion of screen
@@ -557,16 +740,24 @@ volatile unsigned char screen_zero[1] = { 0x00 }; // zero value for black
 
 volatile unsigned int audio_counter[2] = { 0, 0 }; // audio duration
 
+volatile unsigned int ps2_port = 0x0000;
+volatile unsigned int ps2_flags = 0x0000;
+
 // PS/2 keyboard variables
-volatile unsigned char keyboard_counter = 0x00;
-volatile unsigned char keyboard_buffer = 0x00;
-volatile unsigned int keyboard_port = 0x0000;
-volatile unsigned char keyboard_writepos = 0x00;
-volatile unsigned char keyboard_readpos = 0x00;
-volatile unsigned char keyboard_shift = 0x00;
-volatile unsigned char keyboard_release = 0x00;
-volatile unsigned char keyboard_extended = 0x00;
-volatile char keyboard_array[256];
+volatile char ps2_array[2][256];
+volatile unsigned char ps2_counter[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_buffer[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_writepos[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_readpos[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_sequence[2] = { 0xFF, 0xFF }; // starts with 0xFA acknowledge byte
+volatile unsigned int ps2_cursor_x[2] = { 0x0000, 0x0000 };
+volatile unsigned int ps2_cursor_y[2] = { 0x0000, 0x0000 };
+volatile unsigned char ps2_shift[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_release[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_extended[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_mode[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_ready[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_check[2] = { 0x00, 0x00 };
 
 volatile char usb_array[256];
 volatile unsigned char usb_writepos = 0x00;
@@ -606,87 +797,160 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 {
 	IFS3bits.CNDIF = 0;  // clear interrupt flag
 	
-	keyboard_port = PORTD;
+	ps2_port = PORTD;
+	ps2_flags = CNFD;
 	
-	if (((CNFD & 0x0200) == 0x0200)) // PS/2 Keyboard Clock
+	CNFD = 0x0000; // must clear out the flags when done
+	
+	if (((ps2_flags & 0x0200) == 0x0200)) // PS/2 Port 0
 	{	
-		if (keyboard_counter < 0x09)
+		if (ps2_counter[0] < 0x09)
 		{
-			keyboard_buffer = keyboard_buffer >> 1;
+			ps2_buffer[0] = ps2_buffer[0] >> 1;
 			
-			if ((keyboard_port & 0x0400) == 0x0400)
+			if ((ps2_port & 0x0400) == 0x0400)
 			{
-				keyboard_buffer = keyboard_buffer | 0x80;
+				ps2_buffer[0] = ps2_buffer[0] | 0x80;
 			} 
 		}
 
-		keyboard_counter++;
-
-		if (keyboard_counter == 0x0B)
+		ps2_counter[0]++;
+	}
+	
+	if (((ps2_flags & 0x1000) == 0x1000)) // PS/2 Port 1
+	{
+		if (ps2_counter[1] < 0x09)
 		{
-			keyboard_counter = 0x00;
+			ps2_buffer[1] = ps2_buffer[1] >> 1;
+			
+			if ((ps2_port & 0x2000) == 0x2000)
+			{
+				ps2_buffer[1] = ps2_buffer[1] | 0x80;
+			} 
+		}
 
-			if (keyboard_buffer == 0xF0) // release
+		ps2_counter[1]++;
+	}
+		
+	for (unsigned char p=0; p<2; p++)
+	{
+		if (ps2_counter[p] == 0x0B)
+		{
+			//SendHex((unsigned char)ps2_buffer[p]); // TEMPORARY!!!
+			
+			ps2_counter[p] = 0x00;
+
+			if (ps2_ready[p] == 0x00)
 			{
-				keyboard_release = 0xF0;
-			}
-			else if (keyboard_buffer == 0xE0) // extended
-			{
-				keyboard_extended = 0xE0;
-			}
-			else // normal
-			{
-				if (keyboard_release == 0x00)
+				if (ps2_buffer[p] == 0xAA)
 				{
-					if (keyboard_extended == 0xE0)
-					{
-						keyboard_array[keyboard_writepos] = keyboard_conversion[(unsigned char)(keyboard_buffer + keyboard_shift + 0x80)];
-					
-						keyboard_writepos++;
-						
-						keyboard_extended = 0x00;
-					}
-					else
-					{
-						if (keyboard_buffer == 0x12 || keyboard_buffer == 0x59)
-						{
-							keyboard_shift = 0x80;
-						}
-						else
-						{
-							keyboard_array[keyboard_writepos] = keyboard_conversion[(unsigned char)(keyboard_buffer + keyboard_shift)];
-					
-							keyboard_writepos++;
-						}
-					}
+					ps2_ready[p] = 0x01; // should be 0xAA byte
+				}
+				else if (ps2_buffer[p] == 0xFA) // acknowledge
+				{
+					// do nothing
 				}
 				else
 				{
-					if (keyboard_buffer == 0x12 || keyboard_buffer == 0x59)
-					{
-						keyboard_shift = 0x00;
+					ps2_command(0xFF, p); // reset device with 0xFF command
+				}
+			}
+			else if (ps2_mode[p] == 0x00) // keyboard routines
+			{
+				if (ps2_check[p] == 0x00) // check if keyboard or mouse
+				{
+					if (ps2_buffer[p] == 0x00) // if 0x00, it is a mouse
+					{	
+						ps2_command(0xF4, p); // enable output command 0xF4
+						
+						ps2_mode[p] = 0x01; // make it a mouse
 					}
 					
-					keyboard_release = 0x00;
-					keyboard_extended = 0x00;
+					ps2_check[p] = 0x01;
+				}
+				
+				if (ps2_buffer[p] == 0x00) // null character, probably from mouse
+				{
+					// do nothing
+				}
+				else if (ps2_buffer[p] == 0xF0) // release
+				{
+					ps2_release[p] = 0xF0;
+				}
+				else if (ps2_buffer[p] == 0xE0) // extended
+				{
+					ps2_extended[p] = 0xE0;
+				}
+				else // normal
+				{
+					if (ps2_release[p] == 0x00)
+					{
+						if (ps2_extended[p] == 0xE0)
+						{
+							ps2_array[p][ps2_writepos[p]] = ps2_conversion[(unsigned char)(ps2_buffer[p] + ps2_shift[p] + 0x80)];
+
+							ps2_writepos[p]++;
+
+							ps2_extended[p] = 0x00;
+						}
+						else
+						{
+							if (ps2_buffer[p] == 0x12 || ps2_buffer[p] == 0x59)
+							{
+								ps2_shift[p] = 0x80;
+							}
+							else
+							{
+								ps2_array[p][ps2_writepos[p]] = ps2_conversion[(unsigned char)(ps2_buffer[p] + ps2_shift[p])];
+
+								ps2_writepos[p]++;
+							}
+						}
+					}
+					else
+					{
+						if (ps2_buffer[p] == 0x12 || ps2_buffer[p] == 0x59)
+						{
+							ps2_shift[p] = 0x00;
+						}
+
+						ps2_release[p] = 0x00;
+						ps2_extended[p] = 0x00;
+					}
+				}
+			}
+			else if (ps2_mode[p] == 0x01) // mouse
+			{
+				if (ps2_counter[p] == 0x0B)
+				{
+					ps2_counter[p] = 0x00;
+
+					if (ps2_sequence[p] == 0xFF) // acknowledge 0xFA
+					{
+						// do nothing
+					}
+					else if (ps2_sequence[p] == 0x00) // buttons
+					{
+						ps2_array[p][ps2_writepos[p]] = ps2_buffer[p];
+
+						ps2_writepos[p]++;
+					}
+					else if (ps2_sequence[p] == 0x01) // x movement
+					{
+						ps2_cursor_x[p] += (signed char)(ps2_buffer[p]);
+					}
+					else if (ps2_sequence[p] == 0x02) // y movement
+					{
+						ps2_cursor_y[p] += (signed char)(ps2_buffer[p]);
+					}
+
+					ps2_sequence[p]++;
+
+					if (ps2_sequence[p] == 0x03) ps2_sequence[p] = 0x00;
 				}
 			}
 		}		
 	}
-	
-	if (((CNFD & 0x1000) == 0x1000)) // PS/2 Mouse Clock
-	{
-		if ((keyboard_port & 0x2000) == 0x2000) // high
-		{
-			
-		}
-		else // low
-		{
-			
-		}
-	}
-	
-	CNFD = 0x0000; // must clear out the flags when done
 	
 	return;
 }
@@ -802,21 +1066,29 @@ void music_note(unsigned int frequency, unsigned int duration, unsigned char cha
 	return;
 };
 
-char keyboard_character()
+char input_character()
 {
 	char value = 0x00;
 	
-	if (keyboard_readpos != keyboard_writepos)
+	for (unsigned char p=0; p<2; p++)
 	{
-		value = keyboard_array[keyboard_readpos];
-			
-		keyboard_readpos++;
+		if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x00) // ready and keyboard
+		{
+			if (ps2_readpos[p] != ps2_writepos[p])
+			{
+				value = ps2_array[p][ps2_readpos[p]];
+
+				ps2_readpos[p]++;
+				
+				break;
+			}
+		}
 	}
 	
 	return value;
 };
 
-void normal_character(unsigned int x, unsigned int y, unsigned char value)
+void display_character(unsigned int x, unsigned int y, unsigned char value)
 {
 	unsigned int pos = (unsigned int)(value - 32) * 64;
   
@@ -830,7 +1102,7 @@ void normal_character(unsigned int x, unsigned int y, unsigned char value)
 	}
 };
 
-void inverse_character(unsigned int x, unsigned int y, unsigned char value)
+void display_inverse(unsigned int x, unsigned int y, unsigned char value)
 {
 	unsigned int pos = (unsigned int)(value - 32) * 64;
   
@@ -844,7 +1116,7 @@ void inverse_character(unsigned int x, unsigned int y, unsigned char value)
 	}
 };
 	
-void decimal_characters(unsigned int x, unsigned int y, unsigned int value)
+void display_decimal(unsigned int x, unsigned int y, unsigned int value)
 {
 	volatile unsigned int temp = 0;
 	volatile unsigned int next = 0;
@@ -852,55 +1124,36 @@ void decimal_characters(unsigned int x, unsigned int y, unsigned int value)
 	next = value;
 	
 	temp = next / 10000;
-	normal_character(x, y, (unsigned char)(temp + '0'));
+	display_character(x, y, (unsigned char)(temp + '0'));
 	next = next - 10000 * temp;
 	
 	temp = next / 1000;
-	normal_character(x + 0x08, y, (unsigned char)(temp + '0'));
+	display_character(x + 0x08, y, (unsigned char)(temp + '0'));
 	next = next - 1000 * temp;
 	
 	temp = next / 100;
-	normal_character(x + 0x10, y, (unsigned char)(temp + '0'));
+	display_character(x + 0x10, y, (unsigned char)(temp + '0'));
 	next = next - 100 * temp;
 	
 	temp = next / 10;
-	normal_character(x + 0x18, y, (unsigned char)(temp + '0'));
+	display_character(x + 0x18, y, (unsigned char)(temp + '0'));
 	next = next - 10 * temp;
 	
 	temp = next;
-	normal_character(x + 0x20, y, (unsigned char)(temp + '0'));
+	display_character(x + 0x20, y, (unsigned char)(temp + '0'));
 };
 
-void string_characters(unsigned int x, unsigned int y, char *value)
+void display_string(unsigned int x, unsigned int y, char *value)
 {
 	volatile unsigned char pos = 0;
 	
 	while (value[pos] != '\\')
 	{
-		normal_character(x + pos * 8, y, value[pos]);
+		display_character(x + pos * 8, y, value[pos]);
 		
 		pos++;
 	}
 };
-
-void print_single(char value)
-{
-	while (U3STAbits.UTXBF == 1) { }
-	U3TXREG = value;
-}
-
-void print_characters(char *value)
-{
-	unsigned int count = 0;
-	
-	while (1)
-	{
-		if (value[count] == '\0') break;
-		while (U3STAbits.UTXBF == 1) { }
-		U3TXREG = value[count];
-		count++;
-	}
-}
 
 
 
@@ -920,16 +1173,16 @@ void USB_host_tasks()
                 // Is this an LS device or an FS device?
                 if (USBOTGbits.LSDEV)
                 {
-                    //print_characters("Low speed device attached\n\r");
+                    // Low speed device attached
                     USB_EP0_LENGTH = 8; // Set the EP0 length to 8 bytes for now
                 }
                 else
                 {
-                    //print_characters("Full speed device attached\n\r");
+                    // Full speed device attached
                     USB_EP0_LENGTH = 64; // Set the EP0 length to 64 bytes for now
                 }
                 // Device just connected, tell it to reset
-                //print_characters("Tell device to reset its stack\n\r");
+                // Tell device to reset its stack
                 USB_HOST_reset_device();
                 USB_STAGE++;
                 USB_EP0_IF = 0;
@@ -940,7 +1193,6 @@ void USB_host_tasks()
                 if (USB_EP0_IF == 0)
                 {
                     // Send device descriptor request
-                    //print_characters("Send request for device descriptor\n\r");
                     USB_EP0_send_setup(USB_DEVICE_DESCRIPTOR_REQUEST, 8);                        
                     USB_STAGE++;
                     USB_EP0_IF = 0;
@@ -952,7 +1204,7 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     // Send handshake
-                    //print_characters("Sending request packet handshake\n\r");
+                    // Sending request packet handshake
                     *((unsigned char*)&USBE0CSR0 + 0x2) = 0x20; // REQPKT
                     USB_STAGE++;
                     USB_EP0_IF = 0;
@@ -963,21 +1215,15 @@ void USB_host_tasks()
             {
                 if (USB_EP0_IF)
                 {
+					// Receive X bytes
                     received_length = USBE0CSR2bits.RXCNT;
-                    //print_characters("Received ");
-					//print_single((char)(received_length + '0'));
-					//print_characters(" bytes\n\r");
                     USB_EP0_receive((unsigned char *)&device_descriptor, USBE0CSR2bits.RXCNT); //&device_descriptor, USBE0CSR2bits.RXCNT);
                     if (device_descriptor.bMaxPacketSize0 > 0)
                     {
-                        //print_characters("Max endpoint 0 length is ");
-						//print_single((char)(device_descriptor.bMaxPacketSize0+'0'));
-						//print_characters("bytes\n\r");
+                        //Max endpoint 0 length is X bytes
                         USB_EP0_LENGTH = device_descriptor.bMaxPacketSize0;
                     }
-                    //print_characters("USB version is ");
-					//print_single((char)((device_descriptor.bcdUSB >> 8)+'0'));
-					//print_single((char)((device_descriptor.bcdUSB & 0xFF)+'0'));
+                    // Got USB version
                     USB_STAGE++;
                     USB_EP0_IF = 0;
                 }
@@ -986,7 +1232,7 @@ void USB_host_tasks()
             case 4:
             {
                 // Send handshake
-                //print_characters("Sending data received handshake\n\r");
+                // Sending data received handshake
                 *((unsigned char*)&USBE0CSR0 + 0x2) = 0x42; // STATUS + TXPKTRDY
                 USB_STAGE++;
                 USB_EP0_IF = 0;
@@ -997,7 +1243,7 @@ void USB_host_tasks()
                 // Set device address
                 if (USB_EP0_IF)
                 {
-                    //print_characters("Assigning device address of 2\n\r");
+                    // Assigning device address of 2
                     USB_DEVICE_ASSIGN_ADDRESS[2] = 2;
                     USB_EP0_send_setup(USB_DEVICE_ASSIGN_ADDRESS, 8);
                     USB_STAGE++;
@@ -1009,9 +1255,9 @@ void USB_host_tasks()
             {
                 if (USB_EP0_IF)
                 {
-                    //print_characters("Delaying 50ms to let the device get ready\n\r");
+                    //Delaying 50ms to let the device get ready
                     DelayMS(50);
-                    //print_characters("Sending status transition handshake, no data stage\n\r");
+                    // Sending status transition handshake, no data stage
                     *((unsigned char*)&USBE0CSR0 + 0x2) = 0x60; // Set STATUS and REQPKT, no data stage
                     USB_STAGE++;
                     USB_EP0_IF = 0;
@@ -1023,7 +1269,7 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     *((unsigned char*)&USBE0CSR0 + 0x2) &= ~0x41; // Clear STATUS and RXPKTRDY
-                    //print_characters("Sending empty packet request to force set address\n\r");
+                    // Sending empty packet request to force set address
                     *((unsigned char*)&USBE0CSR0 + 0x2) = 0x20; // REQPKT
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1036,9 +1282,6 @@ void USB_host_tasks()
                 {
                     // Should receive 0 bytes
                     received_length = USBE0CSR2bits.RXCNT;
-                    //print_characters("Received ");
-					//print_single((char)(received_length + '0'));
-					//print_characters(" bytes (should be 0)\n\r");
                     USB_EP0_receive(device_configuration, USBE0CSR2bits.RXCNT);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1048,7 +1291,6 @@ void USB_host_tasks()
             case 9:
             {
                 // Send handshake
-                //print_characters("Sending data received handshake\n\r");
                 *((unsigned char*)&USBE0CSR0 + 0x2) = 0x42;
                 USB_EP0_IF = 0;
                 USB_STAGE++;
@@ -1059,10 +1301,10 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     // Set address in hardware, request configuration this time
-                    //print_characters("Initialising endpoint 1\n\r");
+                    // Initialising endpoint 1
                     USB_DEVICE_ADDRESS = 2;
                     USB_init_endpoints(USB_DEVICE_ADDRESS);
-                    //print_characters("Sending request for short device configuration\n\r");
+                    // Sending request for short device configuration
                     USB_EP0_send_setup(USB_DEVICE_CONFIGURATION_REQUEST, 8);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1074,7 +1316,6 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     // Send handshake
-                    //print_characters("Sending request packet handshake\n\r");
                     *((unsigned char*)&USBE0CSR0 + 0x2) = 0x20; // REQPKT
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1085,10 +1326,8 @@ void USB_host_tasks()
             {
                 if (USB_EP0_IF)
                 {
+					// Receive X bytes
                     received_length = USBE0CSR2bits.RXCNT;
-                    //print_characters("Received ");
-					//print_single((char)(received_length + '0'));
-					//print_characters(" bytes\n\r");
                     USB_EP0_receive(device_configuration, received_length);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1098,7 +1337,6 @@ void USB_host_tasks()
             case 13:
             {
                 // Send handshake
-                //print_characters("Sending data received handshake\n\r");
                 *((unsigned char*)&USBE0CSR0 + 0x2) = 0x42;
                 USB_STAGE++;
                 USB_EP0_IF = 0;
@@ -1108,11 +1346,9 @@ void USB_host_tasks()
             {
                 if (USB_EP0_IF)
                 {
+					// Sending request for full device configuration
                     config_length = device_configuration[2];
                     USB_DEVICE_CONFIGURATION_REQUEST[6] = device_configuration[2];
-                    //print_characters("Sending request for full device configuration (");
-					//print_single((char)(config_length+'0'));
-					//print_characters("bytes)\n\r");
                     USB_EP0_send_setup(USB_DEVICE_CONFIGURATION_REQUEST, 8);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1124,7 +1360,6 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     // Send handshake
-                    //print_characters("Sending request packet handshake\n\r");
                     *((unsigned char*)&USBE0CSR0 + 0x2) = 0x20; // REQPKT
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1135,10 +1370,8 @@ void USB_host_tasks()
             {
                 if (USB_EP0_IF)
                 {
+					// Receive X bytes
                     received_length = USB_EP0_receive_long(device_configuration, USBE0CSR2bits.RXCNT);
-                    //print_characters("Received ");
-					//print_single((char)(received_length + '0'));
-					//print_characters(" bytes\n\r");
                     USB_EP0_IF = 0;                   
                     USB_STAGE++;
                 }
@@ -1147,7 +1380,6 @@ void USB_host_tasks()
             case 17:
             {
                 // Send handshake
-                //print_characters("Sending data received handshake\n\r");
                 *((unsigned char*)&USBE0CSR0 + 0x2) = 0x42; // STATUS and TXPKTRDY
                 USB_EP0_IF = 0;
                 USB_STAGE++;
@@ -1157,7 +1389,7 @@ void USB_host_tasks()
             {
                 if (USB_EP0_IF)
                 {
-                    //print_characters("Sending request for short device name\n\r");
+                    // Sending request for short device name
                     USB_EP0_send_setup(USB_DEVICE_STRING_REQUEST, 8);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1169,7 +1401,6 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     // Send handshake
-                    //print_characters("Sending request packet handshake\n\r");
                     *((unsigned char*)&USBE0CSR0 + 0x2) = 0x20; // REQPKT
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1180,10 +1411,8 @@ void USB_host_tasks()
             {
                 if (USB_EP0_IF)
                 {
+					// Receive X bytes
                     received_length = USBE0CSR2bits.RXCNT;
-					//print_characters("Received ");
-					//print_single((char)(received_length + '0'));
-					//print_characters(" bytes\n\r");
                     USB_EP0_receive(device_name, received_length);
                     // Use the received length to modify the GET STRING request
                     USB_DEVICE_STRING_REQUEST[6] = device_name[0];
@@ -1195,10 +1424,9 @@ void USB_host_tasks()
             case 21:
             {
                 // Send handshake
-                //print_characters("Sending data received handshake\n\r");
                 *((unsigned char*)&USBE0CSR0 + 0x2) = 0x42;
                 
-                //print_characters("Sending request for full device name\n\r");
+                // Sending request for full device name
                 USB_EP0_send_setup(USB_DEVICE_STRING_REQUEST, 8);
                 USB_EP0_IF = 0;
                 USB_STAGE++;
@@ -1209,7 +1437,6 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     // Send handshake
-                    //print_characters("Sending request packet handshake\n\r");
                     *((unsigned char*)&USBE0CSR0 + 0x2) = 0x20; // REQPKT
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1220,12 +1447,8 @@ void USB_host_tasks()
             {
                 if (USB_EP0_IF)
                 {
+					// Receive device name as string
                     received_length = USB_EP0_receive_long(device_name, USBE0CSR2bits.RXCNT);
-					//print_characters("Received ");
-					//print_single((char)(received_length + '0'));
-					//print_characters(" bytes\n\r");
-                    //print_characters("Device's name is: ");
-					//print_characters((char *)device_name);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
                 }
@@ -1234,7 +1457,6 @@ void USB_host_tasks()
             case 24:
             {
                 // Send handshake
-                //print_characters("Sending data received handshake\n\r");
                 *((unsigned char*)&USBE0CSR0 + 0x2) = 0x42;                
                 USB_EP0_IF = 0;
                 USB_STAGE++;
@@ -1245,7 +1467,7 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     // Send full configuration request
-                    //print_characters("Sending SET CONFIGURATION request (configuration 0)\n\r");
+                    // Sending SET CONFIGURATION request (configuration 0)
                     USB_EP0_send_setup(USB_DEVICE_SET_CONFIGURATION, 8);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1257,7 +1479,7 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     // Send handshake
-                    //print_characters("Sending status transition handshake, no data stage\n\r");
+                    // Sending status transition handshake, no data stage
                     *((unsigned char*)&USBE0CSR0 + 0x2) = 0x60;  // Set STATUS and REQPKT, no data stage
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1268,8 +1490,8 @@ void USB_host_tasks()
             {
                 if (USB_EP0_IF)
                 {
+					// Send SET IDLE request
                     *((unsigned char*)&USBE0CSR0 + 0x2) &= ~0x41; // Clear STATUS and RXPKTRDY
-                    //print_characters("Sending SET IDLE request\n\r");
                     USB_EP0_send_setup(USB_DEVICE_SET_IDLE, 8);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1280,7 +1502,7 @@ void USB_host_tasks()
             {
                 if (USB_EP0_IF)
                 {
-                    //print_characters("Sending status transition handshake, no data stage\n\r");
+                    // Sending status transition handshake, no data stage
                     *((unsigned char*)&USBE0CSR0 + 0x2) = 0x60;
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1291,8 +1513,8 @@ void USB_host_tasks()
             {
                 if (USB_EP0_IF)
                 {
+					// Send SET protocol
                     *((unsigned char*)&USBE0CSR0 + 0x2) &= 0x41; // Clear STATUS and RXPKTRDY                    
-                    //print_characters("Sending SET PROTOCOL request\n\r");
                     USB_EP0_send_setup(USB_DEVICE_SET_PROTOCOL, 8);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1305,7 +1527,6 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     // Send handshake
-                    //print_characters("Sending status transition handshake, no data stage\n\r");
                     *((unsigned char*)&USBE0CSR0 + 0x2) = 0x60;
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1318,7 +1539,6 @@ void USB_host_tasks()
                 {
                     // Request short 9-byte HID report. Not bothering with requesting the whole thing as we never need it.
                     *((unsigned char*)&USBE0CSR0 + 0x2) &= ~0x41; // Clear STATUS and RXPKTRDY   
-                    //print_characters("Sending request for short HID report (9 bytes)\n\r");
                     USB_EP0_send_setup(USB_DEVICE_GET_HID_REPORT_REQUEST, 8);
                     USB_EP0_IF = 0;
                     USB_STAGE++;                    
@@ -1330,7 +1550,6 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     // Send handshake
-                    //print_characters("Sending request packet handshake\n\r");
                     *((unsigned char*)&USBE0CSR0 + 0x2) = 0x20;
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1341,10 +1560,8 @@ void USB_host_tasks()
             {
                 if (USB_EP0_IF)
                 {
+					// Receive X bytes
                     received_length = USB_EP0_receive_long(HID_report, USBE0CSR2bits.RXCNT);
-                    //print_characters("Received ");
-					//print_single((char)(received_length + '0'));
-					//print_characters(" bytes\n\r");
                     USB_EP0_IF = 0;
                     USB_STAGE++;
                 }
@@ -1353,7 +1570,6 @@ void USB_host_tasks()
             case 34:
             {
                 // Send handshake
-                //print_characters("Sending data received handshake\n\r");
                 *((unsigned char*)&USBE0CSR0 + 0x2) = 0x42;
                 USB_STAGE++;
                 USB_EP0_IF = 0;
@@ -1364,8 +1580,6 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     // Keyboard is enumerated!
-                    //print_characters("Keyboard enumerated successfully!\n\r");
-                    //print_characters("OK, start typing!\n\n\r");
                     key_timer = millis + USB_HID_REQUEST_DELAY;
                     USB_STAGE++;
                     USB_EP0_IF = 0;
@@ -1596,41 +1810,7 @@ int USB_EP0_wait_TXRDY()
 }
 
 void USB_EP0_send_setup(unsigned char *buffer, uint32_t length)
-{
-	/*
-    int cnt;
-    unsigned char *FIFO_buffer;
-        
-    FIFO_buffer = (unsigned char *)&USBFIFO0;
-
-    cnt = 0;
-    USBE0CSR0bits.TXMAXP = USB_EP0_LENGTH;
-    
-    USBE0CSR2bits.SPEED = 2;
-    USBE0TXAbits.TXHUBADD = 0;
-    USBE0TXAbits.TXHUBPRT = 0;
-    USBE0TXAbits.TXFADDR = USB_DEVICE_ADDRESS;    
-    
-    while (cnt < length)
-    {
-        *FIFO_buffer = *buffer++; // Send the bytes
-        cnt++;
-        
-        // Have we sent 64 bytes?
-        if ((cnt > 0) && (cnt % USB_EP0_LENGTH == 0))
-        {
-            // Set TXPKTRDY and SETUPPKT bits, signaling that we are ready to send the next packet
-            *((unsigned char*)&USBE0CSR0 + 0x2) = 0xA;
-            // Wait for TXPKTRDY to be cleared before moving on
-            if (USB_EP0_wait_TXRDY()) return;
-        }
-    }
-    
-    // Set TXPKTRDY and SETUPPKT bits, signaling that we are ready to send the next packet
-    if (cnt % USB_EP0_LENGTH != 0)
-        *((unsigned char*)&USBE0CSR0 + 0x2) = 0xA;
-	*/
-	
+{	
 	int cnt;
     unsigned char *FIFO_buffer;
 
@@ -1653,37 +1833,6 @@ void USB_EP0_send_setup(unsigned char *buffer, uint32_t length)
 
 void USB_EP0_send(unsigned char *buffer, uint32_t length)
 {
-	/*
-    int cnt;
-    unsigned char *FIFO_buffer;
-        
-    FIFO_buffer = (unsigned char *)&USBFIFO0;
-
-    cnt = 0;
-    USBE0CSR0bits.TXMAXP = USB_EP0_LENGTH;
-    
-    USBE0CSR2bits.SPEED = 2;
-    USBE0TXAbits.TXHUBADD = 0;
-    USBE0TXAbits.TXHUBPRT = 0;
-    USBE0TXAbits.TXFADDR = USB_DEVICE_ADDRESS;    
-    
-    while (cnt < length)
-    {
-        *FIFO_buffer = *buffer++; // Send the bytes
-        cnt++;
-        
-        // Have we sent 64 bytes?
-        if ((cnt > 0) && (cnt % USB_EP0_LENGTH == 0))
-        {
-            USBE0CSR0bits.TXRDY = 1;
-            if (USB_EP0_wait_TXRDY()) return;
-        }
-    }
-    
-    if (cnt % USB_EP0_LENGTH != 0)
-        USBE0CSR0bits.TXRDY = 1;
-	*/
-	
 	int cnt;
     unsigned char *FIFO_buffer;
 
@@ -1871,7 +2020,7 @@ void USB_HID_process_report()
     }
 }
 
-void keyboard_status_toggle(char keycode)
+void ps2_status_toggle(char keycode)
 {
     
     if (HID_BUSY) return; // We are already processing a status toggle, skip this one
@@ -1929,141 +2078,24 @@ void keyboard_status_toggle(char keycode)
 
 void handle_keys()
 {
-    int cnt;
-    unsigned char key_ASCII;
-    
-    
-    // Are we dealing with a letter of the alphabet?
-    for (cnt = KEY_A; cnt < KEY_A + 26; cnt++)
-    {
-        // Is a key pressed and has exceeded its repeat delay?
-        if (keys[cnt].pressed && (millis >= keys[cnt].repeat_time))
-        {
-            // If Shift is pressed and CAPS LOCK is off, make it an uppercase letter
-            if (SHIFT_PRESSED && !CAPS_LOCK_STATUS)
-                key_ASCII = cnt - KEY_A + ASCII_A;
-            
-            // If Shift is pressed and CAPS LOCK is on, make it a lowercase letter
-            if (SHIFT_PRESSED && CAPS_LOCK_STATUS)
-                key_ASCII = cnt - KEY_A + ASCII_a;
-            
-            // If just CAPS LOCK is on but shift is not pressed, make it an uppercase letter
-            if (!SHIFT_PRESSED && CAPS_LOCK_STATUS)
-                key_ASCII = cnt - KEY_A + ASCII_A;
-            
-            // If CAPS LOCK is off and shift is not pressed, make it a lowercase letter
-            if (!SHIFT_PRESSED && !CAPS_LOCK_STATUS)
-                key_ASCII = cnt - KEY_A + ASCII_a;
-            
-            keys[cnt].repeat_time = millis + KEYBOARD_REPEAT_DELAY;
-            
-            // Send the key over UART4
-            usb_array[usb_writepos] = key_ASCII;
-			usb_writepos++;
-        }
-    }
-    
-    // Are we dealing with a number?
-    for (cnt = KEY_1; cnt < KEY_1 + 10; cnt++)
-    {
-        // Is a key pressed and has exceeded its repeat delay?
-        if (keys[cnt].pressed && (millis >= keys[cnt].repeat_time))
-        {
-            // The HID key codes start at '1' and on through to '0', but unfortunately ASCII starts at '0' and runs on through to '9'
-                        
-            if (cnt < KEY_1 + 9)
-                key_ASCII = cnt - KEY_1 + 1;
-            else
-                key_ASCII = 0;
-            
-            if (SHIFT_PRESSED)
-                key_ASCII = numbers_shift[key_ASCII];
-            else
-                key_ASCII = key_ASCII + ASCII_ZERO;
-            
-            keys[cnt].repeat_time = millis + KEYBOARD_REPEAT_DELAY;
-            
-            // Send the key over UART4
-            usb_array[usb_writepos] = key_ASCII;
-			usb_writepos++;
-        }
-    }
-    
-    // Deal with the space bar
-    if (keys[KEY_SPACE].pressed && (millis >= keys[KEY_SPACE].repeat_time))
-    {
-        keys[KEY_SPACE].repeat_time = millis + KEYBOARD_REPEAT_DELAY;
-        usb_array[usb_writepos] = ' ';
-		usb_writepos++;
-    }
-    
-    // Deal with the enter key
-    if (keys[KEY_ENTER].pressed && (millis >= keys[KEY_ENTER].repeat_time))
-    {
-        keys[KEY_ENTER].repeat_time = millis + KEYBOARD_REPEAT_DELAY;
-        usb_array[usb_writepos] = 0x0D; // return
-		usb_writepos++;
-    }
-	
-	if (keys[KEY_BACKSPACE].pressed && (millis >= keys[KEY_BACKSPACE].repeat_time))
-    {
-        keys[KEY_BACKSPACE].repeat_time = millis + KEYBOARD_REPEAT_DELAY;
-        usb_array[usb_writepos] = 0x08; // backspace
-		usb_writepos++;
-    }
-	
-	if (keys[KEY_ARROW_UP].pressed && (millis >= keys[KEY_ARROW_UP].repeat_time))
-    {
-        keys[KEY_ARROW_UP].repeat_time = millis + KEYBOARD_REPEAT_DELAY;
-        usb_array[usb_writepos] = 0x11; // arrow up
-		usb_writepos++;
-    }
-	
-	if (keys[KEY_ARROW_DOWN].pressed && (millis >= keys[KEY_ARROW_DOWN].repeat_time))
-    {
-        keys[KEY_ARROW_DOWN].repeat_time = millis + KEYBOARD_REPEAT_DELAY;
-        usb_array[usb_writepos] = 0x12; // arrow down
-		usb_writepos++;
-    }
-	
-	if (keys[KEY_ARROW_LEFT].pressed && (millis >= keys[KEY_ARROW_LEFT].repeat_time))
-    {
-        keys[KEY_ARROW_LEFT].repeat_time = millis + KEYBOARD_REPEAT_DELAY;
-        usb_array[usb_writepos] = 0x13; // arrow left
-		usb_writepos++;
-    }
-	
-	if (keys[KEY_ARROW_RIGHT].pressed && (millis >= keys[KEY_ARROW_RIGHT].repeat_time))
-    {
-        keys[KEY_ARROW_RIGHT].repeat_time = millis + KEYBOARD_REPEAT_DELAY;
-        usb_array[usb_writepos] = 0x14; // arrow right
-		usb_writepos++;
-    }
-	
-	if (keys[KEY_ESCAPE].pressed && (millis >= keys[KEY_ESCAPE].repeat_time))
-    {
-        keys[KEY_ESCAPE].repeat_time = millis + KEYBOARD_REPEAT_DELAY;
-        usb_array[usb_writepos] = 0x1B; // escape
-		usb_writepos++;
-    }
-    
-    // I'm choosing to handle the NUM LOCK, CAPS LOCK and SCROLL LOCK keys separately because they (usually) have an LED to set
-    // I'm also choosing to only handle the key pressed when the keys are *released*
-    if (keys[KEY_NUMLOCK].released)
-    {
-        keyboard_status_toggle(KEY_NUMLOCK);
-        keys[KEY_NUMLOCK].released = 0;
-    }
-    if (keys[KEY_CAPSLOCK].released)
-    {
-        keyboard_status_toggle(KEY_CAPSLOCK);
-        keys[KEY_CAPSLOCK].released = 0;
-    }
-    if (keys[KEY_SCROLLLOCK].released)
-    {
-        keyboard_status_toggle(KEY_SCROLLLOCK);
-        keys[KEY_SCROLLLOCK].released = 0;
-    }
+	for (unsigned int i=0; i<KEYBOARD_NUM_KEYS; i++)
+	{
+		if (keys[i].pressed && (millis >= keys[i].repeat_time))
+		{
+		    keys[i].repeat_time = millis + KEYBOARD_REPEAT_DELAY;
+		   
+			if (SHIFT_PRESSED)
+			{
+				usb_array[usb_writepos] = usb_conversion[i+0x80];
+				usb_writepos++;
+			}
+			else
+			{
+				usb_array[usb_writepos] = usb_conversion[i];
+				usb_writepos++;
+			}
+		}
+	}
 }
 
 
@@ -3053,25 +3085,25 @@ void Tetra()
 			}
 		}
 
-		decimal_characters((unsigned int)((horz + 0x05) * 8), vert * 8, tetra_vars.lines[0]);
+		display_decimal((unsigned int)((horz + 0x05) * 8), vert * 8, tetra_vars.lines[0]);
 
-		if (tetra_vars.new_piece[0] == 0) normal_character(horz * 8, vert * 8, 'I');
-		else if (tetra_vars.new_piece[0] == 1) normal_character(horz * 8, vert * 8, 'J');
-		else if (tetra_vars.new_piece[0] == 2) normal_character(horz * 8, vert * 8, 'L');
-		else if (tetra_vars.new_piece[0] == 3) normal_character(horz * 8, vert * 8, 'O');
-		else if (tetra_vars.new_piece[0] == 4) normal_character(horz * 8, vert * 8, 'S');
-		else if (tetra_vars.new_piece[0] == 5) normal_character(horz * 8, vert * 8, 'T');
-		else if (tetra_vars.new_piece[0] == 6) normal_character(horz * 8, vert * 8, 'Z');
+		if (tetra_vars.new_piece[0] == 0) display_character(horz * 8, vert * 8, 'I');
+		else if (tetra_vars.new_piece[0] == 1) display_character(horz * 8, vert * 8, 'J');
+		else if (tetra_vars.new_piece[0] == 2) display_character(horz * 8, vert * 8, 'L');
+		else if (tetra_vars.new_piece[0] == 3) display_character(horz * 8, vert * 8, 'O');
+		else if (tetra_vars.new_piece[0] == 4) display_character(horz * 8, vert * 8, 'S');
+		else if (tetra_vars.new_piece[0] == 5) display_character(horz * 8, vert * 8, 'T');
+		else if (tetra_vars.new_piece[0] == 6) display_character(horz * 8, vert * 8, 'Z');
 
 		if (tetra_vars.game_over[0] != 0x00)
 		{
-			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "Press \\");
-			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "Button\\");
+			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "Press \\");
+			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "Button\\");
 		}
 		else
 		{
-			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "      \\");
-			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "      \\");
+			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "      \\");
+			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "      \\");
 		}
 		
 		vert = 0x06;
@@ -3126,25 +3158,25 @@ void Tetra()
 			}
 		}
 
-		decimal_characters((unsigned int)((horz + 0x05) * 8), vert * 8, tetra_vars.lines[1]);
+		display_decimal((unsigned int)((horz + 0x05) * 8), vert * 8, tetra_vars.lines[1]);
 
-		if (tetra_vars.new_piece[1] == 0) normal_character(horz * 8, vert * 8, 'I');
-		else if (tetra_vars.new_piece[1] == 1) normal_character(horz * 8, vert * 8, 'J');
-		else if (tetra_vars.new_piece[1] == 2) normal_character(horz * 8, vert * 8, 'L');
-		else if (tetra_vars.new_piece[1] == 3) normal_character(horz * 8, vert * 8, 'O');
-		else if (tetra_vars.new_piece[1] == 4) normal_character(horz * 8, vert * 8, 'S');
-		else if (tetra_vars.new_piece[1] == 5) normal_character(horz * 8, vert * 8, 'T');
-		else if (tetra_vars.new_piece[1] == 6) normal_character(horz * 8, vert * 8, 'Z');
+		if (tetra_vars.new_piece[1] == 0) display_character(horz * 8, vert * 8, 'I');
+		else if (tetra_vars.new_piece[1] == 1) display_character(horz * 8, vert * 8, 'J');
+		else if (tetra_vars.new_piece[1] == 2) display_character(horz * 8, vert * 8, 'L');
+		else if (tetra_vars.new_piece[1] == 3) display_character(horz * 8, vert * 8, 'O');
+		else if (tetra_vars.new_piece[1] == 4) display_character(horz * 8, vert * 8, 'S');
+		else if (tetra_vars.new_piece[1] == 5) display_character(horz * 8, vert * 8, 'T');
+		else if (tetra_vars.new_piece[1] == 6) display_character(horz * 8, vert * 8, 'Z');
 
 		if (tetra_vars.game_over[1] != 0x00)
 		{
-			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "Press \\");
-			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "Button\\");
+			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "Press \\");
+			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "Button\\");
 		}
 		else
 		{
-			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "      \\");
-			string_characters((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "      \\");
+			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "      \\");
+			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "      \\");
 		}
 	}
 };
@@ -3349,11 +3381,11 @@ void Scratchpad()
 		}
 	}
 	
-	inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+	display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 	
 	while (1)
 	{
-		key_value = keyboard_character();
+		key_value = input_character();
 		
 		// if device connected...
 		if (USB_DEVICE_CONNECTED)
@@ -3403,11 +3435,11 @@ void Scratchpad()
 					}
 				}
 	
-				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x0D) // return
 			{
-				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				pos_x = 0x00;
 				pos_y += 8;
@@ -3446,11 +3478,11 @@ void Scratchpad()
 					pos_y -= 8;
 				}
 				
-				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x08) // backspace
 			{
-				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_x >= 8)
 				{
@@ -3459,64 +3491,64 @@ void Scratchpad()
 				
 				scratchpad_buffer[pos_x/8][pos_y/8] = ' ';
 				
-				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x11) // up
 			{
-				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_y >= 8)
 				{
 					pos_y -= 8;
 				}
 				
-				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x12) // down
 			{
-				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_y < 280)
 				{
 					pos_y += 8;
 				}
 				
-				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x13) // left
 			{
-				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_x >= 8)
 				{
 					pos_x -= 8;
 				}
 				
-				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x14) // right
 			{
-				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_x < 384)
 				{
 					pos_x += 8;
 				}
 				
-				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value >= 32)
 			{
 				scratchpad_buffer[pos_x/8][pos_y/8] = key_value;
 				
-				normal_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_x < 384)
 				{
 					pos_x += 0x08;
 				}
 				
-				inverse_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 		}
 	}
@@ -3663,8 +3695,8 @@ int main()
 	// I've had to adjust these values many times...
 	OC1CON = 0x0; // reset OC1
 	OC1CON = 0x00000003; // toggle, use Timer4
-	OC1R = 0x0003; //0x0000; // pixel-sync rise (adjust)
-	OC1RS = 0x0003; //0x0000; // pixel-sync fall (adjust)
+	OC1R = 0x0002; //0x0000; // pixel-sync rise (adjust)
+	OC1RS = 0x0002; //0x0000; // pixel-sync fall (adjust)
 	T4CON = 0x0; // rest Timer4, prescale of 1:1
 	TMR4 = 0x0; // zero out counter
 	PR4 = 0x03; //0x01; // pixel-reset (minus one)
@@ -3778,6 +3810,7 @@ int main()
 	CNCONDbits.ON = 1; // turn on interrupt-on-change
 	CNCONDbits.EDGEDETECT = 1; // edge detect, not mismatch
 	CNNED = 0x1200; // negative edge on RD9 and RD12
+	CNFD = 0x0000; // clear flags
 	
 	IPC30bits.CNDIP = 0x5; // interrupt priority 5
 	IPC30bits.CNDIS = 0x0; // interrupt sub-priority 0
@@ -3887,8 +3920,12 @@ int main()
 		}
 	}
 	
-	// clear keyboard buffer
-	for (unsigned int i=0; i<256; i++) keyboard_array[i] = 0x00;
+	// clear ps2 buffers
+	for (unsigned int i=0; i<256; i++)
+	{
+		ps2_array[0][i] = 0x00;
+		ps2_array[1][i] = 0x00;
+	}
 	
 	
 	// just a 'hello world' over the UART
@@ -3907,16 +3944,16 @@ int main()
 	
 	
 	
-	string_characters(24, 16, "Acolyte Hand PIC'd 32\\");
+	display_string(24, 16, "Acolyte Hand PIC'd 32\\");
 	
-	string_characters(24, 32, " Tetra     \\");
-	string_characters(24, 40, " Bad Apple \\");
-	string_characters(24, 48, " Scratchpad\\");
-	string_characters(24, 56, "           \\");
+	display_string(24, 32, " Tetra     \\");
+	display_string(24, 40, " Bad Apple \\");
+	display_string(24, 48, " Scratchpad\\");
+	display_string(24, 56, "           \\");
 	
 	menu_max = 4; // number of menu items, change accordingly
 	
-	normal_character(24, 32, '>');
+	display_character(24, 32, '>');
 	
 	
 	while (menu_loop > 0)
@@ -3927,11 +3964,11 @@ int main()
 			
 			if (menu_pos > 0)
 			{
-				normal_character(24, 32 + menu_pos * 8, ' ');
+				display_character(24, 32 + menu_pos * 8, ' ');
 					
 				menu_pos--;
 					
-				normal_character(24, 32 + menu_pos * 8, '>');
+				display_character(24, 32 + menu_pos * 8, '>');
 				
 				music_note(523, 250, 0);
 			}
@@ -3943,17 +3980,17 @@ int main()
 			
 			if (menu_pos < menu_max-1)
 			{
-				normal_character(24, 32 + menu_pos * 8, ' ');
+				display_character(24, 32 + menu_pos * 8, ' ');
 
 				menu_pos++;
 
-				normal_character(24, 32 + menu_pos * 8, '>');
+				display_character(24, 32 + menu_pos * 8, '>');
 				
 				music_note(523, 250, 0);
 			}
 		}	
 	
-		menu_key = keyboard_character();
+		menu_key = input_character();
 		
 		// if device connected...
 		if (USB_DEVICE_CONNECTED)
@@ -4057,7 +4094,8 @@ int main()
 	else if (menu_pos == 2) Scratchpad();
 	else if (menu_pos == 3) { }
 	
-
+	
+	
 	while (1)
 	{
 		// blink LED
@@ -4085,7 +4123,7 @@ int main()
 	// infinite loop
 	while (1)
 	{
-		dummy = keyboard_character();
+		dummy = input_character();
 		
 		if (dummy != 0x00)
 		{
