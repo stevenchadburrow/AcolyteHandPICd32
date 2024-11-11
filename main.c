@@ -2182,7 +2182,7 @@ volatile unsigned char sdcard_block[512];
 
 void sdcard_longdelay(void)
 {
-	DelayMS(1); // arbitrary amount of time to delay, should be around 10ms???
+	DelayMS(1); // arbitrary amount of time to delay, only using 1ms here, should be around 10ms???
 }
 
 void sdcard_sendbyte(unsigned int value)
@@ -3371,31 +3371,31 @@ void BadApple()
 		// lock up
 		while (1)
 		{
-			for (unsigned int i=0; i<240; i++)
+			for (unsigned int i=0; i<300; i++)
 			{
-				for (unsigned int j=0; j<640; j++)
+				for (unsigned int j=0; j<800; j++)
 				{
 					screen_buffer[i][j] = 0x00;
 				}
 			}
 			
 			DelayMS(100);
-			//DelayMS(100);
-			//DelayMS(100);
-			//DelayMS(100);
+			DelayMS(100);
+			DelayMS(100);
+			DelayMS(100);
 		
-			for (unsigned int i=0; i<240; i++)
+			for (unsigned int i=0; i<300; i++)
 			{
-				for (unsigned int j=0; j<640; j++)
+				for (unsigned int j=0; j<800; j++)
 				{
 					screen_buffer[i][j] = 0xFF;
 				}
 			}
 			
 			DelayMS(100);
-			//DelayMS(100);
-			//DelayMS(100);
-			//DelayMS(100);
+			DelayMS(100);
+			DelayMS(100);
+			DelayMS(100);
 		}
 	}  
   
@@ -3409,21 +3409,21 @@ void BadApple()
 	
 	while (1) 
 	{
-		x = 80;
-		y = 40;
+		x = 144;
+		y = 25;
 
-		for (unsigned int j=0; j<2; j++)
+		for (unsigned int l=0; l<12; l++)
 		{
 			//sdcard_readblock(address_high, (unsigned int)(address_low + (j * 2)));
-			
+
 			sdcard_disable();
 			sdcard_pump();
-			sdcard_longdelay(); // this is probably not needed
+			//sdcard_longdelay(); // this is probably not needed
 			sdcard_enable();
 			sdcard_sendbyte(0x51); // CMD17 = 0x40 + 0x11 (17 in hex)
 			sdcard_sendbyte((address_high&0x00FF));
-			sdcard_sendbyte((((address_low+(j*2))&0xFF00) >> 8));
-			sdcard_sendbyte(((address_low+(j*2))&0x00FE)); // only blocks of 512 bytes
+			sdcard_sendbyte((((address_low)&0xFF00) >> 8));
+			sdcard_sendbyte(((address_low)&0x00FE)); // only blocks of 512 bytes
 			sdcard_sendbyte(0x00);
 			sdcard_sendbyte(0x01); // CRC (general)
 			temp_value = sdcard_waitresult(); // command response
@@ -3433,9 +3433,9 @@ void BadApple()
 			if (temp_value == 0xFF) { break; }
 			else if (temp_value != 0xFE) { break; }
 
-			for (unsigned int l=0; l<50; l++)
-			{	
-				for (unsigned int i=0; i<10; i++) // packet of 512 bytes
+			for (unsigned int i=0; i<16; i++)
+			{
+				for (unsigned int j=0; j<32; j++) // packet of 512 bytes
 				{					
 					// get value from SDcard
 					value = sdcard_receivebyte();
@@ -3446,71 +3446,40 @@ void BadApple()
 						{
 							screen_buffer[y][x] = 0xFF;
 							screen_buffer[y][x+1] = 0xFF;
-							screen_buffer[y][x+2] = 0xFF;
-							screen_buffer[y][x+3] = 0xFF;
-							screen_buffer[y][x+4] = 0xFF;
-							screen_buffer[y][x+5] = 0xFF;
-							screen_buffer[y][x+6] = 0xFF;
-							screen_buffer[y][x+7] = 0xFF;
-							
-							screen_buffer[y+1][x] = 0xFF;
-							screen_buffer[y+1][x+1] = 0xFF;
-							screen_buffer[y+1][x+2] = 0xFF;
-							screen_buffer[y+1][x+3] = 0xFF;
-							screen_buffer[y+1][x+4] = 0xFF;
-							screen_buffer[y+1][x+5] = 0xFF;
-							screen_buffer[y+1][x+6] = 0xFF;
-							screen_buffer[y+1][x+7] = 0xFF;
 						}
 						else
 						{
 							screen_buffer[y][x] = 0x00;
 							screen_buffer[y][x+1] = 0x00;
-							screen_buffer[y][x+2] = 0x00;
-							screen_buffer[y][x+3] = 0x00;
-							screen_buffer[y][x+4] = 0x00;
-							screen_buffer[y][x+5] = 0x00;
-							screen_buffer[y][x+6] = 0x00;
-							screen_buffer[y][x+7] = 0x00;
-							
-							screen_buffer[y+1][x] = 0x00;
-							screen_buffer[y+1][x+1] = 0x00;
-							screen_buffer[y+1][x+2] = 0x00;
-							screen_buffer[y+1][x+3] = 0x00;
-							screen_buffer[y+1][x+4] = 0x00;
-							screen_buffer[y+1][x+5] = 0x00;
-							screen_buffer[y+1][x+6] = 0x00;
-							screen_buffer[y+1][x+7] = 0x00;
 						}
 
 						value = (unsigned int)(value >> 1);
 
-						x += 8;
+						x += 2;
 					}
 				}
 
-				y += 2;
-				x = 80;
-			}
-			
-			for (unsigned int i=0; i<12; i++)
-			{
-				sdcard_receivebyte();
+				y += 1;
+				x = 144;
 			}
 
 			temp_value = sdcard_receivebyte(); // data packet ends with 0x55 then 0xAA
 			temp_value = sdcard_receivebyte(); // ignore here
 			sdcard_disable();
+			
+			address_low += 0x0002;
+			if (address_low == 0x0000) address_high++; 
 		}
-
-		address_low += 0x0004;
-
-		if (address_low == 0x0000) address_high++; 
 		
-		DelayMS(100);
-		DelayMS(100);
-		//DelayMS(100);
-		//DelayMS(100);
+		// skip next frame entirely!
+		for (unsigned int l=0; l<12; l++)
+		{
+			address_low += 0x0002;
+			if (address_low == 0x0000) address_high++; 
+		}
+		
+		// fine tune delay here
+		DelayMS(3);
 	}
 }
 
@@ -3832,13 +3801,13 @@ int main()
 	CFGCONbits.OCACLK = 1; // use alternate OC/TMR table
 	
 	PB1DIV = 0x00008001; // divide by 2
-	PB2DIV = 0x00008007; //0x00008003; // change PB2 clock to 80 / 4 = 20 MHz for SPI and UART
+	PB2DIV = 0x00008007; //0x00008003; // change PB2 clock to 160 / 8 = 20 MHz for SPI and UART
 	PB3DIV = 0x00008000; // set OC and TMR clock division by 1
 	PB4DIV = 0x00008001; // divide by 2
 	PB5DIV = 0x00008001; // divide by 2
 	//PB6DIV = 0x00008001; // divide by 2
 	PB7DIV = 0x00008000; // CPU clock divide by 1
-	SPLLCON = 0x01270203; //0x02270203; // use PLL to bring external 24 MHz into 200 MHz
+	SPLLCON = 0x01270203; //0x02270203; // use PLL to bring external 24 MHz into 160 MHz
 	
 	// PRECON - Set up prefetch
     PRECONbits.PFMSECEN = 0; // Flash SEC Interrupt Enable (Do not generate an interrupt when the PFMSEC bit is set)
