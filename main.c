@@ -218,22 +218,9 @@ Pin27,RJ11,BUTTON
 #define CTRL_MASK 0x1
 #define ALT_MASK 0x4
 #define SHIFT_MASK 0x2
-#define KEY_A 0x4
-#define KEY_1 0x1E
-#define KEY_SPACE 0x2C
-#define KEY_ENTER 0x28
-#define KEY_BACKSPACE 0x2A
-#define KEY_ARROW_UP 0x52
-#define KEY_ARROW_DOWN 0x51
-#define KEY_ARROW_LEFT 0x50
-#define KEY_ARROW_RIGHT 0x4F
-#define KEY_ESCAPE 0x29
-#define ASCII_A 65
-#define ASCII_a 97
-#define ASCII_ZERO 48
 
 #define KEYBOARD_REPEAT_DELAY 250       // 250ms between key repeats, if a key is held down
-#define USB_HID_REQUEST_DELAY 25        // 25 milliseconds between keyboard report requests
+#define USB_HID_REQUEST_DELAY 25        // 25 device_milliseconds between keyboard report requests
 
 typedef struct
 {
@@ -315,10 +302,10 @@ volatile char HID_STAGE = 0;
 volatile char HID_BUSY = 0;
 
 int config_length;
-HID_KEY keys[KEYBOARD_NUM_KEYS];
+HID_KEY device_keys[KEYBOARD_NUM_KEYS];
 int USB_DEVICE_ADDRESS;
-volatile unsigned long millis;
-unsigned long key_timer;
+volatile unsigned long device_millis;
+unsigned long device_timer;
 char LED_data = 0;
 int USB_EP0_LENGTH = 8;
 
@@ -744,14 +731,14 @@ volatile unsigned int ps2_port = 0x0000;
 volatile unsigned int ps2_flags = 0x0000;
 
 // PS/2 keyboard variables
-volatile char ps2_array[2][256];
+volatile char ps2_state_array[2][256];
+volatile unsigned int ps2_cursor_x[2][256];
+volatile unsigned int ps2_cursor_y[2][256];
 volatile unsigned char ps2_counter[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_buffer[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_writepos[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_readpos[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_sequence[2] = { 0xFF, 0xFF }; // starts with 0xFA acknowledge byte
-volatile unsigned int ps2_cursor_x[2] = { 0x0000, 0x0000 };
-volatile unsigned int ps2_cursor_y[2] = { 0x0000, 0x0000 };
 volatile unsigned char ps2_shift[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_release[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_extended[2] = { 0x00, 0x00 };
@@ -759,11 +746,11 @@ volatile unsigned char ps2_mode[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_ready[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_check[2] = { 0x00, 0x00 };
 
-volatile char usb_array[256];
+volatile char usb_state_array[256];
 volatile unsigned char usb_writepos = 0x00;
 volatile unsigned char usb_readpos = 0x00;
 
-volatile unsigned int millis_delay = 0;
+volatile unsigned int device_millis_delay = 0;
 
 void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_handler()
 {		
@@ -771,12 +758,12 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 	
 	PORTE = 0;
 	
-	millis_delay = millis_delay + 1;
+	device_millis_delay = device_millis_delay + 1;
 	
-	if (millis_delay >= 38) // should be 37.878 really
+	if (device_millis_delay >= 38) // should be 37.878 really
 	{
-		millis_delay = 0;
-		millis++;
+		device_millis_delay = 0;
+		device_millis++;
 	}
 	
 	screen_scanline = screen_scanline + 1; // increment scanline
@@ -814,7 +801,7 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 			} 
 		}
 
-		ps2_counter[0]++;
+		ps2_counter[0] = ps2_counter[0] + 1;
 	}
 	
 	if (((ps2_flags & 0x1000) == 0x1000)) // PS/2 Port 1
@@ -829,7 +816,7 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 			} 
 		}
 
-		ps2_counter[1]++;
+		ps2_counter[1] = ps2_counter[1] + 1;
 	}
 		
 	for (unsigned char p=0; p<2; p++)
@@ -842,6 +829,9 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 
 			if (ps2_ready[p] == 0x00)
 			{
+				ps2_cursor_x[p][0xFF] = 0x0000; // set initial cursor position
+				ps2_cursor_y[p][0xFF] = 0x0000;
+				
 				if (ps2_buffer[p] == 0xAA)
 				{
 					ps2_ready[p] = 0x01; // should be 0xAA byte
@@ -887,9 +877,9 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 					{
 						if (ps2_extended[p] == 0xE0)
 						{
-							ps2_array[p][ps2_writepos[p]] = ps2_conversion[(unsigned char)(ps2_buffer[p] + ps2_shift[p] + 0x80)];
+							ps2_state_array[p][ps2_writepos[p]] = ps2_conversion[(unsigned char)(ps2_buffer[p] + ps2_shift[p] + 0x80)];
 
-							ps2_writepos[p]++;
+							ps2_writepos[p] = ps2_writepos[p] + 1;
 
 							ps2_extended[p] = 0x00;
 						}
@@ -901,9 +891,9 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 							}
 							else
 							{
-								ps2_array[p][ps2_writepos[p]] = ps2_conversion[(unsigned char)(ps2_buffer[p] + ps2_shift[p])];
+								ps2_state_array[p][ps2_writepos[p]] = ps2_conversion[(unsigned char)(ps2_buffer[p] + ps2_shift[p])];
 
-								ps2_writepos[p]++;
+								ps2_writepos[p] = ps2_writepos[p] + 1;
 							}
 						}
 					}
@@ -921,32 +911,76 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 			}
 			else if (ps2_mode[p] == 0x01) // mouse
 			{
-				if (ps2_counter[p] == 0x0B)
+			
+				if (ps2_sequence[p] == 0xFF) // acknowledge 0xFA
 				{
-					ps2_counter[p] = 0x00;
+					ps2_sequence[p] = 0x00;
+				}
+				else if (ps2_sequence[p] == 0x00) // buttons
+				{
+					ps2_state_array[p][ps2_writepos[p]] = ps2_buffer[p];
 
-					if (ps2_sequence[p] == 0xFF) // acknowledge 0xFA
+					ps2_sequence[p] = 0x01;
+				}
+				else if (ps2_sequence[p] == 0x01) // x movement
+				{
+					if ((signed char)(ps2_buffer[p]) < 0)
 					{
-						// do nothing
+						if (ps2_cursor_x[p][(unsigned char)(ps2_writepos[p]-1)] < 0 - (signed char)(ps2_buffer[p]))
+						{
+							ps2_cursor_x[p][ps2_writepos[p]] = 0;
+						}
+						else
+						{
+							ps2_cursor_x[p][ps2_writepos[p]] = 
+								ps2_cursor_x[p][(unsigned char)(ps2_writepos[p]-1)] + (signed char)(ps2_buffer[p]);
+						}
 					}
-					else if (ps2_sequence[p] == 0x00) // buttons
+					else if ((signed char)(ps2_buffer[p]) >= 0)
 					{
-						ps2_array[p][ps2_writepos[p]] = ps2_buffer[p];
+						if (ps2_cursor_x[p][(unsigned char)(ps2_writepos[p]-1)] >= 400 - (signed char)(ps2_buffer[p]))
+						{
+							ps2_cursor_x[p][ps2_writepos[p]] = 400;
+						}
+						else
+						{
+							ps2_cursor_x[p][ps2_writepos[p]] = 
+								ps2_cursor_x[p][(unsigned char)(ps2_writepos[p]-1)] + (signed char)(ps2_buffer[p]);
+						}
+					}
 
-						ps2_writepos[p]++;
-					}
-					else if (ps2_sequence[p] == 0x01) // x movement
+					ps2_sequence[p] = 0x02;
+				}
+				else if (ps2_sequence[p] == 0x02) // y movement
+				{
+					if ((signed char)(ps2_buffer[p]) < 0)
 					{
-						ps2_cursor_x[p] += (signed char)(ps2_buffer[p]);
+						if (ps2_cursor_y[p][(unsigned char)(ps2_writepos[p]-1)] < 0 - (signed char)(ps2_buffer[p]))
+						{
+							ps2_cursor_y[p][ps2_writepos[p]] = 0;
+						}
+						else
+						{
+							ps2_cursor_y[p][ps2_writepos[p]] = 
+								ps2_cursor_y[p][(unsigned char)(ps2_writepos[p]-1)] + (signed char)(ps2_buffer[p]);
+						}
 					}
-					else if (ps2_sequence[p] == 0x02) // y movement
+					else if ((signed char)(ps2_buffer[p]) >= 0)
 					{
-						ps2_cursor_y[p] += (signed char)(ps2_buffer[p]);
+						if (ps2_cursor_y[p][(unsigned char)(ps2_writepos[p]-1)] >= 300 - (signed char)(ps2_buffer[p]))
+						{
+							ps2_cursor_y[p][ps2_writepos[p]] = 300;
+						}
+						else
+						{
+							ps2_cursor_y[p][ps2_writepos[p]] = 
+								ps2_cursor_y[p][(unsigned char)(ps2_writepos[p]-1)] + (signed char)(ps2_buffer[p]);
+						}
 					}
 
-					ps2_sequence[p]++;
+					ps2_sequence[p] = 0x00;
 
-					if (ps2_sequence[p] == 0x03) ps2_sequence[p] = 0x00;
+					ps2_writepos[p] = ps2_writepos[p] + 1;
 				}
 			}
 		}		
@@ -1066,7 +1100,7 @@ void music_note(unsigned int frequency, unsigned int duration, unsigned char cha
 	return;
 };
 
-char input_character()
+char input_keyboard()
 {
 	char value = 0x00;
 	
@@ -1076,7 +1110,44 @@ char input_character()
 		{
 			if (ps2_readpos[p] != ps2_writepos[p])
 			{
-				value = ps2_array[p][ps2_readpos[p]];
+				value = ps2_state_array[p][ps2_readpos[p]];
+
+				ps2_readpos[p]++;
+				
+				break;
+			}
+		}
+	}
+	
+	return value;
+};
+
+char input_mouse(unsigned int *array)
+{
+	char value = 0x00;
+	
+	array[0] = 0;
+	array[1] = 0;
+	array[2] = 0;
+	array[3] = 0;
+	array[4] = 0;
+	
+	for (unsigned char p=0; p<2; p++)
+	{
+		if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x01) // ready and mouse
+		{
+			if (ps2_readpos[p] != ps2_writepos[p])
+			{
+				value = 0x01;
+				
+				if ((ps2_state_array[p][ps2_readpos[p]] & 0x01) == 0x01) array[0] = 0x0001;
+				
+				if ((ps2_state_array[p][ps2_readpos[p]] & 0x02) == 0x02) array[1] = 0x0001;
+				
+				if ((ps2_state_array[p][ps2_readpos[p]] & 0x04) == 0x04) array[2] = 0x0001;
+				
+				array[3] = (unsigned int)(ps2_cursor_x[p][ps2_readpos[p]]);
+				array[4] = (unsigned int)(300 - ps2_cursor_y[p][ps2_readpos[p]]);
 
 				ps2_readpos[p]++;
 				
@@ -1580,7 +1651,7 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     // Keyboard is enumerated!
-                    key_timer = millis + USB_HID_REQUEST_DELAY;
+                    device_timer = device_millis + USB_HID_REQUEST_DELAY;
                     USB_STAGE++;
                     USB_EP0_IF = 0;
                 }
@@ -1588,9 +1659,9 @@ void USB_host_tasks()
             }
             case 36:
             {
-                if (millis > key_timer)
+                if (device_millis > device_timer)
                 {
-                    key_timer = millis + USB_HID_REQUEST_DELAY;                    
+                    device_timer = device_millis + USB_HID_REQUEST_DELAY;                    
                     USBE1CSR1bits.REQPKT = 1;
                 }
                 
@@ -1742,9 +1813,9 @@ void USB_init()
     
     for (cnt = 0; cnt < KEYBOARD_NUM_KEYS; cnt++)
     {
-        keys[cnt].pressed = 0;
-        keys[cnt].released = 0;
-        keys[cnt].repeat_time = 0;
+        device_keys[cnt].pressed = 0;
+        device_keys[cnt].released = 0;
+        device_keys[cnt].repeat_time = 0;
     }
 
     USBCRCONbits.USBIE = 1;
@@ -1995,17 +2066,17 @@ void USB_HID_process_report()
     for (cnt = 0; cnt < KEYBOARD_NUM_KEYS; cnt++)
     {
         // If a key's pressed value is now 0, but it was 1 before, that means it has been released        
-        if ((current_keys_pressed[cnt] == 0) && (keys[cnt].pressed == 1))
+        if ((current_keys_pressed[cnt] == 0) && (device_keys[cnt].pressed == 1))
         {
-            keys[cnt].released = 1; // Key has just been released
-            keys[cnt].pressed = 0;  // Key is no longer pressed
+            device_keys[cnt].released = 1; // Key has just been released
+            device_keys[cnt].pressed = 0;  // Key is no longer pressed
         }
         
         // If a key's pressed value is 1 now, but it was 0 before, that means it has just been pressed
-        if ((current_keys_pressed[cnt] == 1) && (keys[cnt].pressed == 0))
+        if ((current_keys_pressed[cnt] == 1) && (device_keys[cnt].pressed == 0))
         {
-            keys[cnt].pressed = 1;
-            keys[cnt].repeat_time = millis; // Ensures that it will be processed immediately
+            device_keys[cnt].pressed = 1;
+            device_keys[cnt].repeat_time = device_millis; // Ensures that it will be processed immediately
         }
     }
     
@@ -2020,7 +2091,7 @@ void USB_HID_process_report()
     }
 }
 
-void ps2_status_toggle(char keycode)
+void keyboard_status_toggle(char keycode)
 {
     
     if (HID_BUSY) return; // We are already processing a status toggle, skip this one
@@ -2076,22 +2147,22 @@ void ps2_status_toggle(char keycode)
     HID_BUSY = 1;
 }
 
-void handle_keys()
+void keyboard_handle()
 {
 	for (unsigned int i=0; i<KEYBOARD_NUM_KEYS; i++)
 	{
-		if (keys[i].pressed && (millis >= keys[i].repeat_time))
+		if (device_keys[i].pressed && (device_millis >= device_keys[i].repeat_time))
 		{
-		    keys[i].repeat_time = millis + KEYBOARD_REPEAT_DELAY;
+		    device_keys[i].repeat_time = device_millis + KEYBOARD_REPEAT_DELAY;
 		   
 			if (SHIFT_PRESSED)
 			{
-				usb_array[usb_writepos] = usb_conversion[i+0x80];
+				usb_state_array[usb_writepos] = usb_conversion[i+0x80];
 				usb_writepos++;
 			}
 			else
 			{
-				usb_array[usb_writepos] = usb_conversion[i];
+				usb_state_array[usb_writepos] = usb_conversion[i];
 				usb_writepos++;
 			}
 		}
@@ -2583,6 +2654,11 @@ struct tetra_struct_vars tetra_vars;
 
 void Tetra()
 {	
+	unsigned int usb_delay = 0x0000;
+	unsigned int usb_speed = 0x001F;
+	unsigned char usb_directions[4] = { 0, 0, 0, 0 };
+	unsigned char usb_buttons[2] = { 2, 2 };
+	
 	for (volatile unsigned int z=0; z<2; z++)
 	{	
 		tetra_vars.pos_x[z] = 7; // start at 4
@@ -2677,6 +2753,71 @@ void Tetra()
 			}
 		}
 		
+		// if device connected...
+		if (USB_DEVICE_CONNECTED)
+		{
+			USB_host_tasks();
+			USB_HID_tasks();
+			if (USB_EP1_RECEIVED)
+			{
+				USB_EP1_receive(USB_EP1_buffer);
+				USB_HID_process_report();
+				USB_EP1_RECEIVED = 0;
+			}
+			keyboard_handle(); 
+			
+			usb_directions[0] = 0;
+			usb_directions[1] = 0;
+			usb_directions[2] = 0;
+			usb_directions[3] = 0;
+			
+			if (usb_delay > 0x0000) usb_delay--;
+			else
+			{			
+				if (device_keys[0x52].pressed)
+				{
+					usb_directions[0] = 1;
+					usb_delay = usb_speed;
+				}
+				else if (device_keys[0x51].pressed)
+				{
+					usb_directions[1] = 1;
+					usb_delay = usb_speed;
+				}
+				else if (device_keys[0x50].pressed)
+				{
+					usb_directions[2] = 1;
+					usb_delay = usb_speed;
+				}
+				else if (device_keys[0x4F].pressed)
+				{
+					usb_directions[3] = 1;
+					usb_delay = usb_speed;
+				}
+			}
+			
+			if (device_keys[0x2C].pressed || device_keys[0x1B].pressed)
+			{
+				if (usb_buttons[0] == 0) usb_buttons[0] = 1;
+				else usb_buttons[0] = 2;
+			}
+			
+			if (!device_keys[0x2C].pressed && !device_keys[0x1B].pressed)
+			{
+				usb_buttons[0] = 0;
+			}
+			
+			if (device_keys[0x62].pressed || device_keys[0x1D].pressed)
+			{
+				if (usb_buttons[1] == 0) usb_buttons[1] = 1;
+				else usb_buttons[1] = 2;
+			}
+			
+			if (!device_keys[0x62].pressed && !device_keys[0x1D].pressed)
+			{
+				usb_buttons[1] = 0;
+			}
+		}
 		
 		tetra_vars.joy_prev[0] = tetra_vars.joy_curr[0];
 		tetra_vars.joy_curr[0] = 0xFF; 
@@ -2738,31 +2879,44 @@ void Tetra()
 				tetra_vars.joy_prev[z] = tetra_vars.joy_prev[z] | 0xF0;
 			}
 
-			if (((tetra_vars.joy_curr[z] & 0x80) == 0x00) && ((tetra_vars.joy_prev[z] & 0x80) == 0x80)) // up
+			if ((((tetra_vars.joy_curr[z] & 0x80) == 0x00) && ((tetra_vars.joy_prev[z] & 0x80) == 0x80)) ||
+				(usb_directions[0] == 1 && z == 0)) // up
 			{
 				tetra_vars.timer[z] = 1; // not zero
 				tetra_vars.joy_delay[z] = 0;
+				
+				usb_delay = usb_speed;
 			}
-			else if (((tetra_vars.joy_curr[z] & 0x40) == 0x00) && ((tetra_vars.joy_prev[z] & 0x40) == 0x40)) // down
+			else if ((((tetra_vars.joy_curr[z] & 0x40) == 0x00) && ((tetra_vars.joy_prev[z] & 0x40) == 0x40)) ||
+				(usb_directions[1] == 1 && z == 0)) // down
 			{
 				tetra_vars.timer[z] = 0;
 				tetra_vars.joy_delay[z] = 0;
+				
+				usb_delay = usb_speed;
 			}
-			else if (((tetra_vars.joy_curr[z] & 0x20) == 0x00) && ((tetra_vars.joy_prev[z] & 0x20) == 0x20)) // left
+			else if ((((tetra_vars.joy_curr[z] & 0x20) == 0x00) && ((tetra_vars.joy_prev[z] & 0x20) == 0x20)) ||
+				(usb_directions[2] == 1 && z == 0)) // left
 			{
 				tetra_vars.new_pos_x[z]--;
 				tetra_vars.joy_delay[z] = 0;
+				
+				usb_delay = usb_speed;
 			}
-			else if (((tetra_vars.joy_curr[z] & 0x10) == 0x00) && ((tetra_vars.joy_prev[z] & 0x10) == 0x10)) // right
+			else if ((((tetra_vars.joy_curr[z] & 0x10) == 0x00) && ((tetra_vars.joy_prev[z] & 0x10) == 0x10)) ||
+				(usb_directions[3] == 1 && z == 0)) // right
 			{
 				tetra_vars.new_pos_x[z]++;
 				tetra_vars.joy_delay[z] = 0;
+				
+				usb_delay = usb_speed;
 			}
-			else if (((tetra_vars.joy_curr[z] & 0x08) == 0x00) && ((tetra_vars.joy_prev[z] & 0x08) == 0x08)) // button 1
+			else if ((((tetra_vars.joy_curr[z] & 0x08) == 0x00) && ((tetra_vars.joy_prev[z] & 0x08) == 0x08)) ||
+				(usb_buttons[0] == 1 && z == 0)) // button 1
 			{
 				if (tetra_vars.game_over[z] != 0)
 				{
-					tetra_vars.game_over[z] = 2; // exit game
+					tetra_vars.game_over[z] = 0; // play again
 					
 					tetra_vars.speed[z] = 0;
 					
@@ -2789,8 +2943,11 @@ void Tetra()
 					if (tetra_vars.new_rot[z] == 4) tetra_vars.new_rot[z] = 0;
 					tetra_vars.joy_delay[z] = 0;
 				}
+				
+				usb_delay = usb_speed;
 			}
-			else if (((tetra_vars.joy_curr[z] & 0x04) == 0x00) && ((tetra_vars.joy_prev[z] & 0x04) == 0x04)) // button 2
+			else if ((((tetra_vars.joy_curr[z] & 0x04) == 0x00) && ((tetra_vars.joy_prev[z] & 0x04) == 0x04)) ||
+				(usb_buttons[1] == 1 && z == 0)) // button 2
 			{
 				if (tetra_vars.game_over[z] != 0)
 				{
@@ -2821,6 +2978,8 @@ void Tetra()
 					else tetra_vars.new_rot[z]--;
 					tetra_vars.joy_delay[z] = 0;
 				}
+				
+				usb_delay = usb_speed;
 			}
 			
 			if (tetra_vars.game_over[z] != 0) continue;
@@ -3361,9 +3520,12 @@ volatile char scratchpad_buffer[50][36];
 void Scratchpad()
 {
 	char key_value = 0x00;
+	char key_prev = '*';
 	
 	unsigned int pos_x = 0x00;
 	unsigned int pos_y = 0x00;
+	
+	unsigned int mouse_state[5] = { 0, 0, 0, 0, 0 };
 	
 	for (unsigned int y=0; y<300; y++)
 	{
@@ -3385,7 +3547,7 @@ void Scratchpad()
 	
 	while (1)
 	{
-		key_value = input_character();
+		key_value = input_keyboard();
 		
 		// if device connected...
 		if (USB_DEVICE_CONNECTED)
@@ -3398,13 +3560,13 @@ void Scratchpad()
 				USB_HID_process_report();
 				USB_EP1_RECEIVED = 0;
 			}
-			handle_keys(); 
+			keyboard_handle(); 
 			
 			if (key_value == 0x00)
 			{
 				if (usb_readpos != usb_writepos)
 				{
-					key_value = usb_array[usb_readpos];
+					key_value = usb_state_array[usb_readpos];
 					usb_readpos++;
 				}
 			}
@@ -3539,6 +3701,8 @@ void Scratchpad()
 			}
 			else if (key_value >= 32)
 			{
+				key_prev = key_value;
+				
 				scratchpad_buffer[pos_x/8][pos_y/8] = key_value;
 				
 				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
@@ -3551,6 +3715,30 @@ void Scratchpad()
 				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 		}
+		
+		if (input_mouse((unsigned int *)mouse_state) != 0x00)
+		{
+			display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+			
+			pos_x = (unsigned int)(mouse_state[3] / 8) * 8;
+			
+			if (pos_x > 384) pos_x = 384;
+			
+			pos_y = (unsigned int)(mouse_state[4] / 8) * 8;
+			
+			if (pos_y > 280) pos_y = 280;
+			
+			if (mouse_state[0] != 0x0000) // left
+			{
+				scratchpad_buffer[pos_x/8][pos_y/8] = key_prev;
+			}
+			else if (mouse_state[1] != 0x0000) // right
+			{
+				scratchpad_buffer[pos_x/8][pos_y/8] = ' ';
+			}
+			
+			display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);	
+		}
 	}
 }
 
@@ -3561,6 +3749,7 @@ volatile unsigned char menu_max = 1;
 volatile unsigned char menu_loop = 1;
 volatile unsigned char menu_key = 0;
 volatile unsigned int menu_joy = 0xFFFF;
+volatile unsigned int menu_mouse[5] = { 0, 0, 0, 0, 0 };
 volatile unsigned char menu_up = 0;
 volatile unsigned char menu_down = 0;
 
@@ -3868,7 +4057,7 @@ int main()
 	sdcard_block[0] = SPI1BUF; // dummy read
 	
 	/*
-	// Timer for 'millis' used with USB
+	// Timer for 'device_millis' used with USB
     T1CON = 0x0; // disable timer 1
     TMR1 = 0; // clear timer 1
     IEC0bits.T1IE = 1; // Enable interrupt for timer 1
@@ -3880,8 +4069,8 @@ int main()
     T1CONbits.TON = 1; // Turn on the timer 1
     */
 	
-    // Init millis
-    millis = 0;
+    // Init device_millis
+    device_millis = 0;
 	
 	
 	
@@ -3923,8 +4112,8 @@ int main()
 	// clear ps2 buffers
 	for (unsigned int i=0; i<256; i++)
 	{
-		ps2_array[0][i] = 0x00;
-		ps2_array[1][i] = 0x00;
+		ps2_state_array[0][i] = 0x00;
+		ps2_state_array[1][i] = 0x00;
 	}
 	
 	
@@ -3990,7 +4179,7 @@ int main()
 			}
 		}	
 	
-		menu_key = input_character();
+		menu_key = input_keyboard();
 		
 		// if device connected...
 		if (USB_DEVICE_CONNECTED)
@@ -4003,13 +4192,13 @@ int main()
 				USB_HID_process_report();
 				USB_EP1_RECEIVED = 0;
 			}
-			handle_keys(); 
+			keyboard_handle(); 
 		
 			if (menu_key == 0x00)
 			{
 				if (usb_readpos != usb_writepos)
 				{
-					menu_key = usb_array[usb_readpos];
+					menu_key = usb_state_array[usb_readpos];
 					usb_readpos++;
 				}
 			}
@@ -4084,6 +4273,30 @@ int main()
 		{
 			menu_loop = 0;
 		}
+		
+		if (input_mouse((unsigned int *)menu_mouse) != 0x00)
+		{
+			for (unsigned char i=0; i<menu_max; i++)
+			{
+				if (menu_mouse[4] <= (unsigned int)(i * 300 / menu_max))
+				{
+					display_character(24, 32 + menu_pos * 8, ' ');
+
+					menu_pos = i;
+
+					display_character(24, 32 + menu_pos * 8, '>');
+
+					music_note(523, 250, 0);
+					
+					break;
+				}
+			}
+			
+			if (menu_mouse[0] != 0x0000)
+			{
+				menu_loop = 0;
+			}
+		}
 	}
 
 	music_note(1047, 250, 0);
@@ -4093,8 +4306,7 @@ int main()
 	else if (menu_pos == 1) BadApple();
 	else if (menu_pos == 2) Scratchpad();
 	else if (menu_pos == 3) { }
-	
-	
+
 	
 	while (1)
 	{
@@ -4123,7 +4335,7 @@ int main()
 	// infinite loop
 	while (1)
 	{
-		dummy = input_character();
+		dummy = input_keyboard();
 		
 		if (dummy != 0x00)
 		{
