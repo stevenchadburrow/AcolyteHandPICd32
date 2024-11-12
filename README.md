@@ -8,7 +8,7 @@ Comes with attachment possibilities for an SPI Micro SDcard Adapter and a FT232R
 
 *** Board Edits: Exchange the 74HCT273 for a 74AHCT273 for faster timing responses and thus less jitter and bleeding. ***
 
-<img src="BoardPopulated.jpg">
+<img src="BOARD-PICTURE.jpg">
 
 <img src="MIKU-MENU.jpg">
 
@@ -16,4 +16,4 @@ Comes with attachment possibilities for an SPI Micro SDcard Adapter and a FT232R
 
 <img src="BAD-APPLE.jpg">
 
-<img src="SCRATCH.jpg">
+<img src="SCRATCH-PAD.jpg">
