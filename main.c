@@ -139,7 +139,7 @@ This setup *must* have a 74HCT273 and the pixel clock is also using an OC
 /*
 // Video Color Signals
 Pin5,RE7,RED-A
-Pin4,RE6,RED-B
+Pin4,RE6,RED-BUSB_LED_data
 Pin3,RE5,RED-C
 Pin144,RE4,GREEN-A
 Pin143,RE3,GREEN-B
@@ -164,8 +164,8 @@ Pin109,RD1,SCK1
 Pin118,RD4,CS
 
 // PS/2 Keyboard/Mouse
-Pin98,RD9,KEY-CLK
-Pin99,RD10,KEY-DAT
+Pin97,RD9,KEY-CLK
+Pin98,RD10,KEY-DAT
 Pin112,RD12,MOUSE-CLK
 Pin113,RD13,MOUSE-DAT
 
@@ -202,7 +202,7 @@ Pin69,RD14,U3TX
 Pin70,RD15,U3RX
 
 // LED
-Pin97,RD11,LED
+Pin99,RD11,LED
 
 // Button
 Pin27,RJ11,BUTTON
@@ -213,18 +213,18 @@ Pin27,RJ11,BUTTON
 
 #define USB_ENDPOINT_BUFFER_SIZE 64
 #define USB_EP0_WAIT_TIMEOUT 40000
-#define VBUS_VALID 0x3
+#define USB_VBUS_VALID 0x3
 
-#define KEYBOARD_NUM_KEYS 128
-#define KEY_NUMLOCK 0x53
-#define KEY_CAPSLOCK 0x39
-#define KEY_SCROLLLOCK 0x47
-#define CTRL_MASK 0x1
-#define ALT_MASK 0x4
-#define SHIFT_MASK 0x2
+#define USB_KEYBOARD_NUM_KEYS 128
+#define USB_KEY_NUMLOCK 0x53
+#define USB_KEY_CAPSLOCK 0x39
+#define USB_KEY_SCROLLLOCK 0x47
+#define USB_CTRL_MASK 0x1
+#define USB_ALT_MASK 0x4
+#define USB_SHIFT_MASK 0x2
 
-#define KEYBOARD_REPEAT_DELAY 250       // 250ms between key repeats, if a key is held down
-#define USB_HID_REQUEST_DELAY 25        // 25 device_milliseconds between keyboard report requests
+#define USB_KEYBOARD_REPEAT_DELAY 250       // 250ms between key repeats, if a key is held down
+#define USB_HID_REQUEST_DELAY 25        // 25 USB_device_milliseconds between keyboard report requests
 
 typedef struct
 {
@@ -232,7 +232,7 @@ typedef struct
     unsigned long repeat_time;  // When should this press be repeated (if it's pressed)?
     unsigned char released;     // Was the key released?
     
-} HID_KEY;
+} USB_HID_KEY;
 
 typedef struct {
   unsigned char  bLength;
@@ -270,47 +270,33 @@ unsigned char USB_DEVICE_SET_REPORT[8] = {0x21, 0x09, 0x00, 0x02, 0x00, 0x00, 0x
 unsigned char USB_DEVICE_SET_IDLE[8] = {0x21, 0x0A, 0x00, 0x7D, 0x00, 0x00, 0x00, 0x00};
 unsigned char USB_DEVICE_SET_PROTOCOL[8] = {0x21, 0x0B, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-unsigned char numbers_shift[10] =
-{
-    ')', // 0
-    '!', // 1
-    '@', // 2
-    '#', // 3
-    '$', // 4
-    '%', // 5
-    '^', // 6
-    '&', // 7
-    '*', // 8
-    '('  // 9
-};
-
 unsigned char __attribute__ ((coherent, aligned(8))) USB_EP0_buffer[USB_ENDPOINT_BUFFER_SIZE];
 unsigned char __attribute__ ((coherent, aligned(8))) USB_EP1_buffer[USB_ENDPOINT_BUFFER_SIZE];
-USB_DEVICE_DESCRIPTOR device_descriptor;
-unsigned char device_configuration[255];
-unsigned char device_name[255];
-unsigned char HID_report[512];
+USB_DEVICE_DESCRIPTOR USB_device_descriptor;
+unsigned char USB_device_configuration[255];
+unsigned char USB_device_name[255];
+unsigned char USB_HID_report[512];
 
-unsigned char NUM_LOCK_STATUS = 0;
-unsigned char CAPS_LOCK_STATUS = 0;
-unsigned char SCROLL_LOCK_STATUS = 0;
-unsigned char SHIFT_PRESSED = 0;
-unsigned char CTRL_PRESSED = 0;
-unsigned char ALT_PRESSED = 0;
+unsigned char USB_NUM_LOCK_STATUS = 0;
+unsigned char USB_CAPS_LOCK_STATUS = 0;
+unsigned char USB_SCROLL_LOCK_STATUS = 0;
+unsigned char USB_SHIFT_PRESSED = 0;
+unsigned char USB_CTRL_PRESSED = 0;
+unsigned char USB_ALT_PRESSED = 0;
 volatile char USB_EP0_RECEIVED = 0;
 volatile char USB_EP0_IF = 0;
 volatile char USB_EP1_RECEIVED = 0;
 volatile char USB_DEVICE_CONNECTED = 0;
 volatile char USB_STAGE = 0;
-volatile char HID_STAGE = 0;
-volatile char HID_BUSY = 0;
+volatile char USB_HID_STAGE = 0;
+volatile char USB_HID_BUSY = 0;
 
-int config_length;
-HID_KEY device_keys[KEYBOARD_NUM_KEYS];
+int USB_config_length;
+USB_HID_KEY USB_device_keys[USB_KEYBOARD_NUM_KEYS];
 int USB_DEVICE_ADDRESS;
-volatile unsigned long device_millis;
-unsigned long device_timer;
-char LED_data = 0;
+volatile unsigned long USB_device_millis;
+unsigned long USB_device_timer;
+char USB_LED_data = 0;
 int USB_EP0_LENGTH = 8;
 
 
@@ -754,7 +740,7 @@ volatile char usb_state_array[256];
 volatile unsigned char usb_writepos = 0x00;
 volatile unsigned char usb_readpos = 0x00;
 
-volatile unsigned int device_millis_delay = 0;
+volatile unsigned int USB_device_millis_delay = 0;
 
 void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_handler()
 {		
@@ -762,12 +748,12 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 	
 	PORTE = 0;
 	
-	device_millis_delay = device_millis_delay + 1;
+	USB_device_millis_delay = USB_device_millis_delay + 1;
 	
-	if (device_millis_delay >= 38) // should be 37.878 really
+	if (USB_device_millis_delay >= 38) // should be 37.878 really
 	{
-		device_millis_delay = 0;
-		device_millis++;
+		USB_device_millis_delay = 0;
+		USB_device_millis++;
 	}
 	
 	screen_scanline = screen_scanline + 1; // increment scanline
@@ -903,9 +889,30 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 					}
 					else
 					{
-						if (ps2_buffer[p] == 0x12 || ps2_buffer[p] == 0x59)
+						if (ps2_extended[p] == 0xE0)
 						{
-							ps2_shift[p] = 0x00;
+							ps2_state_array[p][ps2_writepos[p]] = 0x0B; // release character, ignore next character if needed
+							ps2_writepos[p] = ps2_writepos[p] + 1;
+							
+							ps2_state_array[p][ps2_writepos[p]] = ps2_conversion[(unsigned char)(ps2_buffer[p] + ps2_shift[p] + 0x80)];
+							ps2_writepos[p] = ps2_writepos[p] + 1;
+
+							ps2_extended[p] = 0x00;
+						}
+						else
+						{
+							if (ps2_buffer[p] == 0x12 || ps2_buffer[p] == 0x59)
+							{
+								ps2_shift[p] = 0x00;
+							}
+							else
+							{
+								ps2_state_array[p][ps2_writepos[p]] = 0x0B; // release character, ignore next character if needed
+								ps2_writepos[p] = ps2_writepos[p] + 1;
+								
+								ps2_state_array[p][ps2_writepos[p]] = ps2_conversion[(unsigned char)(ps2_buffer[p] + ps2_shift[p])];
+								ps2_writepos[p] = ps2_writepos[p] + 1;
+							}
 						}
 
 						ps2_release[p] = 0x00;
@@ -915,7 +922,6 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 			}
 			else if (ps2_mode[p] == 0x01) // mouse
 			{
-			
 				if (ps2_sequence[p] == 0xFF) // acknowledge 0xFA
 				{
 					ps2_sequence[p] = 0x00;
@@ -1104,7 +1110,7 @@ void music_note(unsigned int frequency, unsigned int duration, unsigned char cha
 	return;
 };
 
-char input_keyboard()
+char input_ps2_keyboard()
 {
 	char value = 0x00;
 	
@@ -1114,9 +1120,16 @@ char input_keyboard()
 		{
 			if (ps2_readpos[p] != ps2_writepos[p])
 			{
-				value = ps2_state_array[p][ps2_readpos[p]];
+				if (ps2_state_array[p][ps2_readpos[p]] == 0x0B) // release
+				{
+					ps2_readpos[p] += 2; // skip
+				}
+				else
+				{
+					value = ps2_state_array[p][ps2_readpos[p]]; // press
 
-				ps2_readpos[p]++;
+					ps2_readpos[p]++;
+				}
 				
 				break;
 			}
@@ -1126,7 +1139,7 @@ char input_keyboard()
 	return value;
 };
 
-char input_mouse(unsigned int *array)
+char input_ps2_mouse(unsigned int *array)
 {
 	char value = 0x00;
 	
@@ -1157,6 +1170,22 @@ char input_mouse(unsigned int *array)
 				
 				break;
 			}
+		}
+	}
+	
+	return value;
+};
+
+char input_usb_keyboard()
+{
+	char value = 0x00;
+	
+	for (unsigned char p=0; p<2; p++)
+	{
+		if (usb_readpos != usb_writepos)
+		{
+			value = usb_state_array[usb_readpos];
+			usb_readpos++;
 		}
 	}
 	
@@ -1292,11 +1321,11 @@ void USB_host_tasks()
                 {
 					// Receive X bytes
                     received_length = USBE0CSR2bits.RXCNT;
-                    USB_EP0_receive((unsigned char *)&device_descriptor, USBE0CSR2bits.RXCNT); //&device_descriptor, USBE0CSR2bits.RXCNT);
-                    if (device_descriptor.bMaxPacketSize0 > 0)
+                    USB_EP0_receive((unsigned char *)&USB_device_descriptor, USBE0CSR2bits.RXCNT); //&USB_device_descriptor, USBE0CSR2bits.RXCNT);
+                    if (USB_device_descriptor.bMaxPacketSize0 > 0)
                     {
                         //Max endpoint 0 length is X bytes
-                        USB_EP0_LENGTH = device_descriptor.bMaxPacketSize0;
+                        USB_EP0_LENGTH = USB_device_descriptor.bMaxPacketSize0;
                     }
                     // Got USB version
                     USB_STAGE++;
@@ -1357,7 +1386,7 @@ void USB_host_tasks()
                 {
                     // Should receive 0 bytes
                     received_length = USBE0CSR2bits.RXCNT;
-                    USB_EP0_receive(device_configuration, USBE0CSR2bits.RXCNT);
+                    USB_EP0_receive(USB_device_configuration, USBE0CSR2bits.RXCNT);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
                 }
@@ -1403,7 +1432,7 @@ void USB_host_tasks()
                 {
 					// Receive X bytes
                     received_length = USBE0CSR2bits.RXCNT;
-                    USB_EP0_receive(device_configuration, received_length);
+                    USB_EP0_receive(USB_device_configuration, received_length);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
                 }
@@ -1422,8 +1451,8 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
 					// Sending request for full device configuration
-                    config_length = device_configuration[2];
-                    USB_DEVICE_CONFIGURATION_REQUEST[6] = device_configuration[2];
+                    USB_config_length = USB_device_configuration[2];
+                    USB_DEVICE_CONFIGURATION_REQUEST[6] = USB_device_configuration[2];
                     USB_EP0_send_setup(USB_DEVICE_CONFIGURATION_REQUEST, 8);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
@@ -1446,7 +1475,7 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
 					// Receive X bytes
-                    received_length = USB_EP0_receive_long(device_configuration, USBE0CSR2bits.RXCNT);
+                    received_length = USB_EP0_receive_long(USB_device_configuration, USBE0CSR2bits.RXCNT);
                     USB_EP0_IF = 0;                   
                     USB_STAGE++;
                 }
@@ -1488,9 +1517,9 @@ void USB_host_tasks()
                 {
 					// Receive X bytes
                     received_length = USBE0CSR2bits.RXCNT;
-                    USB_EP0_receive(device_name, received_length);
+                    USB_EP0_receive(USB_device_name, received_length);
                     // Use the received length to modify the GET STRING request
-                    USB_DEVICE_STRING_REQUEST[6] = device_name[0];
+                    USB_DEVICE_STRING_REQUEST[6] = USB_device_name[0];
                     USB_EP0_IF = 0;
                     USB_STAGE++;
                 }
@@ -1523,7 +1552,7 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
 					// Receive device name as string
-                    received_length = USB_EP0_receive_long(device_name, USBE0CSR2bits.RXCNT);
+                    received_length = USB_EP0_receive_long(USB_device_name, USBE0CSR2bits.RXCNT);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
                 }
@@ -1636,7 +1665,7 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
 					// Receive X bytes
-                    received_length = USB_EP0_receive_long(HID_report, USBE0CSR2bits.RXCNT);
+                    received_length = USB_EP0_receive_long(USB_HID_report, USBE0CSR2bits.RXCNT);
                     USB_EP0_IF = 0;
                     USB_STAGE++;
                 }
@@ -1655,7 +1684,7 @@ void USB_host_tasks()
                 if (USB_EP0_IF)
                 {
                     // Keyboard is enumerated!
-                    device_timer = device_millis + USB_HID_REQUEST_DELAY;
+                    USB_device_timer = USB_device_millis + USB_HID_REQUEST_DELAY;
                     USB_STAGE++;
                     USB_EP0_IF = 0;
                 }
@@ -1663,9 +1692,9 @@ void USB_host_tasks()
             }
             case 36:
             {
-                if (device_millis > device_timer)
+                if (USB_device_millis > USB_device_timer)
                 {
-                    device_timer = device_millis + USB_HID_REQUEST_DELAY;                    
+                    USB_device_timer = USB_device_millis + USB_HID_REQUEST_DELAY;                    
                     USBE1CSR1bits.REQPKT = 1;
                 }
                 
@@ -1678,7 +1707,7 @@ void USB_host_tasks()
 // USB_HID_tasks() exists purely for handling the setting of LEDs while not blocking the rest of my code
 void USB_HID_tasks()
 {
-    switch (HID_STAGE)
+    switch (USB_HID_STAGE)
     {
         case 0:
         {
@@ -1693,7 +1722,7 @@ void USB_HID_tasks()
             
             // Wait for transmission to end
             USB_EP0_IF = 0;
-            HID_STAGE++;
+            USB_HID_STAGE++;
             break;
         }
         case 2:
@@ -1703,9 +1732,9 @@ void USB_HID_tasks()
             {
                 USB_EP0_IF = 0;
                 // Now send the actual 1-byte long report, but NOT as a setup packet. Yay
-                USB_EP0_buffer[0] = LED_data;
+                USB_EP0_buffer[0] = USB_LED_data;
                 USB_EP0_send(USB_EP0_buffer, 1);
-                HID_STAGE++;
+                USB_HID_STAGE++;
             }
 
             break;
@@ -1716,7 +1745,7 @@ void USB_HID_tasks()
             {
                 // Send handshake
                 USB_EP0_IF = 0;
-                HID_STAGE++;
+                USB_HID_STAGE++;
                 *((unsigned char*)&USBE0CSR0 + 0x2) = 0x60;  // Set STATUS and REQPKT, no data stage
             }
 
@@ -1728,8 +1757,8 @@ void USB_HID_tasks()
             {
                 // Send handshake
                 USB_EP0_IF = 0;
-                HID_STAGE = 0;
-                HID_BUSY = 0;
+                USB_HID_STAGE = 0;
+                USB_HID_BUSY = 0;
                 *((unsigned char*)&USBE0CSR0 + 0x2) &= ~0x41; // Clear STATUS and RXPKTRDY
             }
 
@@ -1815,11 +1844,11 @@ void USB_init()
     volatile uint8_t * usbBaseAddress;
     int cnt;
     
-    for (cnt = 0; cnt < KEYBOARD_NUM_KEYS; cnt++)
+    for (cnt = 0; cnt < USB_KEYBOARD_NUM_KEYS; cnt++)
     {
-        device_keys[cnt].pressed = 0;
-        device_keys[cnt].released = 0;
-        device_keys[cnt].repeat_time = 0;
+        USB_device_keys[cnt].pressed = 0;
+        USB_device_keys[cnt].released = 0;
+        USB_device_keys[cnt].repeat_time = 0;
     }
 
     USBCRCONbits.USBIE = 1;
@@ -2051,11 +2080,11 @@ void USB_HOST_reset_device()
 void USB_HID_process_report()
 {
     int cnt;
-    char current_keys_pressed[KEYBOARD_NUM_KEYS];
+    char current_keys_pressed[USB_KEYBOARD_NUM_KEYS];
     
     // Clear the current_keys_pressed array first
     //memset(current_keys_pressed, 0, sizeof(current_keys_pressed));
-    for (cnt = 0; cnt < KEYBOARD_NUM_KEYS; cnt++)
+    for (cnt = 0; cnt < USB_KEYBOARD_NUM_KEYS; cnt++)
 	{
 		current_keys_pressed[cnt] = 0;
 	}
@@ -2067,77 +2096,77 @@ void USB_HID_process_report()
     }
     
     // Compare this to the current key status
-    for (cnt = 0; cnt < KEYBOARD_NUM_KEYS; cnt++)
+    for (cnt = 0; cnt < USB_KEYBOARD_NUM_KEYS; cnt++)
     {
         // If a key's pressed value is now 0, but it was 1 before, that means it has been released        
-        if ((current_keys_pressed[cnt] == 0) && (device_keys[cnt].pressed == 1))
+        if ((current_keys_pressed[cnt] == 0) && (USB_device_keys[cnt].pressed == 1))
         {
-            device_keys[cnt].released = 1; // Key has just been released
-            device_keys[cnt].pressed = 0;  // Key is no longer pressed
+            USB_device_keys[cnt].released = 1; // Key has just been released
+            USB_device_keys[cnt].pressed = 0;  // Key is no longer pressed
         }
         
         // If a key's pressed value is 1 now, but it was 0 before, that means it has just been pressed
-        if ((current_keys_pressed[cnt] == 1) && (device_keys[cnt].pressed == 0))
+        if ((current_keys_pressed[cnt] == 1) && (USB_device_keys[cnt].pressed == 0))
         {
-            device_keys[cnt].pressed = 1;
-            device_keys[cnt].repeat_time = device_millis; // Ensures that it will be processed immediately
+            USB_device_keys[cnt].pressed = 1;
+            USB_device_keys[cnt].repeat_time = USB_device_millis; // Ensures that it will be processed immediately
         }
     }
     
     // Now let's process the modifier keys, which are all stored in different bit fields in byte 0 of the HID report
-    CTRL_PRESSED = ((USB_EP1_buffer[0] & CTRL_MASK) == CTRL_MASK);
-    ALT_PRESSED = ((USB_EP1_buffer[0] & ALT_MASK) == ALT_MASK);
-    SHIFT_PRESSED = ((USB_EP1_buffer[0] & SHIFT_MASK) ==  SHIFT_MASK);
+    USB_CTRL_PRESSED = ((USB_EP1_buffer[0] & USB_CTRL_MASK) == USB_CTRL_MASK);
+    USB_ALT_PRESSED = ((USB_EP1_buffer[0] & USB_ALT_MASK) == USB_ALT_MASK);
+    USB_SHIFT_PRESSED = ((USB_EP1_buffer[0] & USB_SHIFT_MASK) ==  USB_SHIFT_MASK);
     
     if ((USB_EP1_buffer[0] > 0) && (USB_EP1_buffer[2] > 0))
     {
-        SHIFT_PRESSED = ((USB_EP1_buffer[0] & SHIFT_MASK) ==  SHIFT_MASK);
+        USB_SHIFT_PRESSED = ((USB_EP1_buffer[0] & USB_SHIFT_MASK) ==  USB_SHIFT_MASK);
     }
 }
 
-void keyboard_status_toggle(char keycode)
+void USB_keyboad_status_toggle(char keycode)
 {
     
-    if (HID_BUSY) return; // We are already processing a status toggle, skip this one
+    if (USB_HID_BUSY) return; // We are already processing a status toggle, skip this one
     
     switch (keycode)
     {
-        case KEY_NUMLOCK:
+        case USB_KEY_NUMLOCK:
         {
             // Flip the bit
-            NUM_LOCK_STATUS ^= 1;
+            USB_NUM_LOCK_STATUS ^= 1;
             
             // Fill in the LED bit fields            
-            if (NUM_LOCK_STATUS)
-                LED_data |= 1;
+            if (USB_NUM_LOCK_STATUS)
+                USB_LED_data |= 1;
             else
-                LED_data &= 0xFE;
+                USB_LED_data &= 0xFE;
                                     
             break;
         }
-        case KEY_CAPSLOCK:
+        case USB_KEY_CAPSLOCK:
         {
             // Flip the bit
-            CAPS_LOCK_STATUS ^= 1;
+            USB_CAPS_LOCK_STATUS ^= 1;
             
             // Fill in the LED bit fields            
-            if (CAPS_LOCK_STATUS)
-                LED_data |= 2;
+            if (USB_CAPS_LOCK_STATUS)
+                USB_LED_data |= 2;
             else
-                LED_data &= 0xFD;
+                USB_LED_data &= 0xFD;
                                     
             break;
         }
-        case KEY_SCROLLLOCK:
+        case USB_KEY_SCROLLLOCK:
         {
             // Flip the bit
-            SCROLL_LOCK_STATUS ^= 1;
+            USB_SCROLL_LOCK_STATUS ^= 1;
             
             // Fill in the LED bit fields            
-            if (SCROLL_LOCK_STATUS)
-                LED_data |= 4;
+            if (USB_SCROLL_LOCK_STATUS)
+                USB_LED_data |= 4;
             else
-                LED_data &= 0xFB;
+                USB_LED_data &= 0xFB;
                                     
             break;
         }
@@ -2147,19 +2176,19 @@ void keyboard_status_toggle(char keycode)
         }
     }
         
-    HID_STAGE = 1;
-    HID_BUSY = 1;
+    USB_HID_STAGE = 1;
+    USB_HID_BUSY = 1;
 }
 
-void keyboard_handle()
+void USB_keyboad_handle()
 {
-	for (unsigned int i=0; i<KEYBOARD_NUM_KEYS; i++)
+	for (unsigned int i=0; i<USB_KEYBOARD_NUM_KEYS; i++)
 	{
-		if (device_keys[i].pressed && (device_millis >= device_keys[i].repeat_time))
+		if (USB_device_keys[i].pressed && (USB_device_millis >= USB_device_keys[i].repeat_time))
 		{
-		    device_keys[i].repeat_time = device_millis + KEYBOARD_REPEAT_DELAY;
+		    USB_device_keys[i].repeat_time = USB_device_millis + USB_KEYBOARD_REPEAT_DELAY;
 		   
-			if (SHIFT_PRESSED)
+			if (USB_SHIFT_PRESSED)
 			{
 				usb_state_array[usb_writepos] = usb_conversion[i+0x80];
 				usb_writepos++;
@@ -2664,8 +2693,12 @@ struct tetra_struct_vars tetra_vars;
 
 void Tetra()
 {	
+	unsigned int ps2_delay = 0x0000;
+	unsigned int ps2_speed = 0x001F;
 	unsigned int usb_delay = 0x0000;
 	unsigned int usb_speed = 0x001F;
+	unsigned char ps2_directions[4] = { 0, 0, 0, 0 };
+	unsigned char ps2_buttons[4] = { 2, 2, 2, 2 };
 	unsigned char usb_directions[4] = { 0, 0, 0, 0 };
 	unsigned char usb_buttons[2] = { 2, 2 };
 	
@@ -2762,6 +2795,101 @@ void Tetra()
 				tetra_vars.background_delay = 5;
 			}
 		}
+	
+		// PS/2 keyboards
+		for (unsigned char p=0; p<2; p++)
+		{
+			if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x00) // ready and keyboard
+			{
+				if (ps2_delay > 0x0000) ps2_delay--;
+				
+				if (ps2_readpos[p] != ps2_writepos[p])
+				{
+					if (ps2_state_array[p][ps2_readpos[p]] == 0x0B) // release
+					{
+						ps2_readpos[p]++;
+
+						if (ps2_state_array[p][ps2_readpos[p]] == 0x11)
+						{
+							ps2_directions[0] = 0;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x12)
+						{
+							ps2_directions[1] = 0;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x13)
+						{
+							ps2_directions[2] = 0;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x14)
+						{
+							ps2_directions[3] = 0;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x20)
+						{
+							ps2_buttons[0] = 0;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x30)
+						{
+							ps2_buttons[1] = 0;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x7A ||
+							ps2_state_array[p][ps2_readpos[p]] == 0x5A)
+						{
+							ps2_buttons[2] = 0;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x78 ||
+							ps2_state_array[p][ps2_readpos[p]] == 0x58)
+						{
+							ps2_buttons[3] = 0;
+						}
+
+						ps2_readpos[p]++;
+					}
+					else
+					{
+						if (ps2_state_array[p][ps2_readpos[p]] == 0x11)
+						{
+							ps2_directions[0] = 1;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x12)
+						{
+							ps2_directions[1] = 1;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x13)
+						{
+							ps2_directions[2] = 1;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x14)
+						{
+							ps2_directions[3] = 1;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x20)
+						{
+							ps2_buttons[0] = 1;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x30)
+						{
+							ps2_buttons[1] = 1;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x7A ||
+							ps2_state_array[p][ps2_readpos[p]] == 0x5A)
+						{
+							ps2_buttons[2] = 1;
+						}
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x78 ||
+							ps2_state_array[p][ps2_readpos[p]] == 0x58)
+						{
+							ps2_buttons[3] = 1;
+						}
+
+						ps2_readpos[p]++;
+					}
+
+					break;
+				}
+			}
+		}
 		
 		// if device connected...
 		if (USB_DEVICE_CONNECTED)
@@ -2774,7 +2902,7 @@ void Tetra()
 				USB_HID_process_report();
 				USB_EP1_RECEIVED = 0;
 			}
-			keyboard_handle(); 
+			USB_keyboad_handle(); 
 			
 			usb_directions[0] = 0;
 			usb_directions[1] = 0;
@@ -2784,46 +2912,46 @@ void Tetra()
 			if (usb_delay > 0x0000) usb_delay--;
 			else
 			{			
-				if (device_keys[0x52].pressed)
+				if (USB_device_keys[0x52].pressed)
 				{
 					usb_directions[0] = 1;
 					usb_delay = usb_speed;
 				}
-				else if (device_keys[0x51].pressed)
+				else if (USB_device_keys[0x51].pressed)
 				{
 					usb_directions[1] = 1;
 					usb_delay = usb_speed;
 				}
-				else if (device_keys[0x50].pressed)
+				else if (USB_device_keys[0x50].pressed)
 				{
 					usb_directions[2] = 1;
 					usb_delay = usb_speed;
 				}
-				else if (device_keys[0x4F].pressed)
+				else if (USB_device_keys[0x4F].pressed)
 				{
 					usb_directions[3] = 1;
 					usb_delay = usb_speed;
 				}
 			}
 			
-			if (device_keys[0x2C].pressed || device_keys[0x1B].pressed)
+			if (USB_device_keys[0x2C].pressed || USB_device_keys[0x1B].pressed)
 			{
 				if (usb_buttons[0] == 0) usb_buttons[0] = 1;
 				else usb_buttons[0] = 2;
 			}
 			
-			if (!device_keys[0x2C].pressed && !device_keys[0x1B].pressed)
+			if (!USB_device_keys[0x2C].pressed && !USB_device_keys[0x1B].pressed)
 			{
 				usb_buttons[0] = 0;
 			}
 			
-			if (device_keys[0x62].pressed || device_keys[0x1D].pressed)
+			if (USB_device_keys[0x62].pressed || USB_device_keys[0x1D].pressed)
 			{
 				if (usb_buttons[1] == 0) usb_buttons[1] = 1;
 				else usb_buttons[1] = 2;
 			}
 			
-			if (!device_keys[0x62].pressed && !device_keys[0x1D].pressed)
+			if (!USB_device_keys[0x62].pressed && !USB_device_keys[0x1D].pressed)
 			{
 				usb_buttons[1] = 0;
 			}
@@ -2890,39 +3018,43 @@ void Tetra()
 			}
 
 			if ((((tetra_vars.joy_curr[z] & 0x80) == 0x00) && ((tetra_vars.joy_prev[z] & 0x80) == 0x80)) ||
-				(usb_directions[0] == 1 && z == 0)) // up
+				(usb_directions[0] == 1 && z == 0) || (ps2_delay == 0x0000 && ps2_directions[0] == 1 && z == 1)) // up
 			{
 				tetra_vars.timer[z] = 1; // not zero
 				tetra_vars.joy_delay[z] = 0;
 				
-				usb_delay = usb_speed;
+				if (z == 1) ps2_delay = ps2_speed;
+				if (z == 0) usb_delay = usb_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x40) == 0x00) && ((tetra_vars.joy_prev[z] & 0x40) == 0x40)) ||
-				(usb_directions[1] == 1 && z == 0)) // down
+				(usb_directions[1] == 1 && z == 0) || (ps2_delay == 0x0000 && ps2_directions[1] == 1 && z == 1)) // down
 			{
 				tetra_vars.timer[z] = 0;
 				tetra_vars.joy_delay[z] = 0;
 				
-				usb_delay = usb_speed;
+				if (z == 1) ps2_delay = ps2_speed;
+				if (z == 0) usb_delay = usb_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x20) == 0x00) && ((tetra_vars.joy_prev[z] & 0x20) == 0x20)) ||
-				(usb_directions[2] == 1 && z == 0)) // left
+				(usb_directions[2] == 1 && z == 0) || (ps2_delay == 0x0000 && ps2_directions[2] == 1 && z == 1)) // left
 			{
 				tetra_vars.new_pos_x[z]--;
 				tetra_vars.joy_delay[z] = 0;
 				
-				usb_delay = usb_speed;
+				if (z == 1) ps2_delay = ps2_speed;
+				if (z == 0) usb_delay = usb_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x10) == 0x00) && ((tetra_vars.joy_prev[z] & 0x10) == 0x10)) ||
-				(usb_directions[3] == 1 && z == 0)) // right
+				(usb_directions[3] == 1 && z == 0) || (ps2_delay == 0x0000 && ps2_directions[3] == 1 && z == 1)) // right
 			{
 				tetra_vars.new_pos_x[z]++;
 				tetra_vars.joy_delay[z] = 0;
 				
-				usb_delay = usb_speed;
+				if (z == 1) ps2_delay = ps2_speed;
+				if (z == 0) usb_delay = usb_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x08) == 0x00) && ((tetra_vars.joy_prev[z] & 0x08) == 0x08)) ||
-				(usb_buttons[0] == 1 && z == 0)) // button 1
+				(usb_buttons[0] == 1 && z == 0) || (ps2_delay == 0x0000 && (ps2_buttons[0] == 1 || ps2_buttons[2] == 1) && z == 1)) // button 1
 			{
 				if (tetra_vars.game_over[z] != 0)
 				{
@@ -2954,10 +3086,16 @@ void Tetra()
 					tetra_vars.joy_delay[z] = 0;
 				}
 				
-				usb_delay = usb_speed;
+				if (z == 1)
+				{
+					ps2_delay = ps2_speed;
+					if (ps2_buttons[0] == 1) ps2_buttons[0] = 2;
+					if (ps2_buttons[2] == 1) ps2_buttons[2] = 2;
+				}
+				if (z == 0) usb_delay = usb_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x04) == 0x00) && ((tetra_vars.joy_prev[z] & 0x04) == 0x04)) ||
-				(usb_buttons[1] == 1 && z == 0)) // button 2
+				(usb_buttons[1] == 1 && z == 0) || (ps2_delay == 0x0000 && (ps2_buttons[1] == 1 || ps2_buttons[3] == 1) && z == 1)) // button 2
 			{
 				if (tetra_vars.game_over[z] != 0)
 				{
@@ -2989,7 +3127,13 @@ void Tetra()
 					tetra_vars.joy_delay[z] = 0;
 				}
 				
-				usb_delay = usb_speed;
+				if (z == 1)
+				{
+					ps2_delay = ps2_speed;
+					if (ps2_buttons[1] == 1) ps2_buttons[1] = 2;
+					if (ps2_buttons[3] == 1) ps2_buttons[3] = 2;
+				}
+				if (z == 0) usb_delay = usb_speed;
 			}
 			
 			if (tetra_vars.game_over[z] != 0) continue;
@@ -3554,7 +3698,7 @@ void Scratchpad()
 	
 	while (1)
 	{
-		key_value = input_keyboard();
+		key_value = input_ps2_keyboard();
 		
 		// if device connected...
 		if (USB_DEVICE_CONNECTED)
@@ -3567,15 +3711,11 @@ void Scratchpad()
 				USB_HID_process_report();
 				USB_EP1_RECEIVED = 0;
 			}
-			keyboard_handle(); 
+			USB_keyboad_handle(); 
 			
 			if (key_value == 0x00)
 			{
-				if (usb_readpos != usb_writepos)
-				{
-					key_value = usb_state_array[usb_readpos];
-					usb_readpos++;
-				}
+				key_value = input_usb_keyboard();
 			}
 		}
 		
@@ -3723,7 +3863,7 @@ void Scratchpad()
 			}
 		}
 		
-		if (input_mouse((unsigned int *)mouse_state) != 0x00)
+		if (input_ps2_mouse((unsigned int *)mouse_state) != 0x00)
 		{
 			display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			
@@ -4064,7 +4204,7 @@ int main()
 	sdcard_block[0] = SPI1BUF; // dummy read
 	
 	/*
-	// Timer for 'device_millis' used with USB
+	// Timer for 'USB_device_millis' used with USB
     T1CON = 0x0; // disable timer 1
     TMR1 = 0; // clear timer 1
     IEC0bits.T1IE = 1; // Enable interrupt for timer 1
@@ -4076,8 +4216,8 @@ int main()
     T1CONbits.TON = 1; // Turn on the timer 1
     */
 	
-    // Init device_millis
-    device_millis = 0;
+    // Init USB_device_millis
+    USB_device_millis = 0;
 	
 	
 	
@@ -4186,7 +4326,7 @@ int main()
 			}
 		}	
 	
-		menu_key = input_keyboard();
+		menu_key = input_ps2_keyboard();
 		
 		// if device connected...
 		if (USB_DEVICE_CONNECTED)
@@ -4199,15 +4339,11 @@ int main()
 				USB_HID_process_report();
 				USB_EP1_RECEIVED = 0;
 			}
-			keyboard_handle(); 
+			USB_keyboad_handle(); 
 		
 			if (menu_key == 0x00)
 			{
-				if (usb_readpos != usb_writepos)
-				{
-					menu_key = usb_state_array[usb_readpos];
-					usb_readpos++;
-				}
+				menu_key = input_usb_keyboard();
 			}
 		}
 		
@@ -4281,7 +4417,7 @@ int main()
 			menu_loop = 0;
 		}
 		
-		if (input_mouse((unsigned int *)menu_mouse) != 0x00)
+		if (input_ps2_mouse((unsigned int *)menu_mouse) != 0x00)
 		{
 			for (unsigned char i=0; i<menu_max; i++)
 			{
@@ -4342,7 +4478,7 @@ int main()
 	// infinite loop
 	while (1)
 	{
-		dummy = input_keyboard();
+		dummy = input_ps2_keyboard();
 		
 		if (dummy != 0x00)
 		{
