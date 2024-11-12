@@ -63,7 +63,12 @@
 
 #include <xc.h>
 
-#include "splash.c"
+#include "splash_sundress.c"
+#include "splash_pointing.c"
+#include "splash_butterfly.c"
+#include "splash_night.c"
+#include "splash_bright.c"
+#include "splash_television.c"
 
 
 #define SYS_FREQ 160000000 // Running at 160MHz
@@ -2720,8 +2725,8 @@ void Tetra()
 	{
 		for (unsigned int x=0; x<800; x+=2)
 		{
-			screen_buffer[y][x] = splash1_bitmap[y * 400 + (x>>1)];
-			screen_buffer[y][x+1] = splash1_bitmap[y * 400 + (x>>1)];
+			screen_buffer[y][x] = splash_bright[y * 400 + (x>>1)];
+			screen_buffer[y][x+1] = splash_bright[y * 400 + (x>>1)];
 		}
 	}
 	
@@ -2741,15 +2746,15 @@ void Tetra()
 				// set background
 				for (unsigned int x=0; x<800; x+=2)
 				{
-					if (tetra_vars.background == 1) screen_buffer[tetra_vars.background_trans][x] = splash1_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
-					else if (tetra_vars.background == 2) screen_buffer[tetra_vars.background_trans][x] = splash2_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
-					else if (tetra_vars.background == 3) screen_buffer[tetra_vars.background_trans][x] = splash3_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
-					else if (tetra_vars.background == 4) screen_buffer[tetra_vars.background_trans][x] = splash4_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
+					if (tetra_vars.background == 1) screen_buffer[tetra_vars.background_trans][x] = splash_bright[tetra_vars.background_trans * 400 + (x>>1)];
+					else if (tetra_vars.background == 2) screen_buffer[tetra_vars.background_trans][x] = splash_night[tetra_vars.background_trans * 400 + (x>>1)];
+					else if (tetra_vars.background == 3) screen_buffer[tetra_vars.background_trans][x] = splash_butterfly[tetra_vars.background_trans * 400 + (x>>1)];
+					else if (tetra_vars.background == 4) screen_buffer[tetra_vars.background_trans][x] = splash_pointing[tetra_vars.background_trans * 400 + (x>>1)];
 					
-					if (tetra_vars.background == 1) screen_buffer[tetra_vars.background_trans][x+1] = splash1_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
-					else if (tetra_vars.background == 2) screen_buffer[tetra_vars.background_trans][x+1] = splash2_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
-					else if (tetra_vars.background == 3) screen_buffer[tetra_vars.background_trans][x+1] = splash3_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
-					else if (tetra_vars.background == 4) screen_buffer[tetra_vars.background_trans][x+1] = splash4_bitmap[tetra_vars.background_trans * 400 + (x>>1)];
+					if (tetra_vars.background == 1) screen_buffer[tetra_vars.background_trans][x+1] = splash_bright[tetra_vars.background_trans * 400 + (x>>1)];
+					else if (tetra_vars.background == 2) screen_buffer[tetra_vars.background_trans][x+1] = splash_night[tetra_vars.background_trans * 400 + (x>>1)];
+					else if (tetra_vars.background == 3) screen_buffer[tetra_vars.background_trans][x+1] = splash_butterfly[tetra_vars.background_trans * 400 + (x>>1)];
+					else if (tetra_vars.background == 4) screen_buffer[tetra_vars.background_trans][x+1] = splash_pointing[tetra_vars.background_trans * 400 + (x>>1)];
 				}
 
 				tetra_vars.background_trans--;
@@ -3354,9 +3359,11 @@ void BadApple()
 	{
 		for (unsigned int y=0; y<300; y++)
 		{
-			for (unsigned int x=0; x<800; x++)
+			for (unsigned int x=0; x<800; x+=2)
 			{
-				screen_buffer[y][x] = 0x25; // grey?
+				screen_buffer[y][x] = splash_television[y * 400 + (x>>1)];
+				screen_buffer[y][x+1] = splash_television[y * 400 + (x>>1)];
+				//screen_buffer[y][x] = 0x25; // grey?
 			}
 		}
 
@@ -3420,8 +3427,8 @@ void BadApple()
 		{
 			frames += 2; // only 30 FPS
 			
-			x = 144;
-			y = 50;
+			x = 72;
+			y = 52;
 
 			for (unsigned int l=0; l<12; l++)
 			{
@@ -3471,7 +3478,7 @@ void BadApple()
 					}
 
 					y += 1;
-					x = 144;
+					x = 72;
 				}
 
 				temp_value = sdcard_receivebyte(); // data packet ends with 0x55 then 0xAA
@@ -4100,8 +4107,8 @@ int main()
 	{
 		for (unsigned int x=0; x<800; x+=2)
 		{
-			screen_buffer[y][x] = splash5_bitmap[y * 400 + (x>>1)];
-			screen_buffer[y][x+1] = splash5_bitmap[y * 400 + (x>>1)];
+			screen_buffer[y][x] = splash_sundress[y * 400 + (x>>1)];
+			screen_buffer[y][x+1] = splash_sundress[y * 400 + (x>>1)];
 			//screen_buffer[y][x] = 0x25; // grey?
 			//screen_buffer[y][x] = (unsigned char)((x + y) % 256); // test pattern
 			//if (x % 2 == 0) screen_buffer[y][x] = 0xFF; // white
@@ -4133,14 +4140,16 @@ int main()
 	
 	display_string(24, 16, "Acolyte Hand PIC'd 32\\");
 	
-	display_string(24, 32, " Tetra     \\");
-	display_string(24, 40, " Bad Apple \\");
-	display_string(24, 48, " Scratchpad\\");
-	display_string(24, 56, "           \\");
+	display_string(280, 112, " Tetra     \\");
+	display_string(280, 120, " Bad Apple \\");
+	display_string(280, 128, " Scratchpad\\");
+	display_string(280, 136, "           \\");
 	
 	menu_max = 4; // number of menu items, change accordingly
 	
-	display_character(24, 32, '>');
+	display_character(280, 112, '>');
+	
+	
 	
 	
 	while (menu_loop > 0)
@@ -4151,11 +4160,11 @@ int main()
 			
 			if (menu_pos > 0)
 			{
-				display_character(24, 32 + menu_pos * 8, ' ');
+				display_character(280, 112 + menu_pos * 8, ' ');
 					
 				menu_pos--;
 					
-				display_character(24, 32 + menu_pos * 8, '>');
+				display_character(280, 112 + menu_pos * 8, '>');
 				
 				music_note(523, 250, 0);
 			}
@@ -4167,11 +4176,11 @@ int main()
 			
 			if (menu_pos < menu_max-1)
 			{
-				display_character(24, 32 + menu_pos * 8, ' ');
+				display_character(280, 112 + menu_pos * 8, ' ');
 
 				menu_pos++;
 
-				display_character(24, 32 + menu_pos * 8, '>');
+				display_character(280, 112 + menu_pos * 8, '>');
 				
 				music_note(523, 250, 0);
 			}
@@ -4278,11 +4287,11 @@ int main()
 			{
 				if (menu_mouse[4] <= (unsigned int)(i * 300 / menu_max))
 				{
-					display_character(24, 32 + menu_pos * 8, ' ');
+					display_character(280, 112 + menu_pos * 8, ' ');
 
 					menu_pos = i;
 
-					display_character(24, 32 + menu_pos * 8, '>');
+					display_character(280, 112 + menu_pos * 8, '>');
 
 					music_note(523, 250, 0);
 					
