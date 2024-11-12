@@ -2872,13 +2872,13 @@ void Tetra()
 						{
 							ps2_buttons[1] = 1;
 						}
-						else if (ps2_state_array[p][ps2_readpos[p]] == 0x7A ||
-							ps2_state_array[p][ps2_readpos[p]] == 0x5A)
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x78 ||
+							ps2_state_array[p][ps2_readpos[p]] == 0x58)
 						{
 							ps2_buttons[2] = 1;
 						}
-						else if (ps2_state_array[p][ps2_readpos[p]] == 0x78 ||
-							ps2_state_array[p][ps2_readpos[p]] == 0x58)
+						else if (ps2_state_array[p][ps2_readpos[p]] == 0x7A ||
+							ps2_state_array[p][ps2_readpos[p]] == 0x5A)
 						{
 							ps2_buttons[3] = 1;
 						}
