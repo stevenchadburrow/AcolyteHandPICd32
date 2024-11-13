@@ -2695,17 +2695,21 @@ void Tetra()
 {	
 	unsigned int ps2_delay = 0x0000;
 	unsigned int ps2_speed = 0x001F;
+	unsigned int ps2_heights_delay = 0x0000;
+	unsigned int ps2_heights_speed = 0x001F;
 	unsigned int usb_delay = 0x0000;
 	unsigned int usb_speed = 0x001F;
+	
 	unsigned char ps2_directions[4] = { 0, 0, 0, 0 };
 	unsigned char ps2_buttons[4] = { 2, 2, 2, 2 };
 	unsigned int ps2_cursors[2] = { 200, 150 };
 	unsigned char ps2_clicks[2] = { 2, 2 };
 	unsigned char ps2_heights = 1;
-	unsigned int ps2_heights_delay = 0x0000;
-	unsigned int ps2_heights_speed = 0x001F;
+	unsigned int ps2_mouse_active = 0;
 	unsigned char usb_directions[4] = { 0, 0, 0, 0 };
 	unsigned char usb_buttons[2] = { 2, 2 };
+	
+	unsigned int overall_delay = 0x0000;
 	
 	for (volatile unsigned int z=0; z<2; z++)
 	{	
@@ -2773,6 +2777,14 @@ void Tetra()
 	
 	while (1)
 	{		
+		if (overall_delay > 0x0000)
+		{
+			overall_delay--;
+			continue;
+		}
+		
+		overall_delay = 0x1FFF;
+		
 		if (tetra_vars.background_trans >= 0)
 		{
 			if (tetra_vars.background_delay > 0)
@@ -2900,6 +2912,8 @@ void Tetra()
 				
 				if (ps2_readpos[p] != ps2_writepos[p])
 				{
+					ps2_mouse_active = 1;
+					
 					if ((ps2_state_array[p][ps2_readpos[p]] & 0x01) == 0x01) // left click
 					{
 						if (ps2_clicks[1] == 0) ps2_clicks[1] = 1;
@@ -3047,75 +3061,79 @@ void Tetra()
 				tetra_vars.joy_prev[z] = tetra_vars.joy_prev[z] | 0xF0;
 			}
 			
-			// PS/2 keyboards and mice
-			for (unsigned char p=0; p<2; p++)
+			// PS/2 mice
+			if (z == 1)
 			{
-				if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x01) // ready and mouse
+				for (unsigned char p=0; p<2; p++)
 				{
-					if (z == 0)
+					if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x01) // ready and mouse
 					{
-						tetra_vars.new_pos_x[z] = (unsigned int)(ps2_cursors[0] / (unsigned int)(400 / (tetra_size_x+2)));
-						
-						if (ps2_cursors[1] < 10) ps2_heights = 0;
-						else if (ps2_cursors[1] > 290) ps2_heights = 2;
-						else ps2_heights = 1;
-						
+						if (ps2_mouse_active == 1)
+						{
+							ps2_mouse_active = 0;
+							
+							tetra_vars.new_pos_x[z] = (unsigned int)(ps2_cursors[0] / (unsigned int)(400 / (tetra_size_x+2)));
+
+							if (ps2_cursors[1] < 10) ps2_heights = 0;
+							else if (ps2_cursors[1] > 290) ps2_heights = 2;
+							else ps2_heights = 1;
+						}
 					}
 				}
 			}
 
 			if ((((tetra_vars.joy_curr[z] & 0x80) == 0x00) && ((tetra_vars.joy_prev[z] & 0x80) == 0x80)) ||
-				(usb_directions[0] == 1 && z == 0) || 
-				(ps2_delay == 0x0000 && ps2_directions[0] == 1 && z == 1) ||
-				(ps2_heights_delay == 0x0000 && ps2_heights == 2 && z == 0)) // up
+				(usb_directions[0] == 1 && z == 1) || 
+				(ps2_delay == 0x0000 && ps2_directions[0] == 1 && z == 0) ||
+				(ps2_heights_delay == 0x0000 && ps2_heights == 2 && z == 1)) // up
 			{
 				tetra_vars.timer[z] = 1; // not zero
 				tetra_vars.joy_delay[z] = 0;
 				
-				if (z == 1) ps2_delay = ps2_speed;
-				if (z == 0)
+				if (z == 0) ps2_delay = ps2_speed;
+				if (z == 1)
 				{
 					usb_delay = usb_speed;
 					ps2_heights_delay = ps2_heights_speed;
 				}
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x40) == 0x00) && ((tetra_vars.joy_prev[z] & 0x40) == 0x40)) ||
-				(usb_directions[1] == 1 && z == 0) ||
-				(ps2_delay == 0x0000 && ps2_directions[1] == 1 && z == 1) ||
-				(ps2_heights_delay == 0x0000 && ps2_heights == 0 && z == 0)) // down
+				(usb_directions[1] == 1 && z == 1) ||
+				(ps2_delay == 0x0000 && ps2_directions[1] == 1 && z == 0) ||
+				(ps2_heights_delay == 0x0000 && ps2_heights == 0 && z == 1)) // down
 			{
 				tetra_vars.timer[z] = 0;
 				tetra_vars.joy_delay[z] = 0;
 				
-				if (z == 1) ps2_delay = ps2_speed;
-				if (z == 0)
+				if (z == 0) ps2_delay = ps2_speed;
+				if (z == 1)
 				{
 					usb_delay = usb_speed;
 					ps2_heights_delay = ps2_heights_speed;
 				}
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x20) == 0x00) && ((tetra_vars.joy_prev[z] & 0x20) == 0x20)) ||
-				(usb_directions[2] == 1 && z == 0) || (ps2_delay == 0x0000 && ps2_directions[2] == 1 && z == 1)) // left
+				(usb_directions[2] == 1 && z == 1) || (ps2_delay == 0x0000 && ps2_directions[2] == 1 && z == 0)) // left
 			{
 				tetra_vars.new_pos_x[z]--;
 				tetra_vars.joy_delay[z] = 0;
 				
-				if (z == 1) ps2_delay = ps2_speed;
-				if (z == 0)	usb_delay = usb_speed;
+				if (z == 0) ps2_delay = ps2_speed;
+				if (z == 1)	usb_delay = usb_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x10) == 0x00) && ((tetra_vars.joy_prev[z] & 0x10) == 0x10)) ||
-				(usb_directions[3] == 1 && z == 0) || (ps2_delay == 0x0000 && ps2_directions[3] == 1 && z == 1)) // right
+				(usb_directions[3] == 1 && z == 1) || (ps2_delay == 0x0000 && ps2_directions[3] == 1 && z == 0)) // right
 			{
 				tetra_vars.new_pos_x[z]++;
 				tetra_vars.joy_delay[z] = 0;
 				
-				if (z == 1) ps2_delay = ps2_speed;
-				if (z == 0) usb_delay = usb_speed;
+				if (z == 0) ps2_delay = ps2_speed;
+				if (z == 1) usb_delay = usb_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x08) == 0x00) && ((tetra_vars.joy_prev[z] & 0x08) == 0x08)) ||
-				(usb_buttons[0] == 1 && z == 0) || 
-				(ps2_delay == 0x0000 && (ps2_buttons[0] == 1 || ps2_buttons[2] == 1) && z == 1) ||
-				(ps2_clicks[0] == 1 && z == 0)) // button 1
+				(usb_buttons[0] == 1 && z == 1) || 
+				(ps2_delay == 0x0000 && (ps2_buttons[0] == 1 || ps2_buttons[2] == 1) && z == 0) ||
+				(ps2_clicks[0] == 1 && z == 1)) // button 1
 			{
 				if (tetra_vars.game_over[z] != 0)
 				{
@@ -3147,13 +3165,13 @@ void Tetra()
 					tetra_vars.joy_delay[z] = 0;
 				}
 				
-				if (z == 0)
+				if (z == 1)
 				{
 					usb_delay = usb_speed;
 					if (ps2_clicks[0] == 1) ps2_clicks[0] = 2;
 				}
 				
-				if (z == 1)
+				if (z == 0)
 				{
 					ps2_delay = ps2_speed;
 					if (ps2_buttons[0] == 1) ps2_buttons[0] = 2;
@@ -3161,9 +3179,9 @@ void Tetra()
 				}
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x04) == 0x00) && ((tetra_vars.joy_prev[z] & 0x04) == 0x04)) ||
-				(usb_buttons[1] == 1 && z == 0) || 
-				(ps2_delay == 0x0000 && (ps2_buttons[1] == 1 || ps2_buttons[3] == 1) && z == 1) ||
-				(ps2_clicks[1] == 1 && z == 0)) // button 2
+				(usb_buttons[1] == 1 && z == 1) || 
+				(ps2_delay == 0x0000 && (ps2_buttons[1] == 1 || ps2_buttons[3] == 1) && z == 0) ||
+				(ps2_clicks[1] == 1 && z == 1)) // button 2
 			{
 				if (tetra_vars.game_over[z] != 0)
 				{
@@ -3195,13 +3213,13 @@ void Tetra()
 					tetra_vars.joy_delay[z] = 0;
 				}
 				
-				if (z == 0)
+				if (z == 1)
 				{
 					usb_delay = usb_speed;
 					if (ps2_clicks[1] == 1) ps2_clicks[1] = 2;
 				}
 				
-				if (z == 1)
+				if (z == 0)
 				{
 					ps2_delay = ps2_speed;
 					if (ps2_buttons[1] == 1) ps2_buttons[1] = 2;
@@ -3755,6 +3773,8 @@ void Scratchpad()
 	unsigned int joy_delay = 0x0000;
 	unsigned int joy_speed = 0x7FFF;
 	
+	unsigned int overall_delay = 0x0000;
+	
 	for (unsigned int y=0; y<300; y++)
 	{
 		for (unsigned int x=0; x<800; x++)
@@ -3775,6 +3795,14 @@ void Scratchpad()
 	
 	while (1)
 	{
+		if (overall_delay > 0x0000)
+		{
+			overall_delay--;
+			continue;
+		}
+		
+		overall_delay = 0x1FFF;
+		
 		key_value = input_ps2_keyboard();
 		
 		// if device connected...
@@ -4038,6 +4066,7 @@ volatile unsigned int menu_joy = 0xFFFF;
 volatile unsigned int menu_mouse[5] = { 0, 0, 0, 0, 0 };
 volatile unsigned char menu_up = 0;
 volatile unsigned char menu_down = 0;
+volatile unsigned int menu_delay = 0x0000;
 
 int main()
 {
@@ -4170,8 +4199,8 @@ int main()
 	// I've had to adjust these values many times...
 	OC1CON = 0x0; // reset OC1
 	OC1CON = 0x00000003; // toggle, use Timer4
-	OC1R = 0x0002; //0x0000; // pixel-sync rise (adjust)
-	OC1RS = 0x0002; //0x0000; // pixel-sync fall (adjust)
+	OC1R = 0x0003; //0x0000; // pixel-sync rise (adjust)
+	OC1RS = 0x0003; //0x0000; // pixel-sync fall (adjust)
 	T4CON = 0x0; // rest Timer4, prescale of 1:1
 	TMR4 = 0x0; // zero out counter
 	PR4 = 0x03; //0x01; // pixel-reset (minus one)
@@ -4465,6 +4494,14 @@ int main()
 			}
 		}	
 	
+		if (menu_delay > 0x0000)
+		{
+			menu_delay--;
+			continue;
+		}
+		
+		menu_delay = 0x7FFF;
+		
 		menu_key = input_ps2_keyboard();
 		
 		// if device connected...
