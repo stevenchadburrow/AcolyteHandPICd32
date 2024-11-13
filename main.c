@@ -2699,6 +2699,11 @@ void Tetra()
 	unsigned int usb_speed = 0x001F;
 	unsigned char ps2_directions[4] = { 0, 0, 0, 0 };
 	unsigned char ps2_buttons[4] = { 2, 2, 2, 2 };
+	unsigned int ps2_cursors[2] = { 200, 150 };
+	unsigned char ps2_clicks[2] = { 2, 2 };
+	unsigned char ps2_heights = 1;
+	unsigned int ps2_heights_delay = 0x0000;
+	unsigned int ps2_heights_speed = 0x001F;
 	unsigned char usb_directions[4] = { 0, 0, 0, 0 };
 	unsigned char usb_buttons[2] = { 2, 2 };
 	
@@ -2772,7 +2777,7 @@ void Tetra()
 		{
 			if (tetra_vars.background_delay > 0)
 			{
-				tetra_vars.background_delay--;
+			 	tetra_vars.background_delay--;
 			}
 			else
 			{
@@ -2796,7 +2801,7 @@ void Tetra()
 			}
 		}
 	
-		// PS/2 keyboards
+		// PS/2 keyboards and mice
 		for (unsigned char p=0; p<2; p++)
 		{
 			if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x00) // ready and keyboard
@@ -2887,6 +2892,31 @@ void Tetra()
 					}
 
 					break;
+				}
+			}
+			else if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x01) // ready and mouse
+			{
+				if (ps2_heights_delay > 0x0000) ps2_heights_delay--;
+				
+				if (ps2_readpos[p] != ps2_writepos[p])
+				{
+					if ((ps2_state_array[p][ps2_readpos[p]] & 0x01) == 0x01) // left click
+					{
+						if (ps2_clicks[1] == 0) ps2_clicks[1] = 1;
+					}
+					else ps2_clicks[1] = 0;
+					
+					if ((ps2_state_array[p][ps2_readpos[p]] & 0x02) == 0x02) // right click
+					{
+						if (ps2_clicks[0] == 0) ps2_clicks[0] = 1;
+						else ps2_clicks[0] = 2;
+					}
+					else ps2_clicks[0] = 0;
+					
+					ps2_cursors[0] = ps2_cursor_x[p][ps2_readpos[p]];
+					ps2_cursors[1] = ps2_cursor_y[p][ps2_readpos[p]];
+					
+					ps2_readpos[p]++;	
 				}
 			}
 		}
@@ -3016,24 +3046,53 @@ void Tetra()
 				tetra_vars.joy_delay[z] = 0;
 				tetra_vars.joy_prev[z] = tetra_vars.joy_prev[z] | 0xF0;
 			}
+			
+			// PS/2 keyboards and mice
+			for (unsigned char p=0; p<2; p++)
+			{
+				if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x01) // ready and mouse
+				{
+					if (z == 0)
+					{
+						tetra_vars.new_pos_x[z] = (unsigned int)(ps2_cursors[0] / (unsigned int)(400 / (tetra_size_x+2)));
+						
+						if (ps2_cursors[1] < 10) ps2_heights = 0;
+						else if (ps2_cursors[1] > 290) ps2_heights = 2;
+						else ps2_heights = 1;
+						
+					}
+				}
+			}
 
 			if ((((tetra_vars.joy_curr[z] & 0x80) == 0x00) && ((tetra_vars.joy_prev[z] & 0x80) == 0x80)) ||
-				(usb_directions[0] == 1 && z == 0) || (ps2_delay == 0x0000 && ps2_directions[0] == 1 && z == 1)) // up
+				(usb_directions[0] == 1 && z == 0) || 
+				(ps2_delay == 0x0000 && ps2_directions[0] == 1 && z == 1) ||
+				(ps2_heights_delay == 0x0000 && ps2_heights == 2 && z == 0)) // up
 			{
 				tetra_vars.timer[z] = 1; // not zero
 				tetra_vars.joy_delay[z] = 0;
 				
 				if (z == 1) ps2_delay = ps2_speed;
-				if (z == 0) usb_delay = usb_speed;
+				if (z == 0)
+				{
+					usb_delay = usb_speed;
+					ps2_heights_delay = ps2_heights_speed;
+				}
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x40) == 0x00) && ((tetra_vars.joy_prev[z] & 0x40) == 0x40)) ||
-				(usb_directions[1] == 1 && z == 0) || (ps2_delay == 0x0000 && ps2_directions[1] == 1 && z == 1)) // down
+				(usb_directions[1] == 1 && z == 0) ||
+				(ps2_delay == 0x0000 && ps2_directions[1] == 1 && z == 1) ||
+				(ps2_heights_delay == 0x0000 && ps2_heights == 0 && z == 0)) // down
 			{
 				tetra_vars.timer[z] = 0;
 				tetra_vars.joy_delay[z] = 0;
 				
 				if (z == 1) ps2_delay = ps2_speed;
-				if (z == 0) usb_delay = usb_speed;
+				if (z == 0)
+				{
+					usb_delay = usb_speed;
+					ps2_heights_delay = ps2_heights_speed;
+				}
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x20) == 0x00) && ((tetra_vars.joy_prev[z] & 0x20) == 0x20)) ||
 				(usb_directions[2] == 1 && z == 0) || (ps2_delay == 0x0000 && ps2_directions[2] == 1 && z == 1)) // left
@@ -3042,7 +3101,7 @@ void Tetra()
 				tetra_vars.joy_delay[z] = 0;
 				
 				if (z == 1) ps2_delay = ps2_speed;
-				if (z == 0) usb_delay = usb_speed;
+				if (z == 0)	usb_delay = usb_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x10) == 0x00) && ((tetra_vars.joy_prev[z] & 0x10) == 0x10)) ||
 				(usb_directions[3] == 1 && z == 0) || (ps2_delay == 0x0000 && ps2_directions[3] == 1 && z == 1)) // right
@@ -3054,7 +3113,9 @@ void Tetra()
 				if (z == 0) usb_delay = usb_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x08) == 0x00) && ((tetra_vars.joy_prev[z] & 0x08) == 0x08)) ||
-				(usb_buttons[0] == 1 && z == 0) || (ps2_delay == 0x0000 && (ps2_buttons[0] == 1 || ps2_buttons[2] == 1) && z == 1)) // button 1
+				(usb_buttons[0] == 1 && z == 0) || 
+				(ps2_delay == 0x0000 && (ps2_buttons[0] == 1 || ps2_buttons[2] == 1) && z == 1) ||
+				(ps2_clicks[0] == 1 && z == 0)) // button 1
 			{
 				if (tetra_vars.game_over[z] != 0)
 				{
@@ -3086,16 +3147,23 @@ void Tetra()
 					tetra_vars.joy_delay[z] = 0;
 				}
 				
+				if (z == 0)
+				{
+					usb_delay = usb_speed;
+					if (ps2_clicks[0] == 1) ps2_clicks[0] = 2;
+				}
+				
 				if (z == 1)
 				{
 					ps2_delay = ps2_speed;
 					if (ps2_buttons[0] == 1) ps2_buttons[0] = 2;
 					if (ps2_buttons[2] == 1) ps2_buttons[2] = 2;
 				}
-				if (z == 0) usb_delay = usb_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x04) == 0x00) && ((tetra_vars.joy_prev[z] & 0x04) == 0x04)) ||
-				(usb_buttons[1] == 1 && z == 0) || (ps2_delay == 0x0000 && (ps2_buttons[1] == 1 || ps2_buttons[3] == 1) && z == 1)) // button 2
+				(usb_buttons[1] == 1 && z == 0) || 
+				(ps2_delay == 0x0000 && (ps2_buttons[1] == 1 || ps2_buttons[3] == 1) && z == 1) ||
+				(ps2_clicks[1] == 1 && z == 0)) // button 2
 			{
 				if (tetra_vars.game_over[z] != 0)
 				{
@@ -3127,13 +3195,18 @@ void Tetra()
 					tetra_vars.joy_delay[z] = 0;
 				}
 				
+				if (z == 0)
+				{
+					usb_delay = usb_speed;
+					if (ps2_clicks[1] == 1) ps2_clicks[1] = 2;
+				}
+				
 				if (z == 1)
 				{
 					ps2_delay = ps2_speed;
 					if (ps2_buttons[1] == 1) ps2_buttons[1] = 2;
 					if (ps2_buttons[3] == 1) ps2_buttons[3] = 2;
 				}
-				if (z == 0) usb_delay = usb_speed;
 			}
 			
 			if (tetra_vars.game_over[z] != 0) continue;
@@ -3678,6 +3751,10 @@ void Scratchpad()
 	
 	unsigned int mouse_state[5] = { 0, 0, 0, 0, 0 };
 	
+	unsigned char joy_curr[2] = { 0xFF, 0xFF };
+	unsigned int joy_delay = 0x0000;
+	unsigned int joy_speed = 0x7FFF;
+	
 	for (unsigned int y=0; y<300; y++)
 	{
 		for (unsigned int x=0; x<800; x++)
@@ -3716,6 +3793,68 @@ void Scratchpad()
 			if (key_value == 0x00)
 			{
 				key_value = input_usb_keyboard();
+			}
+		}
+		
+		joy_curr[0] = 0xFF; 
+		
+		if (PORTJbits.RJ0 == 0) joy_curr[0] = (joy_curr[0] & 0x7F);
+		if (PORTJbits.RJ1 == 0) joy_curr[0] = (joy_curr[0] & 0xBF);
+		if (PORTJbits.RJ2 == 0) joy_curr[0] = (joy_curr[0] & 0xDF);
+		if (PORTJbits.RJ3 == 0) joy_curr[0] = (joy_curr[0] & 0xEF);
+		if (PORTJbits.RJ4 == 0) joy_curr[0] = (joy_curr[0] & 0xF7);
+		if (PORTJbits.RJ5 == 0) joy_curr[0] = (joy_curr[0] & 0xFB);
+		
+		joy_curr[1] = 0xFF; 
+		
+		if (PORTJbits.RJ6 == 0) joy_curr[1] = (joy_curr[1] & 0x7F);
+		if (PORTJbits.RJ7 == 0) joy_curr[1] = (joy_curr[1] & 0xBF);
+		if (PORTJbits.RJ10 == 0) joy_curr[1] = (joy_curr[1] & 0xDF);
+		if (PORTJbits.RJ12 == 0) joy_curr[1] = (joy_curr[1] & 0xEF);
+		if (PORTJbits.RJ13 == 0) joy_curr[1] = (joy_curr[1] & 0xF7);
+		if (PORTJbits.RJ14 == 0) joy_curr[1] = (joy_curr[1] & 0xFB);
+		
+		if (key_value == 0x00)
+		{
+			for (unsigned char z=0; z<2; z++)
+			{
+				if (joy_delay == 0x0000)
+				{
+					if ((joy_curr[z] & 0x08) == 0x00) //&& (joy_prev[z] & 0x08) == 0x08) // button 1
+					{
+						scratchpad_buffer[pos_x/8][pos_y/8] = ' ';
+						display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);	
+						joy_delay = joy_speed;
+					}
+					else if ((joy_curr[z] & 0x04) == 0x00) //&& (joy_prev[z] & 0x04) == 0x04) // button 2
+					{
+						scratchpad_buffer[pos_x/8][pos_y/8] = key_prev;
+						display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);	
+						joy_delay = joy_speed;
+					}
+					
+					if ((joy_curr[z] & 0x80) == 0x00) //&& (joy_prev[z] & 0x80) == 0x80) // up
+					{
+						key_value = 0x11;
+						joy_delay = joy_speed;
+					}
+					else if ((joy_curr[z] & 0x40) == 0x00) //&& (joy_prev[z] & 0x40) == 0x40) // down
+					{
+						key_value = 0x12;
+						joy_delay = joy_speed;
+					}
+					else if ((joy_curr[z] & 0x20) == 0x00) //&& (joy_prev[z] & 0x20) == 0x20) // left
+					{
+						key_value = 0x13;
+						joy_delay = joy_speed;
+					}
+					else if ((joy_curr[z] & 0x10) == 0x00) //&& (joy_prev[z] & 0x10) == 0x10) // right
+					{
+						key_value = 0x14;
+						joy_delay = joy_speed;
+					}
+				}
+				else joy_delay--;
 			}
 		}
 		
