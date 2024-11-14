@@ -89,6 +89,12 @@ void DelayMS(unsigned int s)
 	while (count > _CP0_GET_COUNT()); // Wait until Core Timer count reaches the number we calculated earlier
 }
 
+void SendChar(char value)
+{
+	while (U3STAbits.UTXBF == 1) { }
+	U3TXREG = (char)(value);
+}
+
 void SendHex(unsigned char value)
 {
 	while (U3STAbits.UTXBF == 1) { }
@@ -215,7 +221,7 @@ Pin27,RJ11,BUTTON
 #define USB_EP0_WAIT_TIMEOUT 40000
 #define USB_VBUS_VALID 0x3
 
-#define USB_KEYBOARD_NUM_KEYS 128
+#define USB_KEYBOARD_NUM_KEYS 256 //128
 #define USB_KEY_NUMLOCK 0x53
 #define USB_KEY_CAPSLOCK 0x39
 #define USB_KEY_SCROLLLOCK 0x47
@@ -1701,7 +1707,7 @@ void USB_host_tasks()
                 break;
             }
         }
-    }        
+    }  
 }
 
 // USB_HID_tasks() exists purely for handling the setting of LEDs while not blocking the rest of my code
@@ -2077,56 +2083,8 @@ void USB_HOST_reset_device()
     DelayMS(100);
 }
 
-void USB_HID_process_report()
+void USB_keyboard_status_toggle(char keycode)
 {
-    int cnt;
-    char current_keys_pressed[USB_KEYBOARD_NUM_KEYS];
-    
-    // Clear the current_keys_pressed array first
-    //memset(current_keys_pressed, 0, sizeof(current_keys_pressed));
-    for (cnt = 0; cnt < USB_KEYBOARD_NUM_KEYS; cnt++)
-	{
-		current_keys_pressed[cnt] = 0;
-	}
-	
-    // Find out which keys are currently being pressed by looking at the report
-    for (cnt = 0; cnt < 6; cnt++)
-    {        
-        current_keys_pressed[USB_EP1_buffer[cnt + 2]] = 1;
-    }
-    
-    // Compare this to the current key status
-    for (cnt = 0; cnt < USB_KEYBOARD_NUM_KEYS; cnt++)
-    {
-        // If a key's pressed value is now 0, but it was 1 before, that means it has been released        
-        if ((current_keys_pressed[cnt] == 0) && (USB_device_keys[cnt].pressed == 1))
-        {
-            USB_device_keys[cnt].released = 1; // Key has just been released
-            USB_device_keys[cnt].pressed = 0;  // Key is no longer pressed
-        }
-        
-        // If a key's pressed value is 1 now, but it was 0 before, that means it has just been pressed
-        if ((current_keys_pressed[cnt] == 1) && (USB_device_keys[cnt].pressed == 0))
-        {
-            USB_device_keys[cnt].pressed = 1;
-            USB_device_keys[cnt].repeat_time = USB_device_millis; // Ensures that it will be processed immediately
-        }
-    }
-    
-    // Now let's process the modifier keys, which are all stored in different bit fields in byte 0 of the HID report
-    USB_CTRL_PRESSED = ((USB_EP1_buffer[0] & USB_CTRL_MASK) == USB_CTRL_MASK);
-    USB_ALT_PRESSED = ((USB_EP1_buffer[0] & USB_ALT_MASK) == USB_ALT_MASK);
-    USB_SHIFT_PRESSED = ((USB_EP1_buffer[0] & USB_SHIFT_MASK) ==  USB_SHIFT_MASK);
-    
-    if ((USB_EP1_buffer[0] > 0) && (USB_EP1_buffer[2] > 0))
-    {
-        USB_SHIFT_PRESSED = ((USB_EP1_buffer[0] & USB_SHIFT_MASK) ==  USB_SHIFT_MASK);
-    }
-}
-
-void USB_keyboad_status_toggle(char keycode)
-{
-    
     if (USB_HID_BUSY) return; // We are already processing a status toggle, skip this one
     
     switch (keycode)
@@ -2180,25 +2138,96 @@ void USB_keyboad_status_toggle(char keycode)
     USB_HID_BUSY = 1;
 }
 
-void USB_keyboad_handle()
+void USB_HID_process_report()
 {
-	for (unsigned int i=0; i<USB_KEYBOARD_NUM_KEYS; i++)
+	if (USB_HID_report[3] == 0x06) // keyboard
 	{
-		if (USB_device_keys[i].pressed && (USB_device_millis >= USB_device_keys[i].repeat_time))
+		int cnt;
+		char current_keys_pressed[USB_KEYBOARD_NUM_KEYS];
+
+		// Clear the current_keys_pressed array first
+		//memset(current_keys_pressed, 0, sizeof(current_keys_pressed));
+		for (cnt = 0; cnt < USB_KEYBOARD_NUM_KEYS; cnt++)
 		{
-		    USB_device_keys[i].repeat_time = USB_device_millis + USB_KEYBOARD_REPEAT_DELAY;
-		   
-			if (USB_SHIFT_PRESSED)
+			current_keys_pressed[cnt] = 0;
+		}
+
+		// Find out which keys are currently being pressed by looking at the report
+		for (cnt = 0; cnt < 6; cnt++)
+		{        
+			current_keys_pressed[USB_EP1_buffer[cnt + 2]] = 1;
+
+			USB_keyboard_status_toggle(USB_EP1_buffer[cnt + 2]);
+		}
+
+		// Compare this to the current key status
+		for (cnt = 0; cnt < USB_KEYBOARD_NUM_KEYS; cnt++)
+		{
+			// If a key's pressed value is now 0, but it was 1 before, that means it has been released        
+			if ((current_keys_pressed[cnt] == 0) && (USB_device_keys[cnt].pressed == 1))
 			{
-				usb_state_array[usb_writepos] = usb_conversion[i+0x80];
-				usb_writepos++;
+				USB_device_keys[cnt].released = 1; // Key has just been released
+				USB_device_keys[cnt].pressed = 0;  // Key is no longer pressed
 			}
-			else
+
+			// If a key's pressed value is 1 now, but it was 0 before, that means it has just been pressed
+			if ((current_keys_pressed[cnt] == 1) && (USB_device_keys[cnt].pressed == 0))
 			{
-				usb_state_array[usb_writepos] = usb_conversion[i];
-				usb_writepos++;
+				USB_device_keys[cnt].pressed = 1;
+				USB_device_keys[cnt].repeat_time = USB_device_millis; // Ensures that it will be processed immediately
 			}
 		}
+
+		// Now let's process the modifier keys, which are all stored in different bit fields in byte 0 of the HID report
+		USB_CTRL_PRESSED = ((USB_EP1_buffer[0] & USB_CTRL_MASK) == USB_CTRL_MASK);
+		USB_ALT_PRESSED = ((USB_EP1_buffer[0] & USB_ALT_MASK) == USB_ALT_MASK);
+		USB_SHIFT_PRESSED = ((USB_EP1_buffer[0] & USB_SHIFT_MASK) ==  USB_SHIFT_MASK);
+
+		if ((USB_EP1_buffer[0] > 0) && (USB_EP1_buffer[2] > 0))
+		{
+			USB_SHIFT_PRESSED = ((USB_EP1_buffer[0] & USB_SHIFT_MASK) ==  USB_SHIFT_MASK);
+		}
+	}
+	else if (USB_HID_report[3] == 0x02) // mouse
+	{
+		
+		for (unsigned char i = 0; i < 8; i++)
+		{        
+			SendHex(USB_EP1_buffer[i]);
+			SendChar(' ');
+		}
+		
+		SendChar('\n');
+		SendChar('\r');
+	}
+}
+
+void USB_device_handle()
+{
+	if (USB_HID_report[3] == 0x06) // keyboard
+	{
+		for (unsigned int i=0; i<USB_KEYBOARD_NUM_KEYS; i++)
+		{
+			if (USB_device_keys[i].pressed && (USB_device_millis >= USB_device_keys[i].repeat_time))
+			{
+				USB_device_keys[i].repeat_time = USB_device_millis + USB_KEYBOARD_REPEAT_DELAY;
+
+				if (USB_SHIFT_PRESSED)
+				{
+					usb_state_array[usb_writepos] = usb_conversion[i+0x80];
+					usb_writepos++;
+				}
+				else
+				{
+					usb_state_array[usb_writepos] = usb_conversion[i];
+					usb_writepos++;
+				}
+			}
+		}
+	}
+	else if (USB_HID_report[3] == 0x02) // mouse
+	{
+		
 	}
 }
 
@@ -2946,7 +2975,7 @@ void Tetra()
 				USB_HID_process_report();
 				USB_EP1_RECEIVED = 0;
 			}
-			USB_keyboad_handle(); 
+			USB_device_handle(); 
 			
 			usb_directions[0] = 0;
 			usb_directions[1] = 0;
@@ -3816,7 +3845,7 @@ void Scratchpad()
 				USB_HID_process_report();
 				USB_EP1_RECEIVED = 0;
 			}
-			USB_keyboad_handle(); 
+			USB_device_handle(); 
 			
 			if (key_value == 0x00)
 			{
@@ -4446,6 +4475,8 @@ int main()
     DelayMS(1000); // settling delay, avoid garbage characters
 	
 	
+	
+	
 	display_string(24, 16, "Acolyte Hand PIC'd 32\\");
 	
 	display_string(280, 112, " Tetra     \\");
@@ -4515,7 +4546,7 @@ int main()
 				USB_HID_process_report();
 				USB_EP1_RECEIVED = 0;
 			}
-			USB_keyboad_handle(); 
+			USB_device_handle(); 
 		
 			if (menu_key == 0x00)
 			{
