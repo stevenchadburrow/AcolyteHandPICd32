@@ -2140,7 +2140,7 @@ void USB_keyboard_status_toggle(char keycode)
 
 void USB_HID_process_report()
 {
-	if (USB_HID_report[3] == 0x06) // keyboard
+	if (USB_HID_report[1] == 0x01 && USB_HID_report[3] == 0x06) // keyboard
 	{
 		int cnt;
 		char current_keys_pressed[USB_KEYBOARD_NUM_KEYS];
@@ -2188,13 +2188,18 @@ void USB_HID_process_report()
 			USB_SHIFT_PRESSED = ((USB_EP1_buffer[0] & USB_SHIFT_MASK) ==  USB_SHIFT_MASK);
 		}
 	}
-	else if (USB_HID_report[3] == 0x02) // mouse
+	else
 	{
+		SendHex(USB_HID_report[1]); // mouse = 0x01
+		SendChar(',');
+		
+		SendHex(USB_HID_report[3]); // mouse = 0x02
+		SendChar(':');
 		
 		for (unsigned char i = 0; i < 8; i++)
 		{        
 			SendHex(USB_EP1_buffer[i]);
-			SendChar(' ');
+			SendChar('.');
 		}
 		
 		SendChar('\n');
@@ -2204,7 +2209,7 @@ void USB_HID_process_report()
 
 void USB_device_handle()
 {
-	if (USB_HID_report[3] == 0x06) // keyboard
+	if (USB_HID_report[1] == 0x01 && USB_HID_report[3] == 0x06) // keyboard
 	{
 		for (unsigned int i=0; i<USB_KEYBOARD_NUM_KEYS; i++)
 		{
@@ -2225,7 +2230,7 @@ void USB_device_handle()
 			}
 		}
 	}
-	else if (USB_HID_report[3] == 0x02) // mouse
+	else
 	{
 		
 	}
