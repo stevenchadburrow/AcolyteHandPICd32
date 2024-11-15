@@ -3247,11 +3247,12 @@ void Tetra()
 		}
 		else
 		{	
+			tetra_vars.joy_prev[1] = tetra_vars.joy_curr[1];
+			
 			if (pause[1] == 0)
 			{	
-				if (usb_readpos != usb_writepos)
+				while (usb_readpos != usb_writepos)
 				{	
-					tetra_vars.joy_prev[1] = tetra_vars.joy_curr[1];
 					tetra_vars.joy_curr[1] = 0xFF;
 
 					if ((usb_buttons[usb_readpos] & 0x0100) == 0x0100) // up
@@ -4118,7 +4119,7 @@ void Scratchpad()
 		}
 		else
 		{
-			if (usb_readpos != usb_writepos)
+			while (usb_readpos != usb_writepos)
 			{
 				joy_curr[1] = 0xFF;
 				
@@ -4957,7 +4958,7 @@ int main()
 		}
 		else
 		{
-			if (usb_readpos != usb_writepos)
+			while (usb_readpos != usb_writepos)
 			{
 				if ((usb_buttons[usb_readpos] & 0x0100) == 0x0100) // up
 				{
