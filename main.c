@@ -3417,8 +3417,8 @@ void Tetra()
 									tetra_vars.background_trans = 384;
 								}
 								
-								pause[0] = 0x1F;
-								pause[1] = 0x1F;
+								pause[0] = 0x3F;
+								pause[1] = 0x3F;
 								
 								// SOUND HERE
 								music_note(1047, 250, 0);
