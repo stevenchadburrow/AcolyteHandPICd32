@@ -2869,7 +2869,7 @@ void Tetra()
 	unsigned char mouse_active = 0;
 	unsigned char mouse_move = 0;
 	
-	unsigned char pause[2] = { 0, 0 };
+	unsigned char pause[2] = { 0, 0 }; // not sure if this is needed any more, it was glitching at some point
 	
 	unsigned int overall_delay = 0x0000;
 	
