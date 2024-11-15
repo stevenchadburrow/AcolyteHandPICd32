@@ -4484,9 +4484,6 @@ int main()
 	
 	
 	
-	Scratchpad();
-	
-	
 
 	
 	display_string(24, 16, "Acolyte Hand PIC'd 32\\");
