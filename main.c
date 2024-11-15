@@ -2737,11 +2737,11 @@ struct tetra_struct_vars tetra_vars;
 void Tetra()
 {	
 	unsigned int ps2_delay = 0x0000;
-	unsigned int ps2_speed = 0x001F;
+	unsigned int ps2_speed = 0x002F;
 	unsigned int ps2_heights_delay = 0x0000;
-	unsigned int ps2_heights_speed = 0x001F;
+	unsigned int ps2_heights_speed = 0x002F;
 	unsigned int usb_delay = 0x0000;
-	unsigned int usb_speed = 0x001F;
+	unsigned int usb_speed = 0x002F;
 	
 	unsigned char ps2_directions[4] = { 0, 0, 0, 0 };
 	unsigned char ps2_buttons[4] = { 2, 2, 2, 2 };
@@ -3827,7 +3827,7 @@ void Scratchpad()
 	
 	unsigned char joy_curr[2] = { 0xFF, 0xFF };
 	unsigned int joy_delay = 0x0000;
-	unsigned int joy_speed = 0x05FF;
+	unsigned int joy_speed = 0x01FF;
 	
 	unsigned int overall_delay = 0x0000;
 	
@@ -3857,7 +3857,7 @@ void Scratchpad()
 			continue;
 		}
 		
-		overall_delay = 0x07FF;
+		overall_delay = 0x1FFF;
 		
 		key_value = input_ps2_keyboard();
 		
