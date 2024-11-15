@@ -65,7 +65,7 @@
 
 #include "splash_pointing.c"
 #include "splash_bright.c"
-#include "splash_night.c"
+#include "splash_floating.c"
 #include "splash_butterfly.c"
 #include "splash_blushing.c"
 #include "splash_television.c"
@@ -2726,6 +2726,7 @@ struct tetra_struct_vars
 	volatile unsigned char joy_curr[2];
 	volatile unsigned char joy_prev[2];
 	volatile unsigned int joy_delay[2];
+	volatile unsigned int joy_button_delay[2];
 
 	volatile unsigned int game_over[2];
 };
@@ -2779,6 +2780,7 @@ void Tetra()
 		tetra_vars.joy_curr[z] = 0x00;
 		tetra_vars.joy_prev[z] = 0x00;
 		tetra_vars.joy_delay[z] = 0;
+		tetra_vars.joy_button_delay[z] = 0;
 		
 		tetra_vars.game_over[z] = 0x01;
 
@@ -2837,7 +2839,7 @@ void Tetra()
 				for (unsigned int x=0; x<512; x++)
 				{
 					if (tetra_vars.background == 1) screen_buffer[tetra_vars.background_trans][x] = splash_bright[tetra_vars.background_trans * 512 + x];
-					else if (tetra_vars.background == 2) screen_buffer[tetra_vars.background_trans][x] = splash_night[tetra_vars.background_trans * 512 + x];
+					else if (tetra_vars.background == 2) screen_buffer[tetra_vars.background_trans][x] = splash_floating[tetra_vars.background_trans * 512 + x];
 					else if (tetra_vars.background == 3) screen_buffer[tetra_vars.background_trans][x] = splash_butterfly[tetra_vars.background_trans * 512 + x];
 					else if (tetra_vars.background == 4) screen_buffer[tetra_vars.background_trans][x] = splash_blushing[tetra_vars.background_trans * 512 + x];
 				}
@@ -3083,18 +3085,20 @@ void Tetra()
 
 			tetra_vars.timer[z]++;
 
-			if (tetra_vars.timer[z] > 320 - 16 * tetra_vars.speed[z]) // determines how fast it falls
+			if (tetra_vars.timer[z] > 288 - 16 * tetra_vars.speed[z]) // determines how fast it falls
 			{
 				tetra_vars.timer[z] = 0;
 			}
 
 			tetra_vars.joy_delay[z]++;
 
-			if (tetra_vars.joy_delay[z] > 48) // determines button turbo speed
+			if (tetra_vars.joy_delay[z] > 40) // determines button turbo speed
 			{
 				tetra_vars.joy_delay[z] = 0;
 				tetra_vars.joy_prev[z] = tetra_vars.joy_prev[z] | 0xF0;
 			}
+			
+			if (tetra_vars.joy_button_delay[z] > 0) tetra_vars.joy_button_delay[z]--;
 			
 			// PS/2 mice
 			if (z == 1)
@@ -3165,11 +3169,13 @@ void Tetra()
 				if (z == 0) ps2_delay = ps2_speed;
 				if (z == 1) usb_delay = usb_speed;
 			}
-			else if ((((tetra_vars.joy_curr[z] & 0x08) == 0x00) && ((tetra_vars.joy_prev[z] & 0x08) == 0x08)) ||
+			else if ((((tetra_vars.joy_curr[z] & 0x08) == 0x00) && ((tetra_vars.joy_prev[z] & 0x08) == 0x08) && tetra_vars.joy_button_delay[z] == 0x0000) ||
 				(usb_buttons[0] == 1 && z == 1) || 
 				(ps2_delay == 0x0000 && (ps2_buttons[0] == 1 || ps2_buttons[2] == 1) && z == 0) ||
 				(ps2_clicks[0] == 1 && z == 1)) // button 1
 			{
+				tetra_vars.joy_button_delay[z] = 0x003F;
+				
 				if (tetra_vars.game_over[z] != 0)
 				{
 					tetra_vars.game_over[z] = 0; // play again
@@ -3198,6 +3204,7 @@ void Tetra()
 					tetra_vars.new_rot[z]++;
 					if (tetra_vars.new_rot[z] == 4) tetra_vars.new_rot[z] = 0;
 					tetra_vars.joy_delay[z] = 0;
+					tetra_vars.joy_button_delay[z] = 0;
 				}
 				
 				if (z == 1)
@@ -3213,11 +3220,13 @@ void Tetra()
 					if (ps2_buttons[2] == 1) ps2_buttons[2] = 2;
 				}
 			}
-			else if ((((tetra_vars.joy_curr[z] & 0x04) == 0x00) && ((tetra_vars.joy_prev[z] & 0x04) == 0x04)) ||
+			else if ((((tetra_vars.joy_curr[z] & 0x04) == 0x00) && ((tetra_vars.joy_prev[z] & 0x04) == 0x04) && tetra_vars.joy_button_delay[z] == 0x0000) ||
 				(usb_buttons[1] == 1 && z == 1) || 
 				(ps2_delay == 0x0000 && (ps2_buttons[1] == 1 || ps2_buttons[3] == 1) && z == 0) ||
 				(ps2_clicks[1] == 1 && z == 1)) // button 2
 			{
+				tetra_vars.joy_button_delay[z] = 0x003F;
+				
 				if (tetra_vars.game_over[z] != 0)
 				{
 					tetra_vars.game_over[z] = 0; // play again
@@ -3246,6 +3255,7 @@ void Tetra()
 					if (tetra_vars.new_rot[z] == 0) tetra_vars.new_rot[z] = 3;
 					else tetra_vars.new_rot[z]--;
 					tetra_vars.joy_delay[z] = 0;
+					tetra_vars.joy_button_delay[z] = 0;
 				}
 				
 				if (z == 1)
