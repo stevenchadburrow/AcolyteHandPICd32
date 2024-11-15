@@ -2191,10 +2191,10 @@ void USB_HID_process_report()
 	else
 	{
 		SendHex(USB_HID_report[1]); // mouse = 0x01
-		SendChar(',');
+		SendChar(':');
 		
 		SendHex(USB_HID_report[3]); // mouse = 0x02
-		SendChar(':');
+		SendChar(' ');
 		
 		for (unsigned char i = 0; i < 8; i++)
 		{        
