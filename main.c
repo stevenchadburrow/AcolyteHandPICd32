@@ -4638,13 +4638,13 @@ int main()
 		{
 			for (unsigned char i=0; i<menu_max; i++)
 			{
-				if (menu_mouse[4] <= (unsigned int)(i * 300 / menu_max))
+				if (menu_mouse[4] <= (unsigned int)(i * 384 / menu_max))
 				{
-					display_character(280, 112 + menu_pos * 8, ' ');
+					display_character(24, 300 + menu_pos * 8, ' ');
 
 					menu_pos = i;
 
-					display_character(280, 112 + menu_pos * 8, '>');
+					display_character(24, 300 + menu_pos * 8, '>');
 
 					music_note(523, 250, 0);
 					
