@@ -63,15 +63,15 @@
 
 #include <xc.h>
 
-#include "splash_sundress.c"
 #include "splash_pointing.c"
-#include "splash_butterfly.c"
-#include "splash_night.c"
 #include "splash_bright.c"
+#include "splash_night.c"
+#include "splash_butterfly.c"
+#include "splash_blushing.c"
 #include "splash_television.c"
 
 
-#define SYS_FREQ 160000000 // Running at 160MHz
+#define SYS_FREQ 150000000 // Running at 150MHz
 
 unsigned long VirtToPhys(volatile void* p) // changed 'const' to 'volatile'
 {
@@ -106,31 +106,32 @@ void SendHex(unsigned char value)
 }
 
 /*
-SVGA Signal 800 x 600 @ 60 Hz timing
+VESA Signal 1024 x 768 @ 70 Hz timing
 
 General timing
-Screen refresh rate	60 Hz
-Vertical refresh	37.878787878788 kHz
-Pixel freq.	40.0 MHz
+Screen refresh rate	70 Hz
+Vertical refresh	56.475903614458 kHz
+Pixel freq.	75.0 MHz
 Horizontal timing (line)
-Polarity of horizontal sync pulse is positive.
+Polarity of horizontal sync pulse is negative.
 
 Scanline part	Pixels	Time [µs]
-Visible area	800	20
-Front porch	40	1
-Sync pulse	128	3.2
-Back porch	88	2.2
-Whole line	1056	26.4
+Visible area	1024	13.653333333333
+Front porch	24	0.32
+Sync pulse	136	1.8133333333333
+Back porch	144	1.92
+Whole line	1328	17.706666666667
 Vertical timing (frame)
-Polarity of vertical sync pulse is positive.
+Polarity of vertical sync pulse is negative.
 
 Frame part	Lines	Time [ms]
-Visible area	600	15.84
-Front porch	1	0.0264
-Sync pulse	4	0.1056
-Back porch	23	0.6072
-Whole frame	628	16.5792
+Visible area	768	13.59872
+Front porch	3	0.05312
+Sync pulse	6	0.10624
+Back porch	29	0.51349333333333
+Whole frame	806	14.271573333333
 */
+
 
 /*	
 Interrupt from Visible Timer at beginning of scanline, DMA0 to start.
@@ -715,9 +716,11 @@ void ps2_command(unsigned char command, unsigned char port)
 
 
 
-volatile unsigned char __attribute__((coherent,address(0x80001000))) screen_buffer[300][800]; //screen_buffer[300][400]; // visible portion of screen
+volatile unsigned char __attribute__((coherent,address(0x80001000))) screen_buffer[384][512]; //screen_buffer[300][400]; // visible portion of screen
 
-volatile unsigned int screen_scanline = 601; // start of vertical blank
+volatile unsigned char screen_blank[512]; // black scanline
+
+volatile unsigned int screen_scanline = 771; // start of vertical sync
 
 volatile unsigned char screen_zero[1] = { 0x00 }; // zero value for black
 
@@ -756,7 +759,7 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 	
 	USB_device_millis_delay = USB_device_millis_delay + 1;
 	
-	if (USB_device_millis_delay >= 38) // should be 37.878 really
+	if (USB_device_millis_delay >= 56) // should be 56.475 really
 	{
 		USB_device_millis_delay = 0;
 		USB_device_millis++;
@@ -764,12 +767,18 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 	
 	screen_scanline = screen_scanline + 1; // increment scanline
 	
-	if (screen_scanline == 628) screen_scanline = 0;
+	if (screen_scanline == 806) screen_scanline = 0;
 	
-	if (screen_scanline < 600)
-	{	
+	if (screen_scanline < 768)
+	{		
 		DCH0INTbits.CHBCIF = 0; // clear transfer complete flag
 		DCH0SSA = VirtToPhys(screen_buffer[screen_scanline>>1]); // transfer source physical address
+		DCH0CONbits.CHEN = 1; // enable channel
+	}
+	else if (screen_scanline == 805)
+	{
+		DCH0INTbits.CHBCIF = 0; // clear transfer complete flag
+		DCH0SSA = VirtToPhys(screen_blank); // transfer source physical address
 		DCH0CONbits.CHEN = 1; // enable channel
 	}
 	
@@ -954,9 +963,9 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 					}
 					else if ((signed char)(ps2_buffer[p]) >= 0)
 					{
-						if (ps2_cursor_x[p][(unsigned char)(ps2_writepos[p]-1)] >= 400 - (signed char)(ps2_buffer[p]))
+						if (ps2_cursor_x[p][(unsigned char)(ps2_writepos[p]-1)] >= 512 - (signed char)(ps2_buffer[p]))
 						{
-							ps2_cursor_x[p][ps2_writepos[p]] = 400;
+							ps2_cursor_x[p][ps2_writepos[p]] = 512;
 						}
 						else
 						{
@@ -983,9 +992,9 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 					}
 					else if ((signed char)(ps2_buffer[p]) >= 0)
 					{
-						if (ps2_cursor_y[p][(unsigned char)(ps2_writepos[p]-1)] >= 300 - (signed char)(ps2_buffer[p]))
+						if (ps2_cursor_y[p][(unsigned char)(ps2_writepos[p]-1)] >= 384 - (signed char)(ps2_buffer[p]))
 						{
-							ps2_cursor_y[p][ps2_writepos[p]] = 300;
+							ps2_cursor_y[p][ps2_writepos[p]] = 384;
 						}
 						else
 						{
@@ -1170,7 +1179,7 @@ char input_ps2_mouse(unsigned int *array)
 				if ((ps2_state_array[p][ps2_readpos[p]] & 0x04) == 0x04) array[2] = 0x0001;
 				
 				array[3] = (unsigned int)(ps2_cursor_x[p][ps2_readpos[p]]);
-				array[4] = (unsigned int)(300 - ps2_cursor_y[p][ps2_readpos[p]]);
+				array[4] = (unsigned int)(384 - ps2_cursor_y[p][ps2_readpos[p]]);
 
 				ps2_readpos[p]++;
 				
@@ -1206,8 +1215,7 @@ void display_character(unsigned int x, unsigned int y, unsigned char value)
 	{		
 		for (unsigned int j=0; j<8; j++)
 		{
-			screen_buffer[y+i][(x+j)*2] = (text_bitmap[pos+i*8+j]);
-			screen_buffer[y+i][(x+j)*2+1] = (text_bitmap[pos+i*8+j]);	
+			screen_buffer[y+i][(x+j)] = (text_bitmap[pos+i*8+j]);
 		}
 	}
 };
@@ -1220,8 +1228,7 @@ void display_inverse(unsigned int x, unsigned int y, unsigned char value)
 	{		
 		for (unsigned int j=0; j<8; j++)
 		{
-			screen_buffer[y+i][(x+j)*2] = (unsigned char)((text_bitmap[pos+i*8+j] ^ 0xFF));
-			screen_buffer[y+i][(x+j)*2+1] = (unsigned char)((text_bitmap[pos+i*8+j] ^ 0xFF));	
+			screen_buffer[y+i][(x+j)] = (unsigned char)((text_bitmap[pos+i*8+j] ^ 0xFF));
 		}
 	}
 };
@@ -2666,9 +2673,9 @@ void tetra_solid(unsigned int x, unsigned int y, unsigned char value)
 {	
 	for (unsigned int i=0; i<8; i++)
 	{
-		for (unsigned int j=0; j<16; j++)
+		for (unsigned int j=0; j<8; j++)
 		{
-			screen_buffer[y*8+i][x*16+j] = value;
+			screen_buffer[y*8+i][x*8+j] = value;
 		}
 	}		
 };
@@ -2678,11 +2685,11 @@ void tetra_block(unsigned int x, unsigned int y, unsigned char value)
 {
 	for (unsigned int i=0; i<8; i++)
 	{
-		for (unsigned int j=0; j<16; j++)
+		for (unsigned int j=0; j<8; j++)
 		{
-			if (i == 0) screen_buffer[y*8+i][x*16+j] = 0xFF;
-			else if (j == 0 || j == 1) screen_buffer[y*8+i][x*16+j] = 0xFF;
-			else screen_buffer[y*8+i][x*16+j] = value;
+			if (i == 0) screen_buffer[y*8+i][x*8+j] = 0xFF;
+			else if (j == 0) screen_buffer[y*8+i][x*8+j] = 0xFF;
+			else screen_buffer[y*8+i][x*8+j] = value;
 		}
 	}	
 };
@@ -2797,12 +2804,11 @@ void Tetra()
 	tetra_vars.background_delay = 0;
 	
 	// set background
-	for (unsigned int y=0; y<300; y++)
+	for (unsigned int y=0; y<384; y++)
 	{
-		for (unsigned int x=0; x<800; x+=2)
+		for (unsigned int x=0; x<512; x++)
 		{
-			screen_buffer[y][x] = splash_bright[y * 400 + (x>>1)];
-			screen_buffer[y][x+1] = splash_bright[y * 400 + (x>>1)];
+			screen_buffer[y][x] = splash_bright[y * 512 + x];
 		}
 	}
 	
@@ -2828,19 +2834,14 @@ void Tetra()
 			else
 			{
 				// set background
-				for (unsigned int x=0; x<800; x+=2)
+				for (unsigned int x=0; x<512; x++)
 				{
-					if (tetra_vars.background == 1) screen_buffer[tetra_vars.background_trans][x] = splash_bright[tetra_vars.background_trans * 400 + (x>>1)];
-					else if (tetra_vars.background == 2) screen_buffer[tetra_vars.background_trans][x] = splash_night[tetra_vars.background_trans * 400 + (x>>1)];
-					else if (tetra_vars.background == 3) screen_buffer[tetra_vars.background_trans][x] = splash_butterfly[tetra_vars.background_trans * 400 + (x>>1)];
-					else if (tetra_vars.background == 4) screen_buffer[tetra_vars.background_trans][x] = splash_pointing[tetra_vars.background_trans * 400 + (x>>1)];
-					
-					if (tetra_vars.background == 1) screen_buffer[tetra_vars.background_trans][x+1] = splash_bright[tetra_vars.background_trans * 400 + (x>>1)];
-					else if (tetra_vars.background == 2) screen_buffer[tetra_vars.background_trans][x+1] = splash_night[tetra_vars.background_trans * 400 + (x>>1)];
-					else if (tetra_vars.background == 3) screen_buffer[tetra_vars.background_trans][x+1] = splash_butterfly[tetra_vars.background_trans * 400 + (x>>1)];
-					else if (tetra_vars.background == 4) screen_buffer[tetra_vars.background_trans][x+1] = splash_pointing[tetra_vars.background_trans * 400 + (x>>1)];
+					if (tetra_vars.background == 1) screen_buffer[tetra_vars.background_trans][x] = splash_bright[tetra_vars.background_trans * 512 + x];
+					else if (tetra_vars.background == 2) screen_buffer[tetra_vars.background_trans][x] = splash_night[tetra_vars.background_trans * 512 + x];
+					else if (tetra_vars.background == 3) screen_buffer[tetra_vars.background_trans][x] = splash_butterfly[tetra_vars.background_trans * 512 + x];
+					else if (tetra_vars.background == 4) screen_buffer[tetra_vars.background_trans][x] = splash_blushing[tetra_vars.background_trans * 512 + x];
 				}
-
+				
 				tetra_vars.background_trans--;
 				
 				tetra_vars.background_delay = 5;
@@ -3082,14 +3083,14 @@ void Tetra()
 
 			tetra_vars.timer[z]++;
 
-			if (tetra_vars.timer[z] > 240 - 16 * tetra_vars.speed[z]) // determines how fast it falls
+			if (tetra_vars.timer[z] > 320 - 16 * tetra_vars.speed[z]) // determines how fast it falls
 			{
 				tetra_vars.timer[z] = 0;
 			}
 
 			tetra_vars.joy_delay[z]++;
 
-			if (tetra_vars.joy_delay[z] > 32) // determines button turbo speed
+			if (tetra_vars.joy_delay[z] > 48) // determines button turbo speed
 			{
 				tetra_vars.joy_delay[z] = 0;
 				tetra_vars.joy_prev[z] = tetra_vars.joy_prev[z] | 0xF0;
@@ -3398,7 +3399,7 @@ void Tetra()
 									
 									if (tetra_vars.background >= 5) tetra_vars.background = 1;
 									
-									tetra_vars.background_trans = 300;
+									tetra_vars.background_trans = 384;
 								}
 								
 								// SOUND HERE
@@ -3472,23 +3473,23 @@ void Tetra()
 		}
 		
 		unsigned int vert = 0x06;
-		unsigned int horz = 0x02;
+		unsigned int horz = 0x04;
 		
 		for (unsigned int i=0; i<(tetra_size_y-1)*8; i++)
 		{
 			for (unsigned int j=0; j<8; j++)
 			{
-				screen_buffer[i+(vert+2)*8][j+horz*16-8] = 0x92; // light grey
-				screen_buffer[i+(vert+2)*8][j+horz*16+tetra_size_x*16] = 0x92; // light grey
+				screen_buffer[i+(vert+2)*8][j+horz*8-8] = 0x92; // light grey
+				screen_buffer[i+(vert+2)*8][j+horz*8+tetra_size_x*8] = 0x92; // light grey
 			}
 		}
 		
 		for (unsigned int i=0; i<4; i++)
 		{
-			for (unsigned int j=0; j<(tetra_size_x+1)*16; j++)
+			for (unsigned int j=0; j<(tetra_size_x+2)*8; j++)
 			{
-				screen_buffer[i+(vert+2)*8-4][j+horz*16-8] = 0x92; // light grey
-				screen_buffer[i+(vert+2)*8+(tetra_size_y-1)*8][j+horz*16-8] = 0x92; // light grey
+				screen_buffer[i+(vert+2)*8-4][j+horz*8-8] = 0x92; // light grey
+				screen_buffer[i+(vert+2)*8+(tetra_size_y-1)*8][j+horz*8-8] = 0x92; // light grey
 			}
 		}
 
@@ -3545,23 +3546,23 @@ void Tetra()
 		}
 		
 		vert = 0x06;
-		horz = 0x25;
+		horz = 0x32;
 		
 		for (unsigned int i=0; i<(tetra_size_y-1)*8; i++)
 		{
 			for (unsigned int j=0; j<8; j++)
 			{
-				screen_buffer[i+(vert+2)*8][j+horz*16-8] = 0x92; // light grey
-				screen_buffer[i+(vert+2)*8][j+horz*16+tetra_size_x*16] = 0x92; // light grey
+				screen_buffer[i+(vert+2)*8][j+horz*8-8] = 0x92; // light grey
+				screen_buffer[i+(vert+2)*8][j+horz*8+tetra_size_x*8] = 0x92; // light grey
 			}
 		}
 		
 		for (unsigned int i=0; i<4; i++)
 		{
-			for (unsigned int j=0; j<(tetra_size_x+1)*16; j++)
+			for (unsigned int j=0; j<(tetra_size_x+2)*8; j++)
 			{
-				screen_buffer[i+(vert+2)*8-4][j+horz*16-8] = 0x92; // light grey
-				screen_buffer[i+(vert+2)*8+(tetra_size_y-1)*8][j+horz*16-8] = 0x92; // light grey
+				screen_buffer[i+(vert+2)*8-4][j+horz*8-8] = 0x92; // light grey
+				screen_buffer[i+(vert+2)*8+(tetra_size_y-1)*8][j+horz*8-8] = 0x92; // light grey
 			}
 		}
 
@@ -3626,12 +3627,11 @@ void BadApple()
 { 
 	while (1)
 	{
-		for (unsigned int y=0; y<300; y++)
+		for (unsigned int y=0; y<384; y++)
 		{
-			for (unsigned int x=0; x<800; x+=2)
+			for (unsigned int x=0; x<512; x++)
 			{
-				screen_buffer[y][x] = splash_television[y * 400 + (x>>1)];
-				screen_buffer[y][x+1] = splash_television[y * 400 + (x>>1)];
+				screen_buffer[y][x] = splash_television[y * 512 + x];
 				//screen_buffer[y][x] = 0x25; // grey?
 			}
 		}
@@ -3654,9 +3654,9 @@ void BadApple()
 			// lock up
 			while (1)
 			{
-				for (unsigned int i=0; i<300; i++)
+				for (unsigned int i=0; i<384; i++)
 				{
-					for (unsigned int j=0; j<800; j++)
+					for (unsigned int j=0; j<512; j++)
 					{
 						screen_buffer[i][j] = 0x00;
 					}
@@ -3667,9 +3667,9 @@ void BadApple()
 				DelayMS(100);
 				DelayMS(100);
 
-				for (unsigned int i=0; i<300; i++)
+				for (unsigned int i=0; i<384; i++)
 				{
-					for (unsigned int j=0; j<800; j++)
+					for (unsigned int j=0; j<512; j++)
 					{
 						screen_buffer[i][j] = 0xFF;
 					}
@@ -3696,8 +3696,8 @@ void BadApple()
 		{
 			frames += 2; // only 30 FPS
 			
-			x = 72;
-			y = 52;
+			x = 88;
+			y = 104;
 
 			for (unsigned int l=0; l<12; l++)
 			{
@@ -3732,22 +3732,20 @@ void BadApple()
 							if ((value & 0x01) == 0x01)
 							{
 								screen_buffer[y][x] = 0xFF;
-								screen_buffer[y][x+1] = 0xFF;
 							}
 							else
 							{
 								screen_buffer[y][x] = 0x00;
-								screen_buffer[y][x+1] = 0x00;
 							}
 
 							value = (unsigned int)(value >> 1);
 
-							x += 2;
+							x += 1;
 						}
 					}
 
+					x = 88;
 					y += 1;
-					x = 72;
 				}
 
 				temp_value = sdcard_receivebyte(); // data packet ends with 0x55 then 0xAA
@@ -3791,7 +3789,7 @@ void BadApple()
 }
 
 
-volatile char scratchpad_buffer[50][36];
+volatile char scratchpad_buffer[64][48];
 
 void Scratchpad()
 {
@@ -3805,27 +3803,27 @@ void Scratchpad()
 	
 	unsigned char joy_curr[2] = { 0xFF, 0xFF };
 	unsigned int joy_delay = 0x0000;
-	unsigned int joy_speed = 0x7FFF;
+	unsigned int joy_speed = 0x05FF;
 	
 	unsigned int overall_delay = 0x0000;
 	
-	for (unsigned int y=0; y<300; y++)
+	for (unsigned int y=0; y<384; y++)
 	{
-		for (unsigned int x=0; x<800; x++)
+		for (unsigned int x=0; x<512; x++)
 		{
 			screen_buffer[y][x] = 0x00; // black
 		}
 	}
 	
-	for (unsigned int y=0; y<36; y++)
+	for (unsigned int y=0; y<48; y++)
 	{
-		for (unsigned int x=0; x<50; x++)
+		for (unsigned int x=0; x<64; x++)
 		{
 			scratchpad_buffer[x][y] = ' ';
 		}
 	}
 	
-	display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+	display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 	
 	while (1)
 	{
@@ -3835,7 +3833,7 @@ void Scratchpad()
 			continue;
 		}
 		
-		overall_delay = 0x1FFF;
+		overall_delay = 0x07FF;
 		
 		key_value = input_ps2_keyboard();
 		
@@ -3885,13 +3883,13 @@ void Scratchpad()
 					if ((joy_curr[z] & 0x08) == 0x00) //&& (joy_prev[z] & 0x08) == 0x08) // button 1
 					{
 						scratchpad_buffer[pos_x/8][pos_y/8] = ' ';
-						display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);	
+						display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);	
 						joy_delay = joy_speed;
 					}
 					else if ((joy_curr[z] & 0x04) == 0x00) //&& (joy_prev[z] & 0x04) == 0x04) // button 2
 					{
 						scratchpad_buffer[pos_x/8][pos_y/8] = key_prev;
-						display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);	
+						display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);	
 						joy_delay = joy_speed;
 					}
 					
@@ -3929,70 +3927,70 @@ void Scratchpad()
 				pos_x = 0x00;
 				pos_y = 0x00;
 	
-				for (unsigned int y=0; y<300; y++)
+				for (unsigned int y=0; y<384; y++)
 				{
-					for (unsigned int x=0; x<800; x++)
+					for (unsigned int x=0; x<512; x++)
 					{
 						screen_buffer[y][x] = 0x00; // black
 					}
 				}
 
-				for (unsigned int y=0; y<36; y++)
+				for (unsigned int y=0; y<48; y++)
 				{
-					for (unsigned int x=0; x<50; x++)
+					for (unsigned int x=0; x<64; x++)
 					{
 						scratchpad_buffer[x][y] = ' ';
 					}
 				}
 	
-				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x0D) // return
 			{
-				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				pos_x = 0x00;
 				pos_y += 8;
 				
-				if (pos_y >= 288)
+				if (pos_y >= 376)
 				{
-					for (unsigned int y=0; y<280; y++)
+					for (unsigned int y=0; y<376; y++)
 					{
-						for (unsigned int x=0; x<800; x++)
+						for (unsigned int x=0; x<512; x++)
 						{
 							screen_buffer[y][x] = screen_buffer[y+8][x];
 						}
 					}
 					
-					for (unsigned int y=280; y<288; y++)
+					for (unsigned int y=376; y<384; y++)
 					{
-						for (unsigned int x=0; x<800; x++)
+						for (unsigned int x=0; x<512; x++)
 						{
 							screen_buffer[y][x] = 0x00; // black
 						}
 					}
 					
-					for (unsigned int y=0; y<35; y++)
+					for (unsigned int y=0; y<47; y++)
 					{
-						for (unsigned int x=0; x<50; x++)
+						for (unsigned int x=0; x<64; x++)
 						{
 							scratchpad_buffer[x][y] = scratchpad_buffer[x][y+1];
 						}
 					}
 					
-					for (unsigned int x=0; x<50; x++)
+					for (unsigned int x=0; x<64; x++)
 					{
-						scratchpad_buffer[x][35] = ' ';
+						scratchpad_buffer[x][47] = ' ';
 					}
 					
 					pos_y -= 8;
 				}
 				
-				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x08) // backspace
 			{
-				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_x >= 8)
 				{
@@ -4001,51 +3999,51 @@ void Scratchpad()
 				
 				scratchpad_buffer[pos_x/8][pos_y/8] = ' ';
 				
-				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x11) // up
 			{
-				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_y >= 8)
 				{
 					pos_y -= 8;
 				}
 				
-				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x12) // down
 			{
-				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
-				if (pos_y < 280)
+				if (pos_y < 368)
 				{
 					pos_y += 8;
 				}
 				
-				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x13) // left
 			{
-				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
 				if (pos_x >= 8)
 				{
 					pos_x -= 8;
 				}
 				
-				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value == 0x14) // right
 			{
-				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
-				if (pos_x < 384)
+				if (pos_x < 496)
 				{
 					pos_x += 8;
 				}
 				
-				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 			else if (key_value >= 32)
 			{
@@ -4053,28 +4051,28 @@ void Scratchpad()
 				
 				scratchpad_buffer[pos_x/8][pos_y/8] = key_value;
 				
-				display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_character(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
-				if (pos_x < 384)
+				if (pos_x < 496)
 				{
 					pos_x += 0x08;
 				}
 				
-				display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+				display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			}
 		}
 		
 		if (input_ps2_mouse((unsigned int *)mouse_state) != 0x00)
 		{
-			display_character(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
+			display_character(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			
 			pos_x = (unsigned int)(mouse_state[3] / 8) * 8;
 			
-			if (pos_x > 384) pos_x = 384;
+			if (pos_x > 496) pos_x = 496;
 			
 			pos_y = (unsigned int)(mouse_state[4] / 8) * 8;
 			
-			if (pos_y > 280) pos_y = 280;
+			if (pos_y > 368) pos_y = 368;
 			
 			if (mouse_state[0] != 0x0000) // left
 			{
@@ -4085,7 +4083,7 @@ void Scratchpad()
 				scratchpad_buffer[pos_x/8][pos_y/8] = ' ';
 			}
 			
-			display_inverse(pos_x, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);	
+			display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);	
 		}
 	}
 }
@@ -4181,13 +4179,13 @@ int main()
 	CFGCONbits.OCACLK = 1; // use alternate OC/TMR table
 	
 	PB1DIV = 0x00008001; // divide by 2
-	PB2DIV = 0x00008007; //0x00008003; // change PB2 clock to 160 / 8 = 20 MHz for SPI and UART
+	PB2DIV = 0x00008007; //0x00008003; // change PB2 clock to 150 / 8 = 18.75 MHz for SPI and UART
 	PB3DIV = 0x00008000; // set OC and TMR clock division by 1
 	PB4DIV = 0x00008001; // divide by 2
 	PB5DIV = 0x00008001; // divide by 2
 	//PB6DIV = 0x00008001; // divide by 2
 	PB7DIV = 0x00008000; // CPU clock divide by 1
-	SPLLCON = 0x01270203; //0x02270203; // use PLL to bring external 24 MHz into 160 MHz
+	SPLLCON = 0x01310301; //0x02270203; // use PLL to bring external 24 MHz into 150 MHz
 	
 	// PRECON - Set up prefetch
     PRECONbits.PFMSECEN = 0; // Flash SEC Interrupt Enable (Do not generate an interrupt when the PFMSEC bit is set)
@@ -4233,35 +4231,38 @@ int main()
 	// I've had to adjust these values many times...
 	OC1CON = 0x0; // reset OC1
 	OC1CON = 0x00000003; // toggle, use Timer4
-	OC1R = 0x0003; //0x0000; // pixel-sync rise (adjust)
-	OC1RS = 0x0003; //0x0000; // pixel-sync fall (adjust)
+	OC1R = 0x0001; //0x0000; // pixel-sync rise (adjust)
+	OC1RS = 0x0001; //0x0000; // pixel-sync fall (adjust)
 	T4CON = 0x0; // rest Timer4, prescale of 1:1
 	TMR4 = 0x0; // zero out counter
-	PR4 = 0x03; //0x01; // pixel-reset (minus one)
+	PR4 = 0x01; //0x01; // pixel-reset (minus one)
 	
 	// set OC2 and OC3 and TMR5, horizontal visible and sync clocks
 	OC2CON = 0x0; // reset OC2
 	OC2CON = 0x0000000D; // toggle, use Timer5
-	OC2R = 0x0000; // h-visible rise
-	OC2RS = 0x0C80; //0x0640; // h-blank fall
+	OC2R = 0x0230; // h-visible rise
+	OC2RS = 0x0A30; //0x0640; // h-blank fall
 	OC3CON = 0x0; // reset OC3
 	OC3CON = 0x0000000D; // toggle, use Timer5
-	OC3R = 0x0D20; //0x0690; // h-sync rise
-	OC3RS = 0x0F12; //0x0789; // h-sync fall
+	OC3R = 0x0110; //0x0690; // h-sync rise
+	OC3RS = 0x0A5F; //0x0789; // h-sync fall
 	T5CON = 0x0000; // reset Timer5, prescale of 1:1
 	TMR5 = 0x0000; // zero out counter (offset some cycles)
-	PR5 = 0x107F; //0x083F; // h-reset (minus one)
+	PR5 = 0x0A5F; //0x083F; // h-reset (minus one)
 	
 	// set OC4 and TMR2, vertical sync clock
 	OC4CON = 0x0; // reset OC4
-	OC4CON = 0x00000025; // toggle, use Timer2 in 32-bit mode
-	OC4R = 0x0000; // v-sync rise
-	OC4RS = 0x0084; //0x0042; // v-sync fall
-	T3CON = 0x0;
-	T2CON = 0x00000058; // prescale of 1:32, 32-bit mode
-	TMR3 = 0x00000000;
-	TMR2 = 0x00000000; // zero out counter (offset some cycles)
-	PR2 = 0x000143CF; //0x0000A1E7; // v-reset (minus one)
+	OC4CON = 0x00000005; // toggle, use Timer2
+	OC4R = 0x00F9; // v-sync rise
+	OC4RS = 0x82A8; //0x0042; // v-sync fall
+	T2CON = 0x0060; //0x0050; // prescale of 1:64
+	TMR2 = 0x0000; // zero out counter (offset some cycles)
+	PR2 = 0x82A8; //0xA1E7; // v-reset (minus one)
+	
+	// TMR3, start of scanline
+	T3CON = 0x0000; // reset Timer3, prescale of 1:1
+	TMR3 = 0x0830; // zero out counter (offset some cycles)
+	PR3 = 0x0A5F; //0xA1E7; // v-reset (minus one)
 	
 	// set OC8 and OC9 and TMR6/7, audio channels
 	OC8CON = 0x0; // reset OC2
@@ -4283,10 +4284,6 @@ int main()
 	TMR9 = 0x0000; // zero out counter
 	PR9 = 0x0001; // determines audio duration
 	
-	//IPC3bits.OC2IP = 0x7; // interrupt priority 7
-	//IPC3bits.OC2IS = 0x1; // interrupt sub-priority 1
-	//IFS0bits.OC2IF = 0; // OC2 clear flag
-	//IEC0bits.OC2IE = 1; // OC2 interrupt on (set priority here?)
 	IPC4bits.OC3IP = 0x7; // interrupt priority 7
 	IPC4bits.OC3IS = 0x0; // interrupt sub-priority 0
 	IFS0bits.OC3IF = 0; // OC3 clear flag
@@ -4296,6 +4293,8 @@ int main()
 	OC2CONbits.ON = 1; // turn OC2 on
 	OC3CONbits.ON = 1; // turn OC3 on
 	OC4CONbits.ON = 1; // turn OC4 on
+	OC5CONbits.ON = 1; // turn OC5 on
+	
 	
 	IPC9bits.T8IP = 0x3; // audio interrupt priority 3
 	IPC9bits.T8IS = 0x1; // sub-priority 1
@@ -4314,18 +4313,18 @@ int main()
 	DMACONbits.ON = 1; // enable the DMA controller
 	
 	DCH0CONbits.CHEN = 0; // disable channel
-	DCH0ECONbits.CHSIRQ = 24; // start on Timer 5 interrupt
+	DCH0ECONbits.CHSIRQ = 14; // start on Timer 3 interrupt
 	DCH0ECONbits.SIRQEN = 1; // enable start interrupt
 	DCH0INT = 0x0000; // clear all interrupts
-	DCH0CONbits.CHCHN = 0; // disallow chaining
 	DCH0INTbits.CHBCIF = 0; // clear transfer complete flag
 	DCH0INTbits.CHBCIE = 1; // enable transfer complete interrupt
+	DCH0CONbits.CHCHN = 0; // disallow chaining
 	DCH0CONbits.CHAED = 1; // get next DMA ready for quick transition???
 	DCH0CONbits.CHPRI = 0x3; // highest priority
 	DCH0DSA = VirtToPhys(&PORTE); // transfer destination physical address
-	DCH0SSIZ = 800; //400; // source size
+	DCH0SSIZ = 512; //400; // source size
 	DCH0DSIZ = 1; // dst size 
-	DCH0CSIZ = 800; //400; // 1 byte per event
+	DCH0CSIZ = 512; //400; // 1 byte per event
 
 	DCH1CONbits.CHEN = 0; // disable channel
 	DCH1ECONbits.CHSIRQ = 19; // start on Timer 4 interrupt
@@ -4356,7 +4355,7 @@ int main()
 	IEC3bits.CNDIE = 1; // enable interrupts
 
 	// set up UART here
-	U3BRG = 0x0081; // 20 MHz to 9600 baud = 20000000/(16*9600)-1 = 129.2 = 0x0081
+	U3BRG = 0x0079; // 18.75 MHz to 9600 baud = 18750000/(16*9600)-1 = 121.07 = 0x0079
 	
 	U3MODEbits.STSEL = 0; // 1-Stop bit
 	U3MODEbits.PDSEL = 0; // No Parity, 8-Data bits
@@ -4445,18 +4444,20 @@ int main()
 	
 	
 	// set display buffer
-	for (unsigned int y=0; y<300; y++)
+	for (unsigned int y=0; y<384; y++)
 	{
-		for (unsigned int x=0; x<800; x+=2)
+		for (unsigned int x=0; x<512; x++)
 		{
-			screen_buffer[y][x] = splash_sundress[y * 400 + (x>>1)];
-			screen_buffer[y][x+1] = splash_sundress[y * 400 + (x>>1)];
+			screen_buffer[y][x] = splash_pointing[y * 512 + x];
 			//screen_buffer[y][x] = 0x25; // grey?
 			//screen_buffer[y][x] = (unsigned char)((x + y) % 256); // test pattern
 			//if (x % 2 == 0) screen_buffer[y][x] = 0xFF; // white
 			//else screen_buffer[y][x] = 0x1F; // cyan
 		}
 	}
+	
+	// set black scanline
+	for (unsigned int x=0; x<512; x++) screen_blank[x] = 0x00;
 	
 	// clear ps2 buffers
 	for (unsigned int i=0; i<256; i++)
@@ -4472,8 +4473,10 @@ int main()
 	
 	// turn on video timers
 	T4CONbits.ON = 1; // turn on TMR4 (independent of others)
+	T3CONbits.ON = 1; // turn on TMR3 (cycle offset pre-calculated above)
 	T5CONbits.ON = 1; // turn on TMR5 (cycle offset pre-calculated above)
-	T2CONbits.ON = 1; // turn on TMR2/TMR3 (cycle offset pre-calculated above)
+	T2CONbits.ON = 1; // turn on TMR2 (cycle offset pre-calculated above)
+	
 	
 	USB_init(); // initialize USB
            
@@ -4481,17 +4484,22 @@ int main()
 	
 	
 	
+	Scratchpad();
+	
+	
+
 	
 	display_string(24, 16, "Acolyte Hand PIC'd 32\\");
 	
-	display_string(280, 112, " Tetra     \\");
-	display_string(280, 120, " Bad Apple \\");
-	display_string(280, 128, " Scratchpad\\");
-	display_string(280, 136, "           \\");
+	display_string(24, 300, " Tetra     \\");
+	display_string(24, 308, " Bad Apple \\");
+	display_string(24, 316, " Scratchpad\\");
+	display_string(24, 324, "           \\");
 	
 	menu_max = 4; // number of menu items, change accordingly
 	
-	display_character(280, 112, '>');
+	display_character(24, 300, '>');
+	
 	
 	
 	
@@ -4504,11 +4512,11 @@ int main()
 			
 			if (menu_pos > 0)
 			{
-				display_character(280, 112 + menu_pos * 8, ' ');
+				display_character(24, 300 + menu_pos * 8, ' ');
 					
 				menu_pos--;
 					
-				display_character(280, 112 + menu_pos * 8, '>');
+				display_character(24, 300 + menu_pos * 8, '>');
 				
 				music_note(523, 250, 0);
 			}
@@ -4520,11 +4528,11 @@ int main()
 			
 			if (menu_pos < menu_max-1)
 			{
-				display_character(280, 112 + menu_pos * 8, ' ');
+				display_character(24, 300 + menu_pos * 8, ' ');
 
 				menu_pos++;
 
-				display_character(280, 112 + menu_pos * 8, '>');
+				display_character(24, 300 + menu_pos * 8, '>');
 				
 				music_note(523, 250, 0);
 			}
@@ -4656,12 +4664,13 @@ int main()
 
 	music_note(1047, 250, 0);
 
-
+	
 	if (menu_pos == 0) Tetra();
 	else if (menu_pos == 1) BadApple();
 	else if (menu_pos == 2) Scratchpad();
 	else if (menu_pos == 3) { }
-
+	
+	
 	
 	while (1)
 	{
