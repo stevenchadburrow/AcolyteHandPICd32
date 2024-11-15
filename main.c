@@ -2728,6 +2728,7 @@ struct tetra_struct_vars
 	volatile unsigned char joy_curr[2];
 	volatile unsigned char joy_prev[2];
 	volatile unsigned int joy_delay[2];
+	volatile unsigned int joy_button_delay[2];
 	
 };
 
@@ -2784,6 +2785,7 @@ void Tetra()
 		tetra_vars.joy_curr[z] = 0x00;
 		tetra_vars.joy_prev[z] = 0x00;
 		tetra_vars.joy_delay[z] = 0;
+		tetra_vars.joy_button_delay[z] = 0;
 
 		for (volatile unsigned int i=0; i<tetra_size_y; i++)
 		{
@@ -3109,6 +3111,8 @@ void Tetra()
 				tetra_vars.joy_prev[z] = tetra_vars.joy_prev[z] | 0xF0;
 			}
 			
+			if (tetra_vars.joy_button_delay[z] > 0) tetra_vars.joy_button_delay[z]--;
+			
 			// PS/2 mice
 			if (z == 1)
 			{
@@ -3178,11 +3182,12 @@ void Tetra()
 				if (z == 0) ps2_delay = ps2_speed;
 				if (z == 1) usb_delay = usb_speed;
 			}
-			else if ((((tetra_vars.joy_curr[z] & 0x08) == 0x00) && ((tetra_vars.joy_prev[z] & 0x08) == 0x08)) ||
+			else if ((((tetra_vars.joy_curr[z] & 0x08) == 0x00) && ((tetra_vars.joy_prev[z] & 0x08) == 0x08) && tetra_vars.joy_button_delay[z] == 0) ||
 				(usb_buttons[0] == 1 && z == 1) || 
 				(ps2_delay == 0x0000 && (ps2_buttons[0] == 1 || ps2_buttons[2] == 1) && z == 0) ||
 				(ps2_clicks[0] == 1 && z == 1)) // button 1
 			{
+				tetra_vars.joy_button_delay[z] = 0x007F;
 				
 				if (tetra_vars.game_over[z] != 0)
 				{
@@ -3227,11 +3232,12 @@ void Tetra()
 					if (ps2_buttons[2] == 1) ps2_buttons[2] = 2;
 				}
 			}
-			else if ((((tetra_vars.joy_curr[z] & 0x04) == 0x00) && ((tetra_vars.joy_prev[z] & 0x04) == 0x04)) ||
+			else if ((((tetra_vars.joy_curr[z] & 0x04) == 0x00) && ((tetra_vars.joy_prev[z] & 0x04) == 0x04) && tetra_vars.joy_button_delay[z] == 0) ||
 				(usb_buttons[1] == 1 && z == 1) || 
 				(ps2_delay == 0x0000 && (ps2_buttons[1] == 1 || ps2_buttons[3] == 1) && z == 0) ||
 				(ps2_clicks[1] == 1 && z == 1)) // button 2
 			{
+				tetra_vars.joy_button_delay[z] = 0x007F;
 				
 				if (tetra_vars.game_over[z] != 0)
 				{
