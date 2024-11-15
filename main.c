@@ -748,9 +748,12 @@ volatile unsigned char ps2_check[2] = { 0x00, 0x00 };
 volatile char usb_state_array[256];
 volatile unsigned int usb_cursor_x[256];
 volatile unsigned int usb_cursor_y[256];
+volatile unsigned int usb_buttons[256];
 volatile unsigned char usb_writepos = 0x00;
 volatile unsigned char usb_readpos = 0x00;
 volatile unsigned char usb_mode = 0x00;
+
+
 
 volatile unsigned int USB_device_millis_delay = 0;
 
@@ -2318,22 +2321,43 @@ void USB_HID_process_report()
 	}
 	else
 	{
-		usb_mode = 0x00; // unknown
-		
-		SendHex(USB_HID_report[1]);
-		SendChar(':');
-		
-		SendHex(USB_HID_report[3]);
-		SendChar(' ');
-		
-		for (unsigned char i = 0; i < 16; i++)
-		{        
-			SendHex(USB_EP1_buffer[i]);
-			SendChar('.');
+		if (USB_EP1_buffer[0] == 0x00 && USB_EP1_buffer[1] == 0x14) // xbox-type controller
+		{
+			usb_mode = 0x03; // xbox-type controller
+			
+			// Format: 0xWXYZ
+			// W = 1 start, 2 select, 3 both
+			// X = 1 up, 2 down, 4 left, 8 right (combinations for multiple)
+			// Y = 1 a, 2 b, 3 x, 4 y (combinations for multiple)
+			// Z = 1 left bumper, 2 right bumper, 3 both
+			usb_buttons[usb_writepos] = (unsigned int)((unsigned int)(USB_EP1_buffer[2] << 8) + USB_EP1_buffer[3]);
+			
+			usb_writepos++;
 		}
-		
-		SendChar('\n');
-		SendChar('\r');
+		else
+		{
+			usb_mode = 0x00; // unknown
+
+			/*
+			SendHex(USB_EP1_RECEIVED);
+			SendChar(' ');
+
+			SendHex(USB_HID_report[1]);
+			SendChar(':');
+
+			SendHex(USB_HID_report[3]);
+			SendChar(' ');
+
+			for (unsigned char i = 0; i < 16; i++)
+			{        
+				SendHex(USB_EP1_buffer[i]);
+				SendChar('.');
+			}
+
+			SendChar('\n');
+			SendChar('\r');
+			*/
+		}
 	}
 }
 
@@ -3198,24 +3222,97 @@ void Tetra()
 			if (PORTJbits.RJ3 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xEF);
 			if (PORTJbits.RJ4 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xF7);
 			if (PORTJbits.RJ5 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xFB);
+			
+			// change joystick select pin here if you want
 		}
 		else pause[0]--;
 		
-		tetra_vars.joy_prev[1] = tetra_vars.joy_curr[1];
-		tetra_vars.joy_curr[1] = 0xFF; 
-		
-		if (pause[1] == 0)
+		if (usb_mode != 0x03) // xbox-type controller
 		{
-			if (PORTJbits.RJ6 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0x7F);
-			if (PORTJbits.RJ7 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xBF);
-			if (PORTJbits.RJ10 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xDF);
-			if (PORTJbits.RJ12 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xEF);
-			if (PORTJbits.RJ13 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xF7);
-			if (PORTJbits.RJ14 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xFB);
+			tetra_vars.joy_prev[1] = tetra_vars.joy_curr[1];
+			tetra_vars.joy_curr[1] = 0xFF; 
+
+			if (pause[1] == 0)
+			{
+				if (PORTJbits.RJ6 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0x7F);
+				if (PORTJbits.RJ7 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xBF);
+				if (PORTJbits.RJ10 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xDF);
+				if (PORTJbits.RJ12 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xEF);
+				if (PORTJbits.RJ13 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xF7);
+				if (PORTJbits.RJ14 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xFB);
+				
+				// change joystick select pin here if you want
+			}
+			else pause[1]--;
 		}
-		else pause[1]--;
-		
-		// change joystick select pin here if you want
+		else
+		{	
+			if (pause[1] == 0)
+			{	
+				if (usb_readpos != usb_writepos)
+				{	
+					tetra_vars.joy_prev[1] = tetra_vars.joy_curr[1];
+					tetra_vars.joy_curr[1] = 0xFF;
+
+					if ((usb_buttons[usb_readpos] & 0x0100) == 0x0100) // up
+					{
+						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0x7F);
+					}
+					else
+					{
+						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] | 0x80);
+					}
+
+					if ((usb_buttons[usb_readpos] & 0x0200) == 0x0200) // down
+					{
+						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xBF);
+					}
+					else
+					{
+						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] | 0x40);
+					}
+
+					if ((usb_buttons[usb_readpos] & 0x0400) == 0x0400) // left
+					{
+						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xDF);
+					}
+					else
+					{
+						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] | 0x20);
+					}
+
+					if ((usb_buttons[usb_readpos] & 0x0800) == 0x0800) // down
+					{
+						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xEF);
+					}
+					else
+					{
+						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] | 0x10);
+					}
+
+					if ((usb_buttons[usb_readpos] & 0x0010) == 0x0010) // A
+					{
+						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xF7);
+					}
+					else
+					{
+						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] | 0x08);
+					}
+
+					if ((usb_buttons[usb_readpos] & 0x0020) == 0x0020) // B
+					{
+						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xFB);
+					}
+					else
+					{
+						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] | 0x04);
+					}
+
+					usb_readpos++;
+				}
+			}
+			else pause[1]--;
+		}
 		
 		tetra_vars.seed++; // random 
 		
@@ -4008,14 +4105,80 @@ void Scratchpad()
 		if (PORTJbits.RJ4 == 0) joy_curr[0] = (joy_curr[0] & 0xF7);
 		if (PORTJbits.RJ5 == 0) joy_curr[0] = (joy_curr[0] & 0xFB);
 		
-		joy_curr[1] = 0xFF; 
-		
-		if (PORTJbits.RJ6 == 0) joy_curr[1] = (joy_curr[1] & 0x7F);
-		if (PORTJbits.RJ7 == 0) joy_curr[1] = (joy_curr[1] & 0xBF);
-		if (PORTJbits.RJ10 == 0) joy_curr[1] = (joy_curr[1] & 0xDF);
-		if (PORTJbits.RJ12 == 0) joy_curr[1] = (joy_curr[1] & 0xEF);
-		if (PORTJbits.RJ13 == 0) joy_curr[1] = (joy_curr[1] & 0xF7);
-		if (PORTJbits.RJ14 == 0) joy_curr[1] = (joy_curr[1] & 0xFB);
+		if (usb_mode != 0x03) // xbox-type controller
+		{
+			joy_curr[1] = 0xFF; 
+			
+			if (PORTJbits.RJ6 == 0) joy_curr[1] = (joy_curr[1] & 0x7F);
+			if (PORTJbits.RJ7 == 0) joy_curr[1] = (joy_curr[1] & 0xBF);
+			if (PORTJbits.RJ10 == 0) joy_curr[1] = (joy_curr[1] & 0xDF);
+			if (PORTJbits.RJ12 == 0) joy_curr[1] = (joy_curr[1] & 0xEF);
+			if (PORTJbits.RJ13 == 0) joy_curr[1] = (joy_curr[1] & 0xF7);
+			if (PORTJbits.RJ14 == 0) joy_curr[1] = (joy_curr[1] & 0xFB);
+		}
+		else
+		{
+			if (usb_readpos != usb_writepos)
+			{
+				joy_curr[1] = 0xFF;
+				
+				if ((usb_buttons[usb_readpos] & 0x0100) == 0x0100) // up
+				{
+					joy_curr[1] = (joy_curr[1] & 0x7F);
+				}
+				else
+				{
+					joy_curr[1] = (joy_curr[1] | 0x80);
+				}
+				
+				if ((usb_buttons[usb_readpos] & 0x0200) == 0x0200) // down
+				{
+					joy_curr[1] = (joy_curr[1] & 0xBF);
+				}
+				else
+				{
+					joy_curr[1] = (joy_curr[1] | 0x40);
+				}
+				
+				if ((usb_buttons[usb_readpos] & 0x0400) == 0x0400) // left
+				{
+					joy_curr[1] = (joy_curr[1] & 0xDF);
+				}
+				else
+				{
+					joy_curr[1] = (joy_curr[1] | 0x20);
+				}
+				
+				if ((usb_buttons[usb_readpos] & 0x0800) == 0x0800) // down
+				{
+					joy_curr[1] = (joy_curr[1] & 0xEF);
+				}
+				else
+				{
+					joy_curr[1] = (joy_curr[1] | 0x10);
+				}
+				
+				if ((usb_buttons[usb_readpos] & 0x0010) == 0x0010) // A
+				{
+					joy_curr[1] = (joy_curr[1] & 0xF7);
+				}
+				else
+				{
+					joy_curr[1] = (joy_curr[1] | 0x08);
+				}
+				
+				if ((usb_buttons[usb_readpos] & 0x0020) == 0x0020) // B
+				{
+					joy_curr[1] = (joy_curr[1] & 0xFB);
+				}
+				else
+				{
+					joy_curr[1] = (joy_curr[1] | 0x04);
+				}
+				
+				usb_readpos++;
+			}
+		}
 		
 		if (key_value == 0x00)
 		{
@@ -4758,36 +4921,66 @@ int main()
 		}
 		else menu_joy = (menu_joy & 0xFFFD);
 		
-		if (PORTJbits.RJ6 == 0) // up
-		{
-			if ((menu_joy & 0x0040) == 0x0000)
-			{
-				menu_joy = (menu_joy | 0x0040);
-				
-				menu_up = 1;
-			}
-		}
-		else menu_joy = (menu_joy & 0xFFBF);
-		
-		if (PORTJbits.RJ7 == 0) // down
-		{
-			if ((menu_joy & 0x0080) == 0x0000)
-			{
-				menu_joy = (menu_joy | 0x0080);
-				
-				menu_down = 1;
-			}
-		}
-		else menu_joy = (menu_joy & 0xFF7F);
-		
 		if (PORTJbits.RJ4 == 0 || PORTJbits.RJ5 == 0) // either button
 		{
 			menu_loop = 0;
 		}
 		
-		if (PORTJbits.RJ13 == 0 || PORTJbits.RJ14 == 0) // either button
+		if (usb_mode != 0x03) // xbox-type controller
 		{
-			menu_loop = 0;
+			if (PORTJbits.RJ6 == 0) // up
+			{
+				if ((menu_joy & 0x0040) == 0x0000)
+				{
+					menu_joy = (menu_joy | 0x0040);
+
+					menu_up = 1;
+				}
+			}
+			else menu_joy = (menu_joy & 0xFFBF);
+
+			if (PORTJbits.RJ7 == 0) // down
+			{
+				if ((menu_joy & 0x0080) == 0x0000)
+				{
+					menu_joy = (menu_joy | 0x0080);
+
+					menu_down = 1;
+				}
+			}
+			else menu_joy = (menu_joy & 0xFF7F);
+		
+			if (PORTJbits.RJ13 == 0 || PORTJbits.RJ14 == 0) // either button
+			{
+				menu_loop = 0;
+			}
+		}
+		else
+		{
+			if (usb_readpos != usb_writepos)
+			{
+				if ((usb_buttons[usb_readpos] & 0x0100) == 0x0100) // up
+				{
+					menu_up = 1;
+				}
+				
+				if ((usb_buttons[usb_readpos] & 0x0200) == 0x0200) // down
+				{
+					menu_down = 1;
+				}
+				
+				if ((usb_buttons[usb_readpos] & 0x0010) == 0x0010) // A
+				{
+					menu_loop = 0;
+				}
+				
+				if ((usb_buttons[usb_readpos] & 0x0020) == 0x0020) // B
+				{
+					menu_loop = 0;
+				}
+				
+				usb_readpos++;
+			}
 		}
 		
 		test = input_ps2_mouse((unsigned int *)menu_mouse);
