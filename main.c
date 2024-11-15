@@ -64,9 +64,9 @@
 #include <xc.h>
 
 #include "splash_pointing.c"
-#include "splash_bright.c"
+#include "splash_brighting.c"
 #include "splash_floating.c"
-#include "splash_butterfly.c"
+#include "splash_calling.c"
 #include "splash_blushing.c"
 #include "splash_television.c"
 
@@ -2813,7 +2813,7 @@ void Tetra()
 	{
 		for (unsigned int x=0; x<512; x++)
 		{
-			screen_buffer[y][x] = splash_bright[y * 512 + x];
+			screen_buffer[y][x] = splash_brighting[y * 512 + x];
 		}
 	}
 	
@@ -2841,9 +2841,9 @@ void Tetra()
 				// set background
 				for (unsigned int x=0; x<512; x++)
 				{
-					if (tetra_vars.background == 1) screen_buffer[tetra_vars.background_trans][x] = splash_bright[tetra_vars.background_trans * 512 + x];
+					if (tetra_vars.background == 1) screen_buffer[tetra_vars.background_trans][x] = splash_brighting[tetra_vars.background_trans * 512 + x];
 					else if (tetra_vars.background == 2) screen_buffer[tetra_vars.background_trans][x] = splash_floating[tetra_vars.background_trans * 512 + x];
-					else if (tetra_vars.background == 3) screen_buffer[tetra_vars.background_trans][x] = splash_butterfly[tetra_vars.background_trans * 512 + x];
+					else if (tetra_vars.background == 3) screen_buffer[tetra_vars.background_trans][x] = splash_calling[tetra_vars.background_trans * 512 + x];
 					else if (tetra_vars.background == 4) screen_buffer[tetra_vars.background_trans][x] = splash_blushing[tetra_vars.background_trans * 512 + x];
 				}
 				
@@ -3187,7 +3187,7 @@ void Tetra()
 				(ps2_delay == 0x0000 && (ps2_buttons[0] == 1 || ps2_buttons[2] == 1) && z == 0) ||
 				(ps2_clicks[0] == 1 && z == 1)) // button 1
 			{
-				tetra_vars.joy_button_delay[z] = 0x007F;
+				tetra_vars.joy_button_delay[z] = 0x003F;
 				
 				if (tetra_vars.game_over[z] != 0)
 				{
@@ -3237,7 +3237,7 @@ void Tetra()
 				(ps2_delay == 0x0000 && (ps2_buttons[1] == 1 || ps2_buttons[3] == 1) && z == 0) ||
 				(ps2_clicks[1] == 1 && z == 1)) // button 2
 			{
-				tetra_vars.joy_button_delay[z] = 0x007F;
+				tetra_vars.joy_button_delay[z] = 0x003F;
 				
 				if (tetra_vars.game_over[z] != 0)
 				{
