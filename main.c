@@ -3174,7 +3174,7 @@ void Tetra()
 				(ps2_delay == 0x0000 && (ps2_buttons[0] == 1 || ps2_buttons[2] == 1) && z == 0) ||
 				(ps2_clicks[0] == 1 && z == 1)) // button 1
 			{
-				tetra_vars.joy_button_delay[z] = 0x003F;
+				tetra_vars.joy_button_delay[z] = 0x00FF;
 				
 				if (tetra_vars.game_over[z] != 0)
 				{
@@ -3225,7 +3225,7 @@ void Tetra()
 				(ps2_delay == 0x0000 && (ps2_buttons[1] == 1 || ps2_buttons[3] == 1) && z == 0) ||
 				(ps2_clicks[1] == 1 && z == 1)) // button 2
 			{
-				tetra_vars.joy_button_delay[z] = 0x003F;
+				tetra_vars.joy_button_delay[z] = 0x00FF;
 				
 				if (tetra_vars.game_over[z] != 0)
 				{
