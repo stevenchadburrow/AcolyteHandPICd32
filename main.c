@@ -746,8 +746,11 @@ volatile unsigned char ps2_ready[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_check[2] = { 0x00, 0x00 };
 
 volatile char usb_state_array[256];
+volatile unsigned int usb_cursor_x[256];
+volatile unsigned int usb_cursor_y[256];
 volatile unsigned char usb_writepos = 0x00;
 volatile unsigned char usb_readpos = 0x00;
+volatile unsigned char usb_mode = 0x00;
 
 volatile unsigned int USB_device_millis_delay = 0;
 
@@ -1195,11 +1198,49 @@ char input_usb_keyboard()
 {
 	char value = 0x00;
 	
-	for (unsigned char p=0; p<2; p++)
+	if (usb_mode == 0x01) // keyboard
 	{
 		if (usb_readpos != usb_writepos)
 		{
 			value = usb_state_array[usb_readpos];
+			usb_readpos++;
+		}
+	}
+	
+	return value;
+};
+
+char input_usb_mouse(unsigned int *array)
+{
+	char value = 0x00;
+	
+	array[0] = 0;
+	array[1] = 0;
+	array[2] = 0;
+	array[3] = 0;
+	array[4] = 0;
+	
+	if (usb_mode == 0x02) // mouse
+	{	
+		if (usb_readpos != usb_writepos)
+		{
+			value = 0x01;
+
+			if ((usb_state_array[usb_readpos]) == 0x01) array[0] = 0x0001;
+
+			if ((usb_state_array[usb_readpos]) == 0x02) array[1] = 0x0001;
+			
+			if ((usb_state_array[usb_readpos]) == 0x03)
+			{
+				array[0] = 0x0001;
+				array[1] = 0x0001;
+			}
+
+			if ((usb_state_array[usb_readpos]) == 0x04) array[2] = 0x0001;
+
+			array[3] = (unsigned int)(usb_cursor_x[usb_readpos]);
+			array[4] = (unsigned int)(usb_cursor_y[usb_readpos]); //(unsigned int)(384 - usb_cursor_y[usb_readpos]);
+
 			usb_readpos++;
 		}
 	}
@@ -2020,19 +2061,20 @@ int USB_EP0_receive_long(unsigned char *buffer, uint32_t length)
 }
 
 void USB_EP1_receive(unsigned char *buffer)
-{
+{	
     unsigned char *FIFO_buffer;
     int cnt;
     int length;
     
     USBE1CSR0bits.MODE = 0;     // EP1 is RX mode
     length = USBE1CSR2bits.RXCNT;
-
+	
     FIFO_buffer = (unsigned char *)&USBFIFO1;
-    
+	
     for(cnt = 0; cnt < length; cnt++)
     {
         buffer[cnt] = *(FIFO_buffer + (cnt & 3)); // Store the received bytes in the buffer
+		
     }
     
     USBE1CSR1bits.RXPKTRDY = 0;
@@ -2075,7 +2117,7 @@ void __attribute__((vector(_USB_VECTOR), interrupt(ipl6srs), nomips16)) USB_hand
     if (EP1RXIF)
     {
         USBCSR1bits.EP1RXIF = 0;    // Clear the USB EndPoint 1 RX Interrupt Flag.
-        USB_EP1_RECEIVED = 1;       // To let the app know Endpoint 1 received something
+        USB_EP1_RECEIVED++;       // To let the app know Endpoint 1 received something
     }
     
     IFS4bits.USBIF = 0;             // Clear the main interrupt flag!
@@ -2149,6 +2191,8 @@ void USB_HID_process_report()
 {
 	if (USB_HID_report[1] == 0x01 && USB_HID_report[3] == 0x06) // keyboard
 	{
+		usb_mode = 0x01; // keyboard
+		
 		int cnt;
 		char current_keys_pressed[USB_KEYBOARD_NUM_KEYS];
 
@@ -2194,30 +2238,7 @@ void USB_HID_process_report()
 		{
 			USB_SHIFT_PRESSED = ((USB_EP1_buffer[0] & USB_SHIFT_MASK) ==  USB_SHIFT_MASK);
 		}
-	}
-	else
-	{
-		SendHex(USB_HID_report[1]); // mouse = 0x01
-		SendChar(':');
 		
-		SendHex(USB_HID_report[3]); // mouse = 0x02
-		SendChar(' ');
-		
-		for (unsigned char i = 0; i < 8; i++)
-		{        
-			SendHex(USB_EP1_buffer[i]);
-			SendChar('.');
-		}
-		
-		SendChar('\n');
-		SendChar('\r');
-	}
-}
-
-void USB_device_handle()
-{
-	if (USB_HID_report[1] == 0x01 && USB_HID_report[3] == 0x06) // keyboard
-	{
 		for (unsigned int i=0; i<USB_KEYBOARD_NUM_KEYS; i++)
 		{
 			if (USB_device_keys[i].pressed && (USB_device_millis >= USB_device_keys[i].repeat_time))
@@ -2237,9 +2258,82 @@ void USB_device_handle()
 			}
 		}
 	}
+	else if (USB_HID_report[1] == 0x01 && USB_HID_report[3] == 0x02) // mouse
+	{	
+		usb_mode = 0x02; // mouse
+		
+		usb_state_array[usb_writepos] = USB_EP1_buffer[0];
+		
+		if ((signed char)(USB_EP1_buffer[1]) < 0)
+		{
+			if (usb_cursor_x[(unsigned char)(usb_writepos-1)] < 0 - (signed char)(USB_EP1_buffer[1]))
+			{
+				usb_cursor_x[usb_writepos] = 0;
+			}
+			else
+			{
+				usb_cursor_x[usb_writepos] = 
+					usb_cursor_x[(unsigned char)(usb_writepos-1)] + (signed char)(USB_EP1_buffer[1]);
+			}
+		}
+		else if ((signed char)(USB_EP1_buffer[1]) >= 0)
+		{
+			if (usb_cursor_x[(unsigned char)(usb_writepos-1)] >= 512 - (signed char)(USB_EP1_buffer[1]))
+			{
+				usb_cursor_x[usb_writepos] = 512;
+			}
+			else
+			{
+				usb_cursor_x[usb_writepos] = 
+					usb_cursor_x[(unsigned char)(usb_writepos-1)] + (signed char)(USB_EP1_buffer[1]);
+			}
+		}
+		
+		if ((signed char)(USB_EP1_buffer[2]) < 0)
+		{
+			if (usb_cursor_y[(unsigned char)(usb_writepos-1)] < 0 - (signed char)(USB_EP1_buffer[2]))
+			{
+				usb_cursor_y[usb_writepos] = 0;
+			}
+			else
+			{
+				usb_cursor_y[usb_writepos] = 
+					usb_cursor_y[(unsigned char)(usb_writepos-1)] + (signed char)(USB_EP1_buffer[2]);
+			}
+		}
+		else if ((signed char)(USB_EP1_buffer[2]) >= 0)
+		{
+			if (usb_cursor_y[(unsigned char)(usb_writepos-1)] >= 384 - (signed char)(USB_EP1_buffer[2]))
+			{
+				usb_cursor_y[usb_writepos] = 384;
+			}
+			else
+			{
+				usb_cursor_y[usb_writepos] = 
+					usb_cursor_y[(unsigned char)(usb_writepos-1)] + (signed char)(USB_EP1_buffer[2]);
+			}
+		}
+		
+		usb_writepos++;
+	}
 	else
 	{
+		usb_mode = 0x00; // unknown
 		
+		SendHex(USB_HID_report[1]);
+		SendChar(':');
+		
+		SendHex(USB_HID_report[3]);
+		SendChar(' ');
+		
+		for (unsigned char i = 0; i < 16; i++)
+		{        
+			SendHex(USB_EP1_buffer[i]);
+			SendChar('.');
+		}
+		
+		SendChar('\n');
+		SendChar('\r');
 	}
 }
 
@@ -2736,21 +2830,20 @@ struct tetra_struct_vars tetra_vars;
 
 void Tetra()
 {	
-	unsigned int ps2_delay = 0x0000;
-	unsigned int ps2_speed = 0x002F;
-	unsigned int ps2_heights_delay = 0x0000;
-	unsigned int ps2_heights_speed = 0x002F;
-	unsigned int usb_delay = 0x0000;
-	unsigned int usb_speed = 0x002F;
+	unsigned int press_delay = 0x0000;
+	unsigned int press_speed = 0x002F;
+	unsigned int heights_delay = 0x0000;
+	unsigned int heights_speed = 0x002F;
 	
-	unsigned char ps2_directions[4] = { 0, 0, 0, 0 };
-	unsigned char ps2_buttons[4] = { 2, 2, 2, 2 };
-	unsigned int ps2_cursors[2] = { 200, 150 };
-	unsigned char ps2_clicks[2] = { 2, 2 };
-	unsigned char ps2_heights = 1;
-	unsigned int ps2_mouse_active = 0;
-	unsigned char usb_directions[4] = { 0, 0, 0, 0 };
-	unsigned char usb_buttons[2] = { 2, 2 };
+	unsigned char directions[4] = { 0, 0, 0, 0 };
+	unsigned char buttons[4] = { 2, 2, 2, 2 };
+	unsigned int cursors[2] = { 200, 150 };
+	unsigned char clicks[2] = { 2, 2 };
+	unsigned char heights = 1;
+	
+	unsigned char key_active = 0;
+	unsigned char mouse_active = 0;
+	unsigned char mouse_move = 0;
 	
 	unsigned char pause[2] = { 0, 0 };
 	
@@ -2852,14 +2945,17 @@ void Tetra()
 				tetra_vars.background_delay = 5;
 			}
 		}
-	
 		
+		key_active = 0;
+		mouse_active = 0;
+		mouse_move = 0;
+	
 		// PS/2 keyboards and mice
 		for (unsigned char p=0; p<2; p++)
 		{
 			if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x00) // ready and keyboard
 			{
-				if (ps2_delay > 0x0000) ps2_delay--;
+				key_active = 1;
 				
 				if (ps2_readpos[p] != ps2_writepos[p])
 				{
@@ -2869,37 +2965,37 @@ void Tetra()
 
 						if (ps2_state_array[p][ps2_readpos[p]] == 0x11)
 						{
-							ps2_directions[0] = 0;
+							directions[0] = 0;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x12)
 						{
-							ps2_directions[1] = 0;
+							directions[1] = 0;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x13)
 						{
-							ps2_directions[2] = 0;
+							directions[2] = 0;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x14)
 						{
-							ps2_directions[3] = 0;
+							directions[3] = 0;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x20)
 						{
-							ps2_buttons[0] = 0;
+							buttons[0] = 0;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x30)
 						{
-							ps2_buttons[1] = 0;
+							buttons[1] = 0;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x7A ||
 							ps2_state_array[p][ps2_readpos[p]] == 0x5A)
 						{
-							ps2_buttons[2] = 0;
+							buttons[2] = 0;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x78 ||
 							ps2_state_array[p][ps2_readpos[p]] == 0x58)
 						{
-							ps2_buttons[3] = 0;
+							buttons[3] = 0;
 						}
 
 						ps2_readpos[p]++;
@@ -2908,37 +3004,37 @@ void Tetra()
 					{
 						if (ps2_state_array[p][ps2_readpos[p]] == 0x11)
 						{
-							ps2_directions[0] = 1;
+							directions[0] = 1;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x12)
 						{
-							ps2_directions[1] = 1;
+							directions[1] = 1;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x13)
 						{
-							ps2_directions[2] = 1;
+							directions[2] = 1;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x14)
 						{
-							ps2_directions[3] = 1;
+							directions[3] = 1;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x20)
 						{
-							ps2_buttons[0] = 1;
+							buttons[0] = 1;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x30)
 						{
-							ps2_buttons[1] = 1;
+							buttons[1] = 1;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x78 ||
 							ps2_state_array[p][ps2_readpos[p]] == 0x58)
 						{
-							ps2_buttons[2] = 1;
+							buttons[2] = 1;
 						}
 						else if (ps2_state_array[p][ps2_readpos[p]] == 0x7A ||
 							ps2_state_array[p][ps2_readpos[p]] == 0x5A)
 						{
-							ps2_buttons[3] = 1;
+							buttons[3] = 1;
 						}
 
 						ps2_readpos[p]++;
@@ -2949,27 +3045,27 @@ void Tetra()
 			}
 			else if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x01) // ready and mouse
 			{
-				if (ps2_heights_delay > 0x0000) ps2_heights_delay--;
+				mouse_active = 1;
 				
 				if (ps2_readpos[p] != ps2_writepos[p])
-				{
-					ps2_mouse_active = 1;
+				{	
+					mouse_move = 1;
 					
 					if ((ps2_state_array[p][ps2_readpos[p]] & 0x01) == 0x01) // left click
 					{
-						if (ps2_clicks[1] == 0) ps2_clicks[1] = 1;
+						if (clicks[1] == 0) clicks[1] = 1;
 					}
-					else ps2_clicks[1] = 0;
+					else clicks[1] = 0;
 					
 					if ((ps2_state_array[p][ps2_readpos[p]] & 0x02) == 0x02) // right click
 					{
-						if (ps2_clicks[0] == 0) ps2_clicks[0] = 1;
-						else ps2_clicks[0] = 2;
+						if (clicks[0] == 0) clicks[0] = 1;
+						else clicks[0] = 2;
 					}
-					else ps2_clicks[0] = 0;
+					else clicks[0] = 0;
 					
-					ps2_cursors[0] = ps2_cursor_x[p][ps2_readpos[p]];
-					ps2_cursors[1] = ps2_cursor_y[p][ps2_readpos[p]];
+					cursors[0] = ps2_cursor_x[p][ps2_readpos[p]];
+					cursors[1] = ps2_cursor_y[p][ps2_readpos[p]];
 					
 					ps2_readpos[p]++;	
 				}
@@ -2981,67 +3077,115 @@ void Tetra()
 		{
 			USB_host_tasks();
 			USB_HID_tasks();
-			if (USB_EP1_RECEIVED)
+			if (USB_EP1_RECEIVED > 0)
 			{
 				USB_EP1_receive(USB_EP1_buffer);
 				USB_HID_process_report();
-				USB_EP1_RECEIVED = 0;
-			}
-			USB_device_handle(); 
-			
-			usb_directions[0] = 0;
-			usb_directions[1] = 0;
-			usb_directions[2] = 0;
-			usb_directions[3] = 0;
-			
-			if (usb_delay > 0x0000) usb_delay--;
-			else
-			{			
-				if (USB_device_keys[0x52].pressed)
-				{
-					usb_directions[0] = 1;
-					usb_delay = usb_speed;
-				}
-				else if (USB_device_keys[0x51].pressed)
-				{
-					usb_directions[1] = 1;
-					usb_delay = usb_speed;
-				}
-				else if (USB_device_keys[0x50].pressed)
-				{
-					usb_directions[2] = 1;
-					usb_delay = usb_speed;
-				}
-				else if (USB_device_keys[0x4F].pressed)
-				{
-					usb_directions[3] = 1;
-					usb_delay = usb_speed;
-				}
+				USB_EP1_RECEIVED--;
 			}
 			
-			if (USB_device_keys[0x2C].pressed || USB_device_keys[0x1B].pressed)
+			if (key_active == 0)
 			{
-				if (usb_buttons[0] == 0) usb_buttons[0] = 1;
-				else usb_buttons[0] = 2;
+				directions[0] = 0;
+				directions[1] = 0;
+				directions[2] = 0;
+				directions[3] = 0;
+			
+				if (usb_mode == 0x01) // keyboard
+				{
+					key_active = 1;
+
+					if (press_delay == 0x0000)
+					{			
+						if (USB_device_keys[0x52].pressed)
+						{
+							directions[0] = 1;
+						}
+						else if (USB_device_keys[0x51].pressed)
+						{
+							directions[1] = 1;
+						}
+						else if (USB_device_keys[0x50].pressed)
+						{
+							directions[2] = 1;
+						}
+						else if (USB_device_keys[0x4F].pressed)
+						{
+							directions[3] = 1;
+						}
+					}
+
+					if (USB_device_keys[0x2C].pressed)
+					{
+						if (buttons[0] == 0) buttons[0] = 1;
+						else buttons[0] = 2;
+					}
+					else buttons[0] = 0;
+					
+					if (USB_device_keys[0x1B].pressed)
+					{
+						if (buttons[2] == 0) buttons[2] = 1;
+						else buttons[2] = 2;
+					}
+					else buttons[2] = 0;
+
+					if (USB_device_keys[0x62].pressed)
+					{
+						if (buttons[1] == 0) buttons[1] = 1;
+						else buttons[1] = 2;
+					}
+					else buttons[1] = 0;
+					
+					if (USB_device_keys[0x1D].pressed)
+					{
+						if (buttons[3] == 0) buttons[3] = 1;
+						else buttons[3] = 2;
+					}
+					else buttons[3] = 0;
+				}
 			}
 			
-			if (!USB_device_keys[0x2C].pressed && !USB_device_keys[0x1B].pressed)
+			if (mouse_active == 0)
 			{
-				usb_buttons[0] = 0;
-			}
-			
-			if (USB_device_keys[0x62].pressed || USB_device_keys[0x1D].pressed)
-			{
-				if (usb_buttons[1] == 0) usb_buttons[1] = 1;
-				else usb_buttons[1] = 2;
-			}
-			
-			if (!USB_device_keys[0x62].pressed && !USB_device_keys[0x1D].pressed)
-			{
-				usb_buttons[1] = 0;
+				if (usb_mode == 0x02) // mouse
+				{	
+					mouse_active = 1;
+					
+					if (usb_readpos != usb_writepos)
+					{	
+						mouse_move = 1;
+
+						if ((usb_state_array[usb_readpos]) == 0x01) // left click
+						{
+							if (clicks[1] == 0) clicks[1] = 1;
+						}
+						else clicks[1] = 0;
+
+						if ((usb_state_array[usb_readpos]) == 0x02) // right click
+						{
+							if (clicks[0] == 0) clicks[0] = 1;
+							else clicks[0] = 2;
+						}
+						else clicks[0] = 0;
+
+						cursors[0] = (unsigned int)(usb_cursor_x[usb_readpos]);
+						cursors[1] = (unsigned int)(384 - usb_cursor_y[usb_readpos]);
+
+						usb_readpos++;	
+					}
+				}
 			}
 		}
 		
+		if (key_active > 0)
+		{
+			if (press_delay > 0x0000) press_delay--;
+		}
+		
+		if (mouse_active > 0)
+		{
+			if (heights_delay > 0x0000) heights_delay--;
+		}
 		
 		tetra_vars.joy_prev[0] = tetra_vars.joy_curr[0];
 		tetra_vars.joy_curr[0] = 0xFF; 
@@ -3113,79 +3257,58 @@ void Tetra()
 			
 			if (tetra_vars.joy_button_delay[z] > 0) tetra_vars.joy_button_delay[z]--;
 			
-			// PS/2 mice
+			// mice
 			if (z == 1)
 			{
-				for (unsigned char p=0; p<2; p++)
+				if (mouse_active == 1 && mouse_move == 1)
 				{
-					if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x01) // ready and mouse
-					{
-						if (ps2_mouse_active == 1)
-						{
-							ps2_mouse_active = 0;
-							
-							tetra_vars.new_pos_x[z] = (unsigned int)(ps2_cursors[0] / (unsigned int)(400 / (tetra_size_x+2)));
+					tetra_vars.new_pos_x[z] = (unsigned int)(cursors[0] / (unsigned int)(512 / (tetra_size_x+2)));
 
-							if (ps2_cursors[1] < 10) ps2_heights = 0;
-							else if (ps2_cursors[1] > 290) ps2_heights = 2;
-							else ps2_heights = 1;
-						}
-					}
+					if (cursors[1] < 10) heights = 0;
+					else if (cursors[1] > 374) heights = 2;
+					else heights = 1;
 				}
 			}
 
 			if ((((tetra_vars.joy_curr[z] & 0x80) == 0x00) && ((tetra_vars.joy_prev[z] & 0x80) == 0x80)) ||
-				(usb_directions[0] == 1 && z == 1) || 
-				(ps2_delay == 0x0000 && ps2_directions[0] == 1 && z == 0) ||
-				(ps2_heights_delay == 0x0000 && ps2_heights == 2 && z == 1)) // up
+				(press_delay == 0x0000 && directions[0] == 1 && z == 0) ||
+				(heights_delay == 0x0000 && heights == 2 && z == 1)) // up
 			{
 				tetra_vars.timer[z] = 1; // not zero
 				tetra_vars.joy_delay[z] = 0;
 				
-				if (z == 0) ps2_delay = ps2_speed;
-				if (z == 1)
-				{
-					usb_delay = usb_speed;
-					ps2_heights_delay = ps2_heights_speed;
-				}
+				if (z == 0) press_delay = press_speed;
+				if (z == 1) heights_delay = heights_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x40) == 0x00) && ((tetra_vars.joy_prev[z] & 0x40) == 0x40)) ||
-				(usb_directions[1] == 1 && z == 1) ||
-				(ps2_delay == 0x0000 && ps2_directions[1] == 1 && z == 0) ||
-				(ps2_heights_delay == 0x0000 && ps2_heights == 0 && z == 1)) // down
+				(press_delay == 0x0000 && directions[1] == 1 && z == 0) ||
+				(heights_delay == 0x0000 && heights == 0 && z == 1)) // down
 			{
 				tetra_vars.timer[z] = 0;
 				tetra_vars.joy_delay[z] = 0;
 				
-				if (z == 0) ps2_delay = ps2_speed;
-				if (z == 1)
-				{
-					usb_delay = usb_speed;
-					ps2_heights_delay = ps2_heights_speed;
-				}
+				if (z == 0) press_delay = press_speed;
+				if (z == 1) heights_delay = heights_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x20) == 0x00) && ((tetra_vars.joy_prev[z] & 0x20) == 0x20)) ||
-				(usb_directions[2] == 1 && z == 1) || (ps2_delay == 0x0000 && ps2_directions[2] == 1 && z == 0)) // left
+				(press_delay == 0x0000 && directions[2] == 1 && z == 0)) // left
 			{
 				tetra_vars.new_pos_x[z]--;
 				tetra_vars.joy_delay[z] = 0;
 				
-				if (z == 0) ps2_delay = ps2_speed;
-				if (z == 1)	usb_delay = usb_speed;
+				if (z == 0) press_delay = press_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x10) == 0x00) && ((tetra_vars.joy_prev[z] & 0x10) == 0x10)) ||
-				(usb_directions[3] == 1 && z == 1) || (ps2_delay == 0x0000 && ps2_directions[3] == 1 && z == 0)) // right
+				(press_delay == 0x0000 && directions[3] == 1 && z == 0)) // right
 			{
 				tetra_vars.new_pos_x[z]++;
 				tetra_vars.joy_delay[z] = 0;
 				
-				if (z == 0) ps2_delay = ps2_speed;
-				if (z == 1) usb_delay = usb_speed;
+				if (z == 0) press_delay = press_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x08) == 0x00) && ((tetra_vars.joy_prev[z] & 0x08) == 0x08) && tetra_vars.joy_button_delay[z] == 0) ||
-				(usb_buttons[0] == 1 && z == 1) || 
-				(ps2_delay == 0x0000 && (ps2_buttons[0] == 1 || ps2_buttons[2] == 1) && z == 0) ||
-				(ps2_clicks[0] == 1 && z == 1)) // button 1
+				(press_delay == 0x0000 && (buttons[0] == 1 || buttons[2] == 1) && z == 0) ||
+				(clicks[0] == 1 && z == 1)) // button 1
 			{
 				tetra_vars.joy_button_delay[z] = 0x003F;
 				
@@ -3219,23 +3342,20 @@ void Tetra()
 					tetra_vars.joy_delay[z] = 0;
 				}
 				
-				if (z == 1)
-				{
-					usb_delay = usb_speed;
-					if (ps2_clicks[0] == 1) ps2_clicks[0] = 2;
-				}
-				
 				if (z == 0)
 				{
-					ps2_delay = ps2_speed;
-					if (ps2_buttons[0] == 1) ps2_buttons[0] = 2;
-					if (ps2_buttons[2] == 1) ps2_buttons[2] = 2;
+					press_delay = press_speed;
+					if (buttons[0] == 1) buttons[0] = 2;
+					if (buttons[2] == 1) buttons[2] = 2;
+				}
+				if (z == 1)
+				{
+					if (clicks[0] == 1) clicks[0] = 2;
 				}
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x04) == 0x00) && ((tetra_vars.joy_prev[z] & 0x04) == 0x04) && tetra_vars.joy_button_delay[z] == 0) ||
-				(usb_buttons[1] == 1 && z == 1) || 
-				(ps2_delay == 0x0000 && (ps2_buttons[1] == 1 || ps2_buttons[3] == 1) && z == 0) ||
-				(ps2_clicks[1] == 1 && z == 1)) // button 2
+				(press_delay == 0x0000 && (buttons[1] == 1 || buttons[3] == 1) && z == 0) ||
+				(clicks[1] == 1 && z == 1)) // button 2
 			{
 				tetra_vars.joy_button_delay[z] = 0x003F;
 				
@@ -3269,17 +3389,15 @@ void Tetra()
 					tetra_vars.joy_delay[z] = 0;
 				}
 				
-				if (z == 1)
-				{
-					usb_delay = usb_speed;
-					if (ps2_clicks[1] == 1) ps2_clicks[1] = 2;
-				}
-				
 				if (z == 0)
 				{
-					ps2_delay = ps2_speed;
-					if (ps2_buttons[1] == 1) ps2_buttons[1] = 2;
-					if (ps2_buttons[3] == 1) ps2_buttons[3] = 2;
+					press_delay = press_speed;
+					if (buttons[1] == 1) buttons[1] = 2;
+					if (buttons[3] == 1) buttons[3] = 2;
+				}
+				if (z == 1)
+				{
+					if (clicks[1] == 1) clicks[1] = 2;
 				}
 			}
 			
@@ -3820,6 +3938,8 @@ void Scratchpad()
 	char key_value = 0x00;
 	char key_prev = '*';
 	
+	char test = 0x00;
+	
 	unsigned int pos_x = 0x00;
 	unsigned int pos_y = 0x00;
 	
@@ -3866,13 +3986,12 @@ void Scratchpad()
 		{
 			USB_host_tasks();
 			USB_HID_tasks();
-			if (USB_EP1_RECEIVED)
+			if (USB_EP1_RECEIVED > 0)
 			{
 				USB_EP1_receive(USB_EP1_buffer);
 				USB_HID_process_report();
-				USB_EP1_RECEIVED = 0;
+				USB_EP1_RECEIVED--;
 			}
-			USB_device_handle(); 
 			
 			if (key_value == 0x00)
 			{
@@ -4086,7 +4205,11 @@ void Scratchpad()
 			}
 		}
 		
-		if (input_ps2_mouse((unsigned int *)mouse_state) != 0x00)
+		test = input_ps2_mouse((unsigned int *)mouse_state);
+		
+		if (test == 0x00) test = input_usb_mouse((unsigned int *)mouse_state);
+		
+		if (test != 0x00)
 		{
 			display_character(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 			
@@ -4126,6 +4249,8 @@ volatile unsigned int menu_delay = 0x0000;
 
 int main()
 {
+	char test = 0x00;
+	
 	// turn off analog
 	ANSELA = 0x0;
 	ANSELB = 0x0;
@@ -4488,6 +4613,14 @@ int main()
 	{
 		ps2_state_array[0][i] = 0x00;
 		ps2_state_array[1][i] = 0x00;
+		ps2_cursor_x[0][i] = 0x0000;
+		ps2_cursor_x[1][i] = 0x0000;
+		ps2_cursor_y[0][i] = 0x0000;
+		ps2_cursor_y[1][i] = 0x0000;
+		
+		usb_state_array[i] = 0x00;
+		usb_cursor_x[i] = 0x0000;
+		usb_cursor_y[i] = 0x0000;
 	}
 	
 	
@@ -4574,13 +4707,12 @@ int main()
 		{
 			USB_host_tasks();
 			USB_HID_tasks();
-			if (USB_EP1_RECEIVED)
-			{
+			if (USB_EP1_RECEIVED > 0)
+			{	
 				USB_EP1_receive(USB_EP1_buffer);
 				USB_HID_process_report();
-				USB_EP1_RECEIVED = 0;
+				USB_EP1_RECEIVED--;
 			}
-			USB_device_handle(); 
 		
 			if (menu_key == 0x00)
 			{
@@ -4658,8 +4790,12 @@ int main()
 			menu_loop = 0;
 		}
 		
-		if (input_ps2_mouse((unsigned int *)menu_mouse) != 0x00)
-		{
+		test = input_ps2_mouse((unsigned int *)menu_mouse);
+		
+		if (test == 0x00) test = input_usb_mouse((unsigned int *)menu_mouse);
+		
+		if (test != 0x00)
+		{	
 			for (unsigned char i=0; i<menu_max; i++)
 			{
 				if (menu_mouse[4] <= (unsigned int)(i * 384 / menu_max))
@@ -4684,6 +4820,8 @@ int main()
 	}
 
 	music_note(1047, 250, 0);
+
+	
 
 	
 	if (menu_pos == 0) Tetra();
