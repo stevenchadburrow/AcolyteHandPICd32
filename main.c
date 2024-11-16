@@ -5563,22 +5563,30 @@ int main()
 	T2CONbits.ON = 1; // turn on TMR2 (cycle offset pre-calculated above)
 	
 	
-	// only have one or the other!
-	// also need to change the jumpers on the board
-	USBA_setup(); // initialize USB host
-	//USBB_setup(USBB_data_received); // initialize USB device
-	
-	
-	
-	DelayMS(1000); // settling delay, avoid garbage characters
-	
-    
-	
 	
 	display_string(menu_x, 16, "Acolyte Hand PIC'd 32\\");
 	
-	display_string(menu_x, menu_y, " Tetra     \\");
-	display_string(menu_x, menu_y+8, " Bad Apple \\");
+	// also need to change the jumpers on the board
+	
+	USBA_setup(); // initialize USB host
+	
+	DelayMS(1000); // settling delay, avoid garbage characters
+	DelayMS(1000);
+	DelayMS(1000);
+	DelayMS(1000); 
+	DelayMS(1000);
+	
+	if (USBA_DEVICE_CONNECTED)
+	{
+		display_string(menu_x, 32, "USB Device Detected\\");
+	}
+	else
+	{
+		USBB_setup(USBB_data_received); // initialize USB device
+	}
+	
+	display_string(menu_x, menu_y,    " Tetra     \\");
+	display_string(menu_x, menu_y+8,  " Bad Apple \\");
 	display_string(menu_x, menu_y+16, " Scratchpad\\");
 	display_string(menu_x, menu_y+24, "           \\");
 	
