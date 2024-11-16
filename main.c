@@ -89,6 +89,7 @@ void DelayMS(unsigned int s)
 	while (count > _CP0_GET_COUNT()); // Wait until Core Timer count reaches the number we calculated earlier
 }
 
+// if using UART, use command 'sudo picocom /dev/ttyUSB0' in Linux
 void SendChar(char value)
 {
 	while (U3STAbits.UTXBF == 1) { }
@@ -2641,7 +2642,7 @@ void disk_exchange()
 	
 	char buffer[16];
 	unsigned int bytes;
-	unsigned char result;
+	unsigned int result;
 	
 	for (unsigned int i=0; i<16; i++)
 	{
@@ -2650,21 +2651,28 @@ void disk_exchange()
 	
 	// read in some text
 	result = f_open(&file, "/INPUT.TXT", FA_READ);
-	SendHex(result);
-	result = f_read(&file, buffer, 16, &bytes);
-	SendHex(result);
-	result = f_close(&file);
-	SendHex(result);
+	if (result == 0)
+	{
+		while (f_read(&file, buffer, 16, &bytes) == 1) { }
+		while (f_close(&file) == 1) { }
+	}
 	
-	/// write the same text
-	result = f_open(&file, "/OUTPUT.TXT", FA_CREATE_NEW);
-	SendHex(result);
+	// write the same text back
 	result = f_open(&file, "/OUTPUT.TXT", FA_WRITE);
-	SendHex(result);
-	result = f_write(&file, buffer, 16, &bytes);
-	SendHex(result);
-	result = f_close(&file);
-	SendHex(result);
+	if (result != 0)
+	{
+		result = f_open(&file, "/OUTPUT.TXT", FA_CREATE_NEW);
+		if (result == 0)
+		{
+			while (f_close(&file) == 1) { }
+			result = f_open(&file, "/OUTPUT.TXT", FA_WRITE);
+		}
+	}
+	if (result == 0)
+	{
+		while (f_write(&file, buffer, 16, &bytes) == 1) { }
+		while (f_close(&file) == 1) { }
+	}
 };
 
 
@@ -4887,6 +4895,7 @@ int main()
 	
        
 
+	
 	
 	display_string(24, 16, "Acolyte Hand PIC'd 32\\");
 	
