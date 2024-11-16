@@ -4843,9 +4843,9 @@ int main()
 	{
 		for (unsigned int x=0; x<512; x++)
 		{
-			//screen_buffer[y][x] = splash_pointing[y * 512 + x];
+			screen_buffer[y][x] = splash_pointing[y * 512 + x];
 			//screen_buffer[y][x] = 0x25; // grey?
-			screen_buffer[y][x] = (unsigned char)((x + y) % 256); // test pattern
+			//screen_buffer[y][x] = (unsigned char)((x + y) % 256); // test pattern
 			//if (x % 2 == 0) screen_buffer[y][x] = 0xFF; // white
 			//else screen_buffer[y][x] = 0x1F; // cyan
 		}
