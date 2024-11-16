@@ -7,7 +7,9 @@ Video output of 512x384 VGA with 256-colors.  Supports 2 independent audio squar
 Comes with attachment possibilities for an SPI Micro SDcard Adapter and a FT232RL USB-to-UART Adapter.  SDcard is required for BadApple and using Elm-Chan's FatFs files (included).  If using UART, use the command 'sudo picocom /dev/ttyUSB0'.  The PIC32 is programmed through ICSP port connecting to a PICkit3.
 
 Links:
+
 <a href="https://www.aidanmocke.com/">https://www.aidanmocke.com/</a> for a bunch of PIC32MZ projects, including USB and FatFs.
+
 <a href="http://elm-chan.org/">http://elm-chan.org/</a> for a bunch of other projects, including MMC (SDcard) and FatFs.
 
 *** Board Edits: Exchange the 74HCT273 for a 74AHCT273 for faster timing responses and thus less jitter and bleeding. ***
