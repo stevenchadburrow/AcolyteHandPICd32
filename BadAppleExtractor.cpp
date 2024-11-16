@@ -20,7 +20,7 @@ Make sure to find the right drive!!!
 
 Then:
 
-sudo dd if=BadAppleFinal.bin of=/dev/sdd bs=100M conv=fsync
+sudo dd if=TouhouBadApple-Final.bin of=/dev/sdd bs=100M conv=fsync
 
 */
 
