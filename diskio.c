@@ -18,9 +18,7 @@
 DSTATUS disk_status (
 	BYTE pdrv		/* Physical drive nmuber to identify the drive */
 )
-{
-	SendString("disk_status()\n\r\\");
-	
+{	
 	//return STA_NOINIT;
 	return 0;
 }

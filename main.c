@@ -2639,11 +2639,11 @@ void disk_exchange()
 	// sudo umount /dev/sdc
 	// sudo mkfs.vfat /dev/sdc
 	
-	char buffer[256];
+	char buffer[16];
 	unsigned int bytes;
 	unsigned char result;
 	
-	for (unsigned int i=0; i<256; i++)
+	for (unsigned int i=0; i<16; i++)
 	{
 		buffer[i] = 0;
 	};
@@ -2651,7 +2651,7 @@ void disk_exchange()
 	// read in some text
 	result = f_open(&file, "/INPUT.TXT", FA_READ);
 	SendHex(result);
-	result = f_read(&file, buffer, 256, &bytes);
+	result = f_read(&file, buffer, 16, &bytes);
 	SendHex(result);
 	result = f_close(&file);
 	SendHex(result);
@@ -2661,7 +2661,7 @@ void disk_exchange()
 	SendHex(result);
 	result = f_open(&file, "/OUTPUT.TXT", FA_WRITE);
 	SendHex(result);
-	result = f_write(&file, buffer, 256, &bytes);
+	result = f_write(&file, buffer, 16, &bytes);
 	SendHex(result);
 	result = f_close(&file);
 	SendHex(result);
