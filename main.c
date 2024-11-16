@@ -95,6 +95,19 @@ void SendChar(char value)
 	U3TXREG = (char)(value);
 }
 
+void SendString(char *value)
+{
+	for (unsigned int i=0; i<256; i++)
+	{
+		if (value[i] == '\\') break;
+		else
+		{
+			while (U3STAbits.UTXBF == 1) { }
+			U3TXREG = (char)(value[i]);
+		}
+	}
+}
+
 void SendHex(unsigned char value)
 {
 	while (U3STAbits.UTXBF == 1) { }
@@ -104,6 +117,8 @@ void SendHex(unsigned char value)
 	if (value%16 >= 10) U3TXREG = (char)(value%16 + 'A' - 10);
 	else U3TXREG = (char)(value%16 + '0');
 }
+
+
 
 /*
 VESA Signal 1024 x 768 @ 70 Hz timing
@@ -1896,7 +1911,7 @@ void USB_init_endpoints(int USB_address)
     USBE1RXAbits.RXFADDR = USB_address;
 }
 
-void USB_init()
+void USB_setup()
 {
     volatile uint8_t * usbBaseAddress;
     int cnt;
@@ -2588,6 +2603,73 @@ unsigned int sdcard_writeblock(unsigned int high, unsigned int low)
 
 	return 1;
 }
+
+
+
+
+#include "ffconf.h"
+#include "ff.h"
+#include "ff.c"
+#include "diskio.h"
+#include "diskio.c"
+
+
+// Global variables
+FIL file; // File handle for the file we open
+DIR dir; // Directory information for the current directory
+FATFS fso; // File System Object for the file system we are reading from
+
+void disk_setup()
+{
+    // Wait for the disk to initialise
+    while(disk_initialize(0));
+    // Mount the disk
+    f_mount(&fso, "", 0);
+    // Change dir to the root directory
+    f_chdir("/");
+    // Open the directory
+    f_opendir(&dir, ".");
+};
+
+void disk_exchange()
+{	
+	// #The SDcard must have been formatted
+	// #Check which drive it is, here /dev/sdc
+	// sudo fdisk -l
+	// sudo umount /dev/sdc
+	// sudo mkfs.vfat /dev/sdc
+	
+	char buffer[256];
+	unsigned int bytes;
+	unsigned char result;
+	
+	for (unsigned int i=0; i<256; i++)
+	{
+		buffer[i] = 0;
+	};
+	
+	// read in some text
+	result = f_open(&file, "/INPUT.TXT", FA_READ);
+	SendHex(result);
+	result = f_read(&file, buffer, 256, &bytes);
+	SendHex(result);
+	result = f_close(&file);
+	SendHex(result);
+	
+	/// write the same text
+	result = f_open(&file, "/OUTPUT.TXT", FA_CREATE_NEW);
+	SendHex(result);
+	result = f_open(&file, "/OUTPUT.TXT", FA_WRITE);
+	SendHex(result);
+	result = f_write(&file, buffer, 256, &bytes);
+	SendHex(result);
+	result = f_close(&file);
+	SendHex(result);
+};
+
+
+
+
 
 
 
@@ -4761,9 +4843,9 @@ int main()
 	{
 		for (unsigned int x=0; x<512; x++)
 		{
-			screen_buffer[y][x] = splash_pointing[y * 512 + x];
+			//screen_buffer[y][x] = splash_pointing[y * 512 + x];
 			//screen_buffer[y][x] = 0x25; // grey?
-			//screen_buffer[y][x] = (unsigned char)((x + y) % 256); // test pattern
+			screen_buffer[y][x] = (unsigned char)((x + y) % 256); // test pattern
 			//if (x % 2 == 0) screen_buffer[y][x] = 0xFF; // white
 			//else screen_buffer[y][x] = 0x1F; // cyan
 		}
@@ -4799,12 +4881,11 @@ int main()
 	T2CONbits.ON = 1; // turn on TMR2 (cycle offset pre-calculated above)
 	
 	
-	USB_init(); // initialize USB
-           
-    DelayMS(1000); // settling delay, avoid garbage characters
+	USB_setup(); // initialize USB
 	
+	DelayMS(1000); // settling delay, avoid garbage characters
 	
-	
+       
 
 	
 	display_string(24, 16, "Acolyte Hand PIC'd 32\\");
@@ -4819,7 +4900,7 @@ int main()
 	display_character(24, 300, '>');
 	
 	
-	
+
 	
 	
 	while (menu_loop > 0)
@@ -5023,6 +5104,11 @@ int main()
 	else if (menu_pos == 2) Scratchpad();
 	else if (menu_pos == 3) { }
 	
+	
+	
+	
+	disk_setup(); // initialize disk
+	disk_exchange(); // read INPUT.TXT and write OUTPUT.TXT
 	
 	
 	while (1)
