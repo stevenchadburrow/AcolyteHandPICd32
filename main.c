@@ -64,7 +64,7 @@
 #include <xc.h>
 
 // comment out if you want to program the PIC32 faster
-//#define SPLASH
+#define SPLASH
 
 #ifdef SPLASH
 #include "splash_pointing.c"
