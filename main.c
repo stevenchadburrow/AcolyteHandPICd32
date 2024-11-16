@@ -64,7 +64,7 @@
 #include <xc.h>
 
 // comment out if you want to program the PIC32 faster
-#define SPLASH
+//#define SPLASH
 
 #ifdef SPLASH
 #include "splash_pointing.c"
@@ -5569,21 +5569,11 @@ int main()
 	// also need to change the jumpers on the board
 	
 	USBA_setup(); // initialize USB host
+	//USBB_setup(USBB_data_received); // initialize USB device
 	
 	DelayMS(1000); // settling delay, avoid garbage characters
-	DelayMS(1000);
-	DelayMS(1000);
-	DelayMS(1000); 
-	DelayMS(1000);
+
 	
-	if (USBA_DEVICE_CONNECTED)
-	{
-		display_string(menu_x, 32, "USB Device Detected\\");
-	}
-	else
-	{
-		USBB_setup(USBB_data_received); // initialize USB device
-	}
 	
 	display_string(menu_x, menu_y,    " Tetra     \\");
 	display_string(menu_x, menu_y+8,  " Bad Apple \\");
