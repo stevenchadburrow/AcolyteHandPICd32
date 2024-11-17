@@ -4,25 +4,6 @@
 shift = 0;
 
 
-/*
-shift = 35;
-color("#40C040") {
-translate([50,58,22]) {
-cube([62,34,3],center=true);    
-    
-}
-}
-*/
-
-/*
-shift = 10;
-color("#40C040") {
-translate([50, 69, 22]) {
-cube([50,14,4],center=true);
-}
-}
-*/
-
 
 // beginning of top half
 rotate([180,0,0]) {
@@ -155,46 +136,6 @@ translate([-3, -3, -2]) {
         }
         translate([3+5, 3+95, -1]) {
             cylinder(4, 3, 3);
-        }
-    }
-}
-
-// front
-translate([-3, -3, 0]) {
-    difference() {
-        cube([106, 2, 5], center = false);
-        translate([73.5+3, -0.5, 0]) {
-            cube([17, 3, 6], center = false);
-        }
-    }
-}
-
-// back
-translate([-3, 101, 0]) {
-    difference() {
-        cube([106, 2, 5], center = false);
-        translate([73.5+3, -0.5, 0]) {
-            cube([17, 3, 6], center = false);
-        }
-    }
-}
-
-// left
-translate([-3, -3, 0]) {
-    difference() {
-        cube([2, 106, 5], center = false);
-        translate([-0.5, 73.5+3, 0]) {
-            cube([3, 17, 6], center = false);
-        }
-    }
-}
-
-// right
-translate([101, -3, 0]) {
-    difference() {
-        cube([2, 106, 5], center = false);
-        translate([-0.5, 73.5+3, 0]) {
-            cube([3, 17, 6], center = false);
         }
     }
 }
@@ -401,5 +342,3 @@ translate([-1, 94, 0]) {
 }
 }
 // end of bottom half
-
-//}
