@@ -13,7 +13,7 @@ Links:
 <a href="https://www.aidanmocke.com/">https://www.aidanmocke.com/</a> for a bunch of PIC32MZ projects (without Harmony), including USB and FatFs.<br>
 <a href="http://elm-chan.org/">http://elm-chan.org/</a> for a bunch of other projects, including MMC (aka SDcard) and FatFs.<br>
 
-*** Board Edits: Exchange the 74HCT273 for a 74AHCT273 for faster timing responses and thus less jitter and bleeding. ***
+*** Board Edits: Exchange the 74HCT273 for a 74AHCT273 for faster timing responses because of the faster pixel clock. ***
 
 <img src="BOARD-PICTURE.jpg">
 
