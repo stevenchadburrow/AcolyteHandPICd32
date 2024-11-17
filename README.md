@@ -6,6 +6,8 @@ Video output of 512x384 VGA with 256-colors.  Supports 2 independent audio squar
 
 Comes with attachment possibilities for an SPI Micro SDcard Adapter and a FT232RL USB-to-UART Adapter.  SDcard is required for BadApple and using Elm-Chan's FatFs files (included).  If using UART, use the command 'sudo picocom /dev/ttyUSB0'.  The PIC32 is programmed through ICSP port connecting to a PICkit3.
 
+Only PORTD, PORTE, and PORTJ are used for all existing peripherals.  That leaves PORTA, PORTB, PORTC, PORTF, PORTG, and PORTH all for user functionality.
+
 Links:
 
 <a href="https://www.aidanmocke.com/">https://www.aidanmocke.com/</a> for a bunch of PIC32MZ projects (without Harmony), including USB and FatFs.<br>
