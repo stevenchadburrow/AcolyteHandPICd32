@@ -66,11 +66,11 @@ translate([5, 5, 0]) {
         }
     }
 }
-translate([4, -1, 0]) {
-    cube([2, 3, 20], center = false);
+translate([4, -2, 0]) {
+    cube([3, 4, 20], center = false);
 }
-translate([-1, 4, 0]) {
-    cube([3, 2, 20], center = false);
+translate([-2, 4, 0]) {
+    cube([4, 3, 20], center = false);
 }
 
 // corner
@@ -82,11 +82,11 @@ translate([95, 5, 0]) {
         }
     }
 }
-translate([94, -1, 0]) {
-    cube([2, 3, 20], center = false);
+translate([94, -2, 0]) {
+    cube([3, 4, 20], center = false);
 }
-translate([99, 4, 0]) {
-    cube([3, 2, 20], center = false);
+translate([98, 4, 0]) {
+    cube([4, 3, 20], center = false);
 }
 
 // corner
@@ -98,11 +98,11 @@ translate([95, 95, 0]) {
         }
     }
 }
-translate([94, 99, 0]) {
-    cube([2, 3, 20], center = false);
+translate([94, 98, 0]) {
+    cube([3, 4, 20], center = false);
 }
-translate([99, 94, 0]) {
-    cube([3, 2, 20], center = false);
+translate([98, 94, 0]) {
+    cube([4, 3, 20], center = false);
 }
 
 // corner
@@ -114,102 +114,13 @@ translate([5, 95, 0]) {
         }
     }
 }
-translate([4, 99, 0]) {
-    cube([2, 3, 20], center = false);
+translate([4, 98, 0]) {
+    cube([3, 4, 20], center = false);
 }
-translate([-1, 94, 0]) {
-    cube([3, 2, 20], center = false);
-}
-     
-// bottom
-translate([-3, -3, -2]) {
-    difference() {
-        cube([106, 106, 2], center = false);
-        translate([3+5, 3+5, -1]) {
-            cylinder(4, 3, 3);
-        }
-        translate([3+95, 3+5, -1]) {
-            cylinder(4, 3, 3);
-        }
-        translate([3+95, 3+95, -1]) {
-            cylinder(4, 3, 3);
-        }
-        translate([3+5, 3+95, -1]) {
-            cylinder(4, 3, 3);
-        }
-    }
+translate([-2, 94, 0]) {
+    cube([4, 3, 20], center = false);
 }
 
-// front left corner
-translate([5, 5, 0]) {
-    difference() {
-        cylinder(3.25, 4, 4);
-        translate([0, 0, -1]) {
-            cylinder(4.5, 1.5, 1.5);
-        }
-    }
-}
-translate([4, -1, 0]) {
-    cube([2, 3, 3.25], center = false);
-}
-translate([-1, 4, 0]) {
-    cube([3, 2, 3.25], center = false);
-}
-
-// front right corner
-translate([95, 5, 0]) {
-    difference() {
-        cylinder(3.25, 4, 4);
-        translate([0, 0, -1]) {
-            cylinder(4.5, 1.5, 1.5);
-        }
-    }
-}
-translate([94, -1, 0]) {
-    cube([2, 3, 3.25], center = false);
-}
-translate([99, 4, 0]) {
-    cube([3, 2, 3.25], center = false);
-}
-
-// back right corner
-translate([95, 95, 0]) {
-    difference() {
-        cylinder(3.25, 4, 4);
-        translate([0, 0, -1]) {
-            cylinder(4.5, 1.5, 1.5);
-        }
-    }
-}
-translate([94, 99, 0]) {
-    cube([2, 3, 3.25], center = false);
-}
-translate([99, 94, 0]) {
-    cube([3, 2, 3.25], center = false);
-}
-
-// back left corner
-translate([5, 95, 0]) {
-    difference() {
-        cylinder(3.25, 4, 4);
-        translate([0, 0, -1]) {
-            cylinder(4.5, 1.5, 1.5);
-        }
-    }
-}
-translate([4, 99, 0]) {
-    cube([2, 3, 3.25], center = false);
-}
-translate([-1, 94, 0]) {
-    cube([3, 2, 3.25], center = false);
-} 
-
-translate([4, 99, 0]) {
-    cube([2, 3, 20], center = false);
-}
-translate([-1, 94, 0]) {
-    cube([3, 2, 20], center = false);
-}
 }}
 // end of top half
 
@@ -287,10 +198,10 @@ translate([5, 5, 0]) {
     }
 }
 translate([4, -1, 0]) {
-    cube([2, 3, 3.25], center = false);
+    cube([3, 4, 3.25], center = false);
 }
 translate([-1, 4, 0]) {
-    cube([3, 2, 3.25], center = false);
+    cube([4, 3, 3.25], center = false);
 }
 
 // front right corner
@@ -303,10 +214,10 @@ translate([95, 5, 0]) {
     }
 }
 translate([94, -1, 0]) {
-    cube([2, 3, 3.25], center = false);
+    cube([3, 4, 3.25], center = false);
 }
 translate([99, 4, 0]) {
-    cube([3, 2, 3.25], center = false);
+    cube([4, 3, 3.25], center = false);
 }
 
 // back right corner
@@ -319,10 +230,10 @@ translate([95, 95, 0]) {
     }
 }
 translate([94, 99, 0]) {
-    cube([2, 3, 3.25], center = false);
+    cube([3, 4, 3.25], center = false);
 }
 translate([99, 94, 0]) {
-    cube([3, 2, 3.25], center = false);
+    cube([4, 3, 3.25], center = false);
 }
 
 // back left corner
@@ -335,10 +246,10 @@ translate([5, 95, 0]) {
     }
 }
 translate([4, 99, 0]) {
-    cube([2, 3, 3.25], center = false);
+    cube([3, 4, 3.25], center = false);
 }
 translate([-1, 94, 0]) {
-    cube([3, 2, 3.25], center = false);
+    cube([4, 3, 3.25], center = false);
 }
 }
 // end of bottom half
