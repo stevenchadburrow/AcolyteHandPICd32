@@ -17,6 +17,8 @@ Links:
 
 <img src="BOARD-PICTURE.jpg">
 
+<img src="PRINTED-CASE.jpg">
+
 <img src="MIKU-MENU.jpg">
 
 <img src="MIKU-TETRA.jpg">
