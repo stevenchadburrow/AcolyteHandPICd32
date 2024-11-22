@@ -41,7 +41,7 @@
 #pragma config ICESEL = ICS_PGx1        // ICE/ICD Comm Channel Select (Communicate on PGEC1/PGED1)
 #pragma config TRCEN = OFF               // Trace Disable (Trace features in the CPU are disabled)
 #pragma config BOOTISA = MIPS32         // Boot ISA Selection (Boot code and Exception code is MIPS32)
-#pragma config FECCCON = ON             // Dynamic Flash ECC Configuration (Flash ECC is enabled (ECCCON bits are locked))
+#pragma config FECCCON = OFF_UNLOCKED //ON             // Dynamic Flash ECC Configuration (Flash ECC is enabled (ECCCON bits are locked))
 #pragma config FSLEEP = VREGS           // Flash Sleep Mode (Flash power down is controlled by the VREGS bit)
 #pragma config DBGPER = PG_ALL          // Debug Mode CPU Access Permission (Allow CPU access to all permission regions)
 #pragma config SMCLR = MCLR_NORM        // Soft Master Clear Enable bit (MCLR pin generates a normal system Reset)
@@ -1032,6 +1032,8 @@ void EchoFile()
 		buffer[i] = ' ';
 	};
 	
+	SendString("\n\r\\");
+	
 	// read in some text
 	result = f_open(&file, "/INPUT.TXT", FA_READ);
 	if (result == 0)
@@ -1112,6 +1114,19 @@ unsigned int NVMEraseAll()
 	return res;
 }
 
+unsigned int NVMWriteSingleWord(unsigned long address, unsigned long data0)
+{	
+	unsigned int res;
+	// Load data into NVMDATA register
+	NVMDATA0 = data0;
+	// Load address to program into NVMADDR register
+	NVMADDR = (unsigned long) address;
+	// Unlock and Write Single Word
+	res = NVMUnlock (0x4001); // ECC must be turned off!
+	// Return Result
+	return res;
+}
+
 unsigned int NVMWriteQuadWord(unsigned long address, 
 	unsigned long data0, unsigned long data1, unsigned long data2, unsigned long data3)
 {
@@ -1129,10 +1144,15 @@ unsigned int NVMWriteQuadWord(unsigned long address,
 	return res;
 }
 
+#pragma region name="user_ram" origin=0x80040000 size=0x00040000 
+#pragma region name="user_rom" origin=0x9D080100 size=0x0017FF00
+#define USER_RAM __attribute__((region("user_ram")))
+#define USER_ROM __attribute__((region("user_rom")))
+#define USER_JUMP __attribute__((address(0x9D080000)))
 #define REPROGRAM_BEGIN 0x1D080000
 #define REPROGRAM_END 0x1D200000
 
-void Reprogram()
+void ReprogramCode()
 {	
 	// #The SDcard must have been formatted
 	// #Check which drive it is, here /dev/sdc
@@ -1165,6 +1185,8 @@ void Reprogram()
 	pos = 0;
 	
 	result = f_open(&file, "/CODE.HEX", FA_READ);
+	
+	SendString("\n\r\\");
 	
 	if (result == 0)
 	{
@@ -1233,8 +1255,15 @@ void Reprogram()
 						{
 							SendChar('.');
 
-							NVMWriteQuadWord((unsigned long)((high_address << 16) + low_address), 
-								word[0], word[1], word[2], word[3]);
+							//NVMWriteQuadWord((unsigned long)((high_address << 16) + low_address), 
+							//	word[0], word[1], word[2], word[3]);
+							
+							for (int i=0; i<num; i++)
+							{
+								NVMWriteSingleWord((unsigned long)((high_address << 16) + low_address), word[i]);
+								
+								low_address += 4;
+							}
 						}
 					}
 					else if (line[6] == '0' && line[7] == '1') // eof
@@ -1271,6 +1300,8 @@ void Reprogram()
 
 		while (f_close(&file) == 1) { }
 		
+		SendString("\r\n\\");
+		
 		SendString("Please reset computer now\r\n\\");
 	}
 	else
@@ -1278,6 +1309,40 @@ void Reprogram()
 		SendString("Could not find CODE.HEX\r\n\\");
 	}
 };
+
+
+
+
+
+void USER_ROM testing_hex(unsigned char value)
+{
+	while (U3STAbits.UTXBF == 1) { }
+	if (value/16 >= 10) U3TXREG = (char)(value/16 + 'A' - 10);
+	else U3TXREG = (char)(value/16 + '0');
+	while (U3STAbits.UTXBF == 1) { }
+	if (value%16 >= 10) U3TXREG = (char)(value%16 + 'A' - 10);
+	else U3TXREG = (char)(value%16 + '0');
+};
+
+unsigned int USER_RAM testing_value;
+
+void USER_ROM testing_function()
+{
+	testing_value = 0x4000;
+	
+	for (unsigned int i=0; i<256; i++) testing_value += i;
+	
+	testing_hex((unsigned char)(testing_value / 256));
+	
+	testing_hex((unsigned char)(testing_value % 256));
+}
+
+// must be a very small function
+void USER_JUMP UserCode()
+{
+	testing_function();
+};
+
 
 
 
@@ -1704,11 +1769,9 @@ int main()
 	if (dummy == 0) Tetra();
 	else if (dummy == 1) BadApple();
 	else if (dummy == 2) Scratchpad();
-	else if (dummy == 3) { }
-
-	
-	EchoFile(); // copies INPUT.TXT to OUTPUT.TXT
-	//Reprogram(); // reprogram from CODE.HEX
+	else if (dummy == 3) UserCode();
+	else if (dummy == 4) ReprogramCode();
+	else if (dummy == 5) { }
 	
 	
 	while (1)

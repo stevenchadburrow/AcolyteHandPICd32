@@ -23,9 +23,11 @@ unsigned char Menu()
 	display_string(menu_x, menu_y,    " Tetra     \\");
 	display_string(menu_x, menu_y+8,  " Bad Apple \\");
 	display_string(menu_x, menu_y+16, " Scratchpad\\");
-	display_string(menu_x, menu_y+24, "           \\");
+	display_string(menu_x, menu_y+24, " Run Code  \\");
+	display_string(menu_x, menu_y+32, " Reprogram \\");
+	display_string(menu_x, menu_y+40, "           \\");
 
-	menu_max = 4; // number of menu items, change accordingly
+	menu_max = 6; // number of menu items, change accordingly
 
 	display_character(menu_x, menu_y, '>');
 
