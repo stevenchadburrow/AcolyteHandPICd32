@@ -1036,8 +1036,14 @@ void EchoFile()
 	result = f_open(&file, "/INPUT.TXT", FA_READ);
 	if (result == 0)
 	{
+		SendString("Found INPUT.TXT, copying now\n\r\\");
+		
 		while (f_read(&file, buffer, 16, &bytes) == 1) { }
 		while (f_close(&file) == 1) { }
+	}
+	else
+	{
+		SendString("Could not find INPUT.TXT\n\r\\");
 	}
 	
 	// write the same text back
@@ -1052,9 +1058,15 @@ void EchoFile()
 		}
 	}
 	if (result == 0)
-	{
+	{	
 		while (f_write(&file, buffer, 16, &bytes) == 1) { }
 		while (f_close(&file) == 1) { }
+		
+		SendString("Copied to OUTPUT.TXT\n\r\\");
+	}
+	else
+	{
+		SendString("Could not copy to OUTPUT.TXT\n\r\\");
 	}
 };
 
@@ -1117,6 +1129,9 @@ unsigned int NVMWriteQuadWord(unsigned long address,
 	return res;
 }
 
+#define REPROGRAM_BEGIN 0x1D080000
+#define REPROGRAM_END 0x1D200000
+
 void Reprogram()
 {	
 	// #The SDcard must have been formatted
@@ -1155,7 +1170,12 @@ void Reprogram()
 	{
 		SendString("Found CODE.HEX, reprogramming now\n\r\\");
 		
-		NVMEraseAll();
+		//NVMEraseAll();
+		
+		for (unsigned long i=REPROGRAM_BEGIN; i<REPROGRAM_END; i+=0x00001000) // ???
+		{
+			NVMErasePage(i);
+		}
 		
 		buffer[0] = 0;
 		
@@ -1209,7 +1229,7 @@ void Reprogram()
 							}
 						}
 						
-						if (high_address >= 0x1D08 && high_address < 0x1D20)
+						if (high_address >= (REPROGRAM_BEGIN >> 16) && high_address < (REPROGRAM_END >> 16)) // range where it will re-program flash
 						{
 							SendChar('.');
 
