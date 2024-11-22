@@ -1308,6 +1308,17 @@ void ReprogramCode()
 	{
 		SendString("Could not find CODE.HEX\r\n\\");
 	}
+	
+	DelayMS(1000);
+	
+	// soft reset system
+	SYSKEY = 0x0; // reset
+	SYSKEY = 0xAA996655; // unlock key #1
+	SYSKEY = 0x556699AA; // unlock key #2
+	RSWRST = 1; // set bit to reset of system
+	SYSKEY = 0x0; // re-lock
+	RSWRST; // read from register to reset
+	while (1) { } // wait until reset occurs
 };
 
 
