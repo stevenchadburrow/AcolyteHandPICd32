@@ -1029,7 +1029,7 @@ void EchoFile()
 	
 	for (unsigned int i=0; i<16; i++)
 	{
-		buffer[i] = 0;
+		buffer[i] = ' ';
 	};
 	
 	// read in some text
