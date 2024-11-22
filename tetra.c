@@ -245,10 +245,12 @@ struct tetra_struct_vars
 	volatile unsigned int lines[2];
 	volatile unsigned int timer[2];
 	
+	/*
 	volatile int background;
 	volatile int background_counter;
 	volatile int background_trans;
 	volatile int background_delay;
+	*/
 	
 	volatile unsigned char joy_curr[2];
 	volatile unsigned char joy_prev[2];
@@ -327,10 +329,12 @@ void Tetra()
 		}
 	}
 	
+	/*
 	tetra_vars.background = 1;
 	tetra_vars.background_counter = 0;
 	tetra_vars.background_trans = -1;
 	tetra_vars.background_delay = 0;
+	*/
 	
 	// set background
 	for (unsigned int y=0; y<SCREEN_Y; y++)
@@ -338,7 +342,7 @@ void Tetra()
 		for (unsigned int x=0; x<SCREEN_X; x++)
 		{
 #ifdef SPLASH
-			screen_buffer[y*SCREEN_X+x] = splash_brighting[y * SCREEN_X + x];
+			screen_buffer[y*SCREEN_X+x] = splash_default[y * SCREEN_X + x];
 #else
 			screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
 #endif
@@ -358,6 +362,7 @@ void Tetra()
 		
 		overall_delay = 0x1FFF;
 		
+		/*
 		if (tetra_vars.background_trans >= 0)
 		{
 			if (tetra_vars.background_delay > 0)
@@ -384,6 +389,7 @@ void Tetra()
 				tetra_vars.background_delay = 5;
 			}
 		}
+		*/
 		
 		key_active = 0;
 		mouse_active = 0;
@@ -1041,6 +1047,7 @@ void Tetra()
 								tetra_vars.lines[z]++;
 								count++;
 								
+								/*
 								tetra_vars.background_counter++;
 								
 								if (tetra_vars.background_counter >= 4 && tetra_vars.background_trans < 0)
@@ -1053,6 +1060,7 @@ void Tetra()
 									
 									tetra_vars.background_trans = SCREEN_Y;
 								}
+								*/
 								
 								pause[0] = 0x3F;
 								pause[1] = 0x3F;

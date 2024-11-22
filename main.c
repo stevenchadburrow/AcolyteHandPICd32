@@ -63,18 +63,14 @@
 
 #include <xc.h>
 
+
+
 // comment out if you want to program the PIC32 faster
 #define SPLASH
 
 #ifdef SPLASH
-#include "splash_pointing.c"
-#include "splash_brighting.c"
-#include "splash_floating.c"
-#include "splash_calling.c"
-#include "splash_blushing.c"
-#include "splash_television.c"
+#include "splash_default.c"
 #endif
-
 
 
 
@@ -129,15 +125,31 @@ void SendHex(unsigned char value)
 
 
 
+
 #define SCREEN_X 512
 #define SCREEN_Y 384
 
-volatile unsigned char __attribute__((coherent,address(0x80001000))) screen_buffer[SCREEN_Y*SCREEN_X]; //screen_buffer[300][400]; // visible portion of screen
+// globally accessable variables
+volatile unsigned char __attribute__((coherent,address(0x80004000))) screen_buffer[SCREEN_Y*SCREEN_X]; //screen_buffer[300][400]; // visible portion of screen
+volatile char ps2_state_array[2][256];
+volatile unsigned int ps2_cursor_x[2][256];
+volatile unsigned int ps2_cursor_y[2][256];
+volatile unsigned char ps2_mode[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_writepos[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_readpos[2] = { 0x00, 0x00 };
 
+volatile char usb_state_array[256];
+volatile unsigned int usb_cursor_x[256];
+volatile unsigned int usb_cursor_y[256];
+volatile unsigned int usb_buttons[256];
+volatile unsigned char usb_mode = 0x00;
+volatile unsigned char usb_writepos = 0x00;
+volatile unsigned char usb_readpos = 0x00;
+
+
+// additional variables
 volatile unsigned char screen_blank[SCREEN_X]; // black scanline
-
 volatile unsigned int screen_scanline = 771; // start of vertical sync
-
 volatile unsigned char screen_zero[1] = { 0x00 }; // zero value for black
 
 volatile unsigned int audio_counter[2] = { 0, 0 }; // audio duration
@@ -146,28 +158,14 @@ volatile unsigned int ps2_port = 0x0000;
 volatile unsigned int ps2_flags = 0x0000;
 
 // PS/2 keyboard variables
-volatile char ps2_state_array[2][256];
-volatile unsigned int ps2_cursor_x[2][256];
-volatile unsigned int ps2_cursor_y[2][256];
 volatile unsigned char ps2_counter[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_buffer[2] = { 0x00, 0x00 };
-volatile unsigned char ps2_writepos[2] = { 0x00, 0x00 };
-volatile unsigned char ps2_readpos[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_sequence[2] = { 0xFF, 0xFF }; // starts with 0xFA acknowledge byte
 volatile unsigned char ps2_shift[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_release[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_extended[2] = { 0x00, 0x00 };
-volatile unsigned char ps2_mode[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_ready[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_check[2] = { 0x00, 0x00 };
-
-volatile char usb_state_array[256];
-volatile unsigned int usb_cursor_x[256];
-volatile unsigned int usb_cursor_y[256];
-volatile unsigned int usb_buttons[256];
-volatile unsigned char usb_writepos = 0x00;
-volatile unsigned char usb_readpos = 0x00;
-volatile unsigned char usb_mode = 0x00;
 
 
 #include "tables.c"
@@ -990,6 +988,14 @@ void display_string(unsigned int x, unsigned int y, char *value)
 
 
 
+
+
+
+
+
+
+
+
 // must come before the ff.c and diskio.c files
 #include "sdcard.c"
 
@@ -1006,9 +1012,9 @@ FIL file; // File handle for the file we open
 DIR dir; // Directory information for the current directory
 FATFS fso; // File System Object for the file system we are reading from
 
-void disk_setup()
+void EchoFile()
 {
-    // Wait for the disk to initialise
+	// Wait for the disk to initialise
     while(disk_initialize(0));
     // Mount the disk
     f_mount(&fso, "", 0);
@@ -1016,16 +1022,7 @@ void disk_setup()
     f_chdir("/");
     // Open the directory
     f_opendir(&dir, ".");
-};
-
-void disk_exchange()
-{	
-	// #The SDcard must have been formatted
-	// #Check which drive it is, here /dev/sdc
-	// sudo fdisk -l
-	// sudo umount /dev/sdc
-	// sudo mkfs.vfat /dev/sdc
-	
+ 
 	char buffer[16];
 	unsigned int bytes;
 	unsigned int result;
@@ -1060,6 +1057,208 @@ void disk_exchange()
 		while (f_close(&file) == 1) { }
 	}
 };
+
+unsigned int NVMUnlock(unsigned int nvmop)
+{
+	// Suspend or Disable all Interrupts
+	asm("di");
+	// Enable Flash Write/Erase Operations and Select
+	// Flash operation to perform
+	NVMCON = nvmop;
+	// Write Keys
+	NVMKEY = 0xAA996655;
+	NVMKEY = 0x556699AA;
+	// Start the operation using the Set Register
+	NVMCONSET = 0x8000;
+	// Wait for operation to complete
+	while (NVMCON & 0x8000);
+	// Restore Interrupts
+	asm("ei");
+	// Disable NVM write enable
+	NVMCONCLR = 0x0004000;
+	// Return WRERR and LVDERR Error Status Bits
+	return (NVMCON & 0x3000);
+}
+
+unsigned int NVMErasePage(unsigned long address)
+{
+	unsigned int res;
+	// Load address to program into NVMADDR register
+	NVMADDR = (unsigned long) address;
+	// Unlock and Erase Page
+	res = NVMUnlock (0x4004);
+	// Return Result
+	return res;
+}
+
+unsigned int NVMEraseAll()
+{
+	unsigned int res;
+	// Unlock and Erase All
+	res = NVMUnlock (0x4007);
+	// Return Result
+	return res;
+}
+
+unsigned int NVMWriteQuadWord(unsigned long address, 
+	unsigned long data0, unsigned long data1, unsigned long data2, unsigned long data3)
+{
+	unsigned int res;
+	// Load data into NVMDATA register
+	NVMDATA0 = data0;
+	NVMDATA1 = data1;
+	NVMDATA2 = data2;
+	NVMDATA3 = data3;
+	// Load address to program into NVMADDR register
+	NVMADDR = (unsigned long) address;
+	// Unlock and Write Quad Word
+	res = NVMUnlock (0x4002);
+	// Return Result
+	return res;
+}
+
+void Reprogram()
+{	
+	// #The SDcard must have been formatted
+	// #Check which drive it is, here /dev/sdc
+	// sudo fdisk -l
+	// sudo umount /dev/sdc
+	// sudo mkfs.vfat /dev/sdc
+	
+	// Wait for the disk to initialise
+    while(disk_initialize(0));
+    // Mount the disk
+    f_mount(&fso, "", 0);
+    // Change dir to the root directory
+    f_chdir("/");
+    // Open the directory
+    f_opendir(&dir, ".");
+	
+	char buffer[1];
+	char line[256];
+	unsigned int pos = 0;
+	unsigned int bytes = 1;
+	unsigned int result = 0;
+	
+	unsigned long high_address = 0x0;
+	unsigned long low_address = 0x0;
+	unsigned char single = 0x0;
+	unsigned long word[4] = { 0x0, 0x0, 0x0, 0x0 };
+	unsigned char num = 0;
+	
+	for (unsigned int i=0; i<256; i++) line[i] = '0';
+	pos = 0;
+	
+	result = f_open(&file, "/CODE.HEX", FA_READ);
+	
+	if (result == 0)
+	{
+		SendString("Found CODE.HEX, reprogramming now\n\r\\");
+		
+		NVMEraseAll();
+		
+		buffer[0] = 0;
+		
+		while (bytes > 0 && buffer[0] != ':')
+		{
+			while (f_read(&file, buffer, 1, &bytes) == 1) { } // colon
+		}
+		
+		while (bytes > 0)
+		{
+			while (f_read(&file, buffer, 1, &bytes) == 1) { }
+			
+			if (bytes > 0)
+			{
+				if (buffer[0] == ':')
+				{	
+					low_address = 0x0000;
+					
+					for (unsigned int i=0; i<4; i++)
+					{
+						low_address = (low_address << 4);
+						
+						if (line[i+2] >= 'a') low_address += (unsigned int)(line[i+2] - 'a' + 10);
+						else low_address += (unsigned int)(line[i+2] - '0');
+					}
+					
+					if (line[6] == '0' && line[7] == '0') // data
+					{	
+						for (unsigned char i=0; i<4; i++) word[i] = 0x00000000;
+						
+						if (line[0] == '1' && line[1] == '0') num = 4;
+						else if (line[0] == '0' && line[1] == 'C') num = 3;
+						else if (line[0] == '0' && line[1] == '8') num = 2;
+						else if (line[0] == '0' && line[1] == '4') num = 1;
+						
+						for (unsigned char i=0; i<num; i++)
+						{
+							for (unsigned char j=0; j<8; j+=2)
+							{
+								word[i] = (word[i] >> 8);
+								
+								single = 0x00;
+								
+								if (line[i*8+j+8] >= 'a') single += (unsigned long)(line[i*8+j+8] - 'a' + 10) * 0x10;
+								else single += (unsigned long)(line[i*8+j+8] - '0') * 0x10;
+								
+								if (line[i*8+j+1+8] >= 'a') single += (unsigned long)(line[i*8+j+1+8] - 'a' + 10) * 0x01;
+								else single += (unsigned long)(line[i*8+j+1+8] - '0') * 0x01;
+								
+								word[i] += single * 0x01000000;
+							}
+						}
+						
+						if (high_address >= 0x1D08 && high_address < 0x1D20)
+						{
+							SendChar('.');
+
+							NVMWriteQuadWord((unsigned long)((high_address << 16) + low_address), 
+								word[0], word[1], word[2], word[3]);
+						}
+					}
+					else if (line[6] == '0' && line[7] == '1') // eof
+					{
+						
+					}
+					else if (line[6] == '0' && line[7] == '4') // high address
+					{	
+						high_address = 0x0000;
+						
+						for (unsigned int i=0; i<4; i++)
+						{
+							high_address = (high_address << 4);
+							
+							if (line[i+8] >= 'a') high_address += (unsigned int)(line[i+8] - 'a' + 10);
+							else high_address += (unsigned int)(line[i+8] - '0');
+						}
+					}
+					else
+					{
+				
+					}
+					
+					for (unsigned int i=0; i<256; i++) line[i] = '0';
+					pos = 0;
+				}
+				else
+				{
+					line[pos] = buffer[0];
+					pos++;
+				}
+			}
+		}
+
+		while (f_close(&file) == 1) { }
+		
+		SendString("Please reset computer now\r\n\\");
+	}
+	else
+	{
+		SendString("Could not find CODE.HEX\r\n\\");
+	}
+};
+
 
 
 
@@ -1133,6 +1332,16 @@ int main()
 	IFS6 = 0x0;
 	//IFS7 = 0x0;
 	
+	
+	// Set up caching
+	unsigned int cp0 = _mfc0(16, 0);
+	cp0 &= ~0x07;
+	cp0 |= 0b011; // K0 = Cacheable, non-coherent, write-back, write allocate
+	//cp0 &= ~0x03;
+	//cp0 |= 0x02; // K0 = Uncachable
+	_mtc0(16, 0, cp0);  
+	
+	 
 	// change tri-state on pins
 	TRISD = 0xB640; // MISO, KEY, LED, MOUSE, and UART
 	TRISJ = 0xFCFF; // JOY-A, JOY-B, and BUTTON
@@ -1163,11 +1372,6 @@ int main()
     
 	CFGCONbits.USBSSEN = 1; // USB?
 
-	// Set up caching
-	unsigned int cp0 = _mfc0(16, 0);
-	cp0 &= ~0x07;
-	cp0 |= 0b011; // K0 = Cacheable, non-coherent, write-back, write allocate
-	_mtc0(16, 0, cp0);  
 	
 	OSCCONbits.SLPEN = 0; // WAIT instruction puts CPU into idle mode
 	OSCCONbits.NOSC = 0x1; // switch to SPLL
@@ -1411,8 +1615,6 @@ int main()
 	// wait some time
 	DelayMS(1000);
 	
-
-	
 	
 	
 	// set display buffer
@@ -1421,7 +1623,7 @@ int main()
 		for (unsigned int x=0; x<SCREEN_X; x++)
 		{
 #ifdef SPLASH
-			screen_buffer[y*SCREEN_X+x] = splash_pointing[y * SCREEN_X + x];
+			screen_buffer[y*SCREEN_X+x] = splash_default[y * SCREEN_X + x];
 #else
 			screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
 			//screen_buffer[y*SCREEN_X+x] = (unsigned char)((x + y) % 256); // test pattern
@@ -1451,8 +1653,7 @@ int main()
 	
 	
 	// just a 'hello world' over the UART
-	//while (U3STAbits.UTXBF == 1) { }
-	U3TXREG = '*';
+	SendChar('*');
 	
 	// turn on video timers
 	T4CONbits.ON = 1; // turn on TMR4 (independent of others)
@@ -1474,11 +1675,9 @@ int main()
 	}
 	
 	DelayMS(1000); // settling delay, avoid garbage characters
-
 	
-
-
-
+	
+	
 
 	dummy = (char)Menu();
 	
@@ -1486,13 +1685,10 @@ int main()
 	else if (dummy == 1) BadApple();
 	else if (dummy == 2) Scratchpad();
 	else if (dummy == 3) { }
-	
-	
 
 	
-	
-	disk_setup(); // initialize disk
-	disk_exchange(); // read INPUT.TXT and write OUTPUT.TXT
+	EchoFile(); // copies INPUT.TXT to OUTPUT.TXT
+	//Reprogram(); // reprogram from CODE.HEX
 	
 	
 	while (1)
@@ -1603,30 +1799,46 @@ int main()
 		DelayMS(100);
 */
 /*
-		while (U3STAbits.UTXBF == 1) { }
-		U3TXREG = '@';
-*/
-/*		
-		unsigned char dummy = 0x00;
-		
-		for (unsigned int i=0; i<10000; i++)
+    // Wait for the disk to initialise
+    while(disk_initialize(0));
+    // Mount the disk
+    f_mount(&fso, "", 0);
+    // Change dir to the root directory
+    f_chdir("/");
+    // Open the directory
+    f_opendir(&dir, ".");
+ 
+	char buffer[16];
+	unsigned int bytes;
+	unsigned int result;
+	
+	for (unsigned int i=0; i<16; i++)
+	{
+		buffer[i] = 0;
+	};
+	
+	// read in some text
+	result = f_open(&file, "/INPUT.TXT", FA_READ);
+	if (result == 0)
+	{
+		while (f_read(&file, buffer, 16, &bytes) == 1) { }
+		while (f_close(&file) == 1) { }
+	}
+	
+	// write the same text back
+	result = f_open(&file, "/OUTPUT.TXT", FA_WRITE);
+	if (result != 0)
+	{
+		result = f_open(&file, "/OUTPUT.TXT", FA_CREATE_NEW);
+		if (result == 0)
 		{
-			for (unsigned int j=0; j<1000; j++)
-			{
-				dummy++;
-			}
+			while (f_close(&file) == 1) { }
+			result = f_open(&file, "/OUTPUT.TXT", FA_WRITE);
 		}
-		
-		PORTDbits.RD11 = 0;
-		
-		for (unsigned int i=0; i<10000; i++)
-		{
-			for (unsigned int j=0; j<1000; j++)
-			{
-				dummy++;
-			}
-		}
-		
-		PORTDbits.RD11 = 1;
+	}
+	if (result == 0)
+	{
+		while (f_write(&file, buffer, 16, &bytes) == 1) { }
+		while (f_close(&file) == 1) { }
+	}
 */
-		//asm("WAIT");

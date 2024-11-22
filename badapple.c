@@ -10,7 +10,7 @@ void BadApple()
 			for (unsigned int x=0; x<SCREEN_X; x++)
 			{
 #ifdef SPLASH
-				screen_buffer[y*SCREEN_X+x] = splash_television[y * SCREEN_X + x];
+				screen_buffer[y*SCREEN_X+x] = splash_default[y * SCREEN_X + x];
 #else
 				screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
 #endif
@@ -77,8 +77,10 @@ void BadApple()
 		{
 			frames += 2; // only 30 FPS
 			
-			x = 88;
-			y = 104;
+			//x = 88;
+			//y = 104;
+			x = 128;
+			y = 180;
 
 			for (unsigned int l=0; l<12; l++)
 			{
@@ -125,8 +127,10 @@ void BadApple()
 						}
 					}
 
-					x = 88;
 					y += 1;
+					
+					//x = 88;
+					x = 128;
 				}
 
 				temp_value = sdcard_receivebyte(); // data packet ends with 0x55 then 0xAA
