@@ -71,6 +71,8 @@ unsigned int NVMWriteQuadWord(unsigned long address,
 	return res;
 }
 
+#ifdef USER_SPACE
+
 void ReprogramCode()
 {	
 	// #The SDcard must have been formatted
@@ -245,3 +247,11 @@ void ReprogramCode()
 	while (1) { } // wait until reset occurs
 };
 
+#else
+
+void ReprogramCode()
+{
+	while (1) { }
+};
+
+#endif

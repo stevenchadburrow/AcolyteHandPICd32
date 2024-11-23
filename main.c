@@ -249,22 +249,7 @@ void SendHex(unsigned char value)
 #define SCREEN_Y 384
 
 // globally accessable variables
-volatile unsigned char __attribute__((coherent,address(0x80004000))) screen_buffer[SCREEN_Y*SCREEN_X]; // visible portion of screen
-volatile char __attribute__((coherent,address(0x80001000))) ps2_state_array[2][256];
-volatile unsigned int __attribute__((coherent,address(0x80001800))) ps2_cursor_x[2][256];
-volatile unsigned int __attribute__((coherent,address(0x80002000))) ps2_cursor_y[2][256];
-volatile unsigned char __attribute__((coherent,address(0x80003800))) ps2_mode[2] = { 0x00, 0x00 };
-volatile unsigned char __attribute__((coherent,address(0x80003900))) ps2_writepos[2] = { 0x00, 0x00 };
-volatile unsigned char __attribute__((coherent,address(0x80003A00))) ps2_readpos[2] = { 0x00, 0x00 };
-
-volatile char __attribute__((coherent,address(0x80002800))) usb_state_array[256];
-volatile unsigned int __attribute__((coherent,address(0x80002C00))) usb_cursor_x[256];
-volatile unsigned int __attribute__((coherent,address(0x80003000))) usb_cursor_y[256];
-volatile unsigned int __attribute__((coherent,address(0x80003400))) usb_buttons[256];
-volatile unsigned char __attribute__((coherent,address(0x80003B00))) usb_mode = 0x00;
-volatile unsigned char __attribute__((coherent,address(0x80003C00))) usb_writepos = 0x00;
-volatile unsigned char __attribute__((coherent,address(0x80003D00))) usb_readpos = 0x00;
-
+volatile unsigned char __attribute__((coherent,address(0x80001000))) screen_buffer[SCREEN_Y*SCREEN_X]; // visible portion of screen
 
 // additional variables
 volatile unsigned char screen_blank[SCREEN_X]; // black scanline
@@ -273,7 +258,13 @@ volatile unsigned char screen_zero[1] = { 0x00 }; // zero value for black
 
 volatile unsigned int audio_counter[2] = { 0, 0 }; // audio duration
 
-// PS/2 keyboard variables
+// PS/2 variables
+volatile char ps2_state_array[2][256];
+volatile unsigned int ps2_cursor_x[2][256];
+volatile unsigned int ps2_cursor_y[2][256];
+volatile unsigned char ps2_mode[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_writepos[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_readpos[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_counter[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_buffer[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_sequence[2] = { 0xFF, 0xFF }; // starts with 0xFA acknowledge byte
@@ -284,6 +275,15 @@ volatile unsigned char ps2_ready[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_check[2] = { 0x00, 0x00 };
 volatile unsigned int ps2_port = 0x0000;
 volatile unsigned int ps2_flags = 0x0000;
+
+// USB variables
+volatile char usb_state_array[256];
+volatile unsigned int usb_cursor_x[256];
+volatile unsigned int usb_cursor_y[256];
+volatile unsigned int usb_buttons[256];
+volatile unsigned char usb_mode = 0x00;
+volatile unsigned char usb_writepos = 0x00;
+volatile unsigned char usb_readpos = 0x00;
 
 
 #ifdef SPLASH
@@ -609,10 +609,6 @@ void display_string(unsigned int x, unsigned int y, char *value)
 		pos++;
 	}
 };
-
-
-
-
 
 
 
