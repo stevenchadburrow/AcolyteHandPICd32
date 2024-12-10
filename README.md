@@ -6,14 +6,19 @@ Video output of 512x384 VGA with 256-colors.  Supports 2 independent audio squar
 
 Comes with attachment possibilities for an SPI Micro SDcard Adapter and a FT232RL USB-to-UART Adapter.  SDcard is required for BadApple and using Elm-Chan's FatFs files (included).  If using UART, use the command 'sudo picocom /dev/ttyUSB0'.  The PIC32 is programmed through ICSP port connecting to a PICkit3, but can also be re-programmed at general memory locations from production hex files through the SDcard.
 
-Only PORTD, PORTE, and PORTJ are used for all existing peripherals.  That leaves PORTA, PORTB, PORTC, PORTF, PORTG, and PORTH all for user functionality.
+PORTH has been bodge-wired to make an audio DAC using an R-2R Ladder.  Currently it only has 4-bits, but does the job pretty well.
+
+Lastly, the Gameboy emulator Peanut-GB (with MiniGB-APU) has been recoded for the PIC32!  Some games tested and working include: Tetris, Dr. Mario, Link's Awakening, and Pokemon Red.
+
+Only PORTD, PORTE, PORTH, and PORTJ are used for all existing peripherals.  That leaves PORTA, PORTB, PORTC, PORTF, and PORTG all for user functionality.
 
 Links:
 
 <a href="https://www.aidanmocke.com/">https://www.aidanmocke.com/</a> for a bunch of PIC32MZ projects (without Harmony), including USB and FatFs.<br>
 <a href="http://elm-chan.org/">http://elm-chan.org/</a> for a bunch of other projects, including MMC (aka SDcard) and FatFs.<br>
+<a href="https://github.com/deltabeard/Peanut-GB">https://github.com/deltabeard/Peanut-GB</a> for the Peanut-GB (and MiniGB-APU) project.<br>
 
-*** Board Edits: Exchange the 74HCT273 for a 74AHCT273 for faster timing responses because of the faster pixel clock. ***
+*** Board Edits: Removed the 74HC273 entirely and directly connected latch inputs to outputs.  Also added 4-bit audio DAC to PORTH pins. ***
 
 <img src="BOARD-PICTURE.jpg">
 
