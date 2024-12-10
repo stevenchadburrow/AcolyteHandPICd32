@@ -7,7 +7,7 @@ volatile unsigned char sdcard_block[512];
 
 void sdcard_longdelay(void)
 {
-	//DelayMS(1); // arbitrary amount of time to delay, only using 1ms here, should be around 10ms???
+	//DelayMS(10); // arbitrary amount of time to delay, should be around 10ms???
 	
 	// fine tune delay here
 	unsigned long count = 0x00000000;
@@ -22,6 +22,8 @@ void sdcard_sendbyte(unsigned int value)
 	
 	temp_value = (temp_value & 0x00FF);
 	
+	while (SPI1STATbits.SPIBUSY == 1) { }
+	
 	SPI1BUF = temp_value;
 	
 	while (SPI1STATbits.SPIRBF == 0) { }
@@ -33,6 +35,8 @@ void sdcard_sendbyte(unsigned int value)
 unsigned int sdcard_receivebyte(void)
 {
 	unsigned int temp_value = 0x0000;
+	
+	while (SPI1STATbits.SPIBUSY == 1) { }
 	
 	SPI1BUF = 0xFFFF; // dummy write
 	
@@ -84,7 +88,7 @@ unsigned int sdcard_waitresult(void)
 		}
 	}
 
-	return 0xFF;
+	return 0x00FF;
 }
 
 unsigned int sdcard_initialize(void)
@@ -153,6 +157,21 @@ unsigned int sdcard_initialize(void)
 		if (temp_value != 0x0000 && temp_value != 0x0001) { return 0; } // expecting 0x00, if 0x01 try again
 		sdcard_longdelay();
 	} while (temp_value == 0x0001);
+	
+	// added this in much later
+	sdcard_longdelay();
+	sdcard_pump();
+	sdcard_enable();
+	sdcard_sendbyte(0x0050); // CMD16 = 0x40 + 0x10 (16 in hex)
+	sdcard_sendbyte(0x0000); // block size of 512 bytes
+	sdcard_sendbyte(0x0000);
+	sdcard_sendbyte(0x0002);
+	sdcard_sendbyte(0x0000); 
+	sdcard_sendbyte(0x0001); // CRC (general)
+	temp_value = sdcard_waitresult(); // command response
+	if (temp_value == 0xFF) { return 0; }
+	sdcard_disable();
+	if (temp_value != 0x00) { return 0; } // expecting 0x00
 
 	return 1;
 }
@@ -194,32 +213,42 @@ unsigned int sdcard_writeblock(unsigned int high, unsigned int low)
 {
 	unsigned char temp_value = 0x00;
 
-	sdcard_disable();
-	sdcard_pump();
-	sdcard_longdelay(); // this is probably not needed
-	sdcard_enable();
-	sdcard_sendbyte(0x58); // CMD24 = 0x40 + 0x18 (24 in hex)
-	sdcard_sendbyte((high&0x00FF));
-	sdcard_sendbyte(((low&0xFF00)>>8));
-	sdcard_sendbyte((low&0x00FE)); // only blocks of 512 bytes
-	sdcard_sendbyte(0x00);
-	sdcard_sendbyte(0x01); // CRC (general)
-	temp_value = sdcard_waitresult(); // command response
-	if (temp_value == 0xFF) { return 0; }
-	else if (temp_value != 0x00) { return 0; } // expecting 0x00
-	sdcard_sendbyte(0xFE); // data packet starts with 0xFE
-
-	for (unsigned int i=0; i<512; i++)
+	for (unsigned int attempt=0; attempt<256; attempt++) // 256 tries before giving up
 	{
-		sdcard_sendbyte(sdcard_block[i]);
-	}
-	
-	sdcard_sendbyte(0x55); // data packet ends with 0x55 then 0xAA
-	sdcard_sendbyte(0xAA);
-	temp_value = sdcard_receivebyte(); // toggle clock 8 times
-	sdcard_disable();
+		sdcard_longdelay(); // are these helpful or not?
+		sdcard_longdelay();
+		sdcard_longdelay();
+		sdcard_longdelay();
+		
+		sdcard_disable();
+		sdcard_pump();
+		sdcard_longdelay(); // this is probably not needed
+		sdcard_enable();
+		sdcard_sendbyte(0x58); // CMD24 = 0x40 + 0x18 (24 in hex)
+		sdcard_sendbyte((high&0x00FF));
+		sdcard_sendbyte(((low&0xFF00)>>8));
+		sdcard_sendbyte((low&0x00FE)); // only blocks of 512 bytes
+		sdcard_sendbyte(0x00);
+		sdcard_sendbyte(0x01); // CRC (general)
+		temp_value = sdcard_waitresult(); // command response
+		if (temp_value == 0xFF) { continue; }
+		else if (temp_value != 0x00) { continue; } // expecting 0x00
+		sdcard_sendbyte(0xFE); // data packet starts with 0xFE
 
-	return 1;
+		for (unsigned int i=0; i<512; i++)
+		{
+			sdcard_sendbyte(sdcard_block[i]);
+		}
+
+		sdcard_sendbyte(0x55); // data packet ends with 0x55 then 0xAA
+		sdcard_sendbyte(0xAA);
+		temp_value = sdcard_receivebyte(); // toggle clock 8 times
+		sdcard_disable();
+		
+		return 1;
+	}
+
+	return 0;
 }
 
 

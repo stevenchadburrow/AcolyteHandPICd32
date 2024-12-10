@@ -165,26 +165,6 @@ void Setup()
 	TMR3 = 0x0830; // zero out counter (offset some cycles)
 	PR3 = 0x0A5F; //0xA1E7; // v-reset (minus one)
 	
-	// set OC8 and OC9 and TMR6/7, audio channels
-	OC8CON = 0x0; // reset OC2
-	OC8CON = 0x00000003; // toggle on compare, use Timer6
-	OC8R = 0x0000; // always at zero
-	OC9CON = 0x0; // reset OC3
-	OC9CON = 0x0000000B; // toggle on compare, use Timer7
-	OC9R = 0x0000; // always at zero
-	T6CON = 0x0060; // reset Timer6, prescale of 1:64
-	TMR6 = 0x0000; // zero out counter
-	PR6 = 0x0001; // determines audio frequency
-	T7CON = 0x0060; // reset Timer7, prescale of 1:64
-	TMR7 = 0x0000; // zero out counter
-	PR7 = 0x0001; // determines audio frequency
-	T8CON = 0x0070; // reset Timer8, prescale of 1:256
-	TMR8 = 0x0000; // zero out counter
-	PR8 = 0x0001; // determines audio duration
-	T9CON = 0x0070; // reset Timer9, prescale of 1:256
-	TMR9 = 0x0000; // zero out counter
-	PR9 = 0x0001; // determines audio duration
-	
 	IPC4bits.OC3IP = 0x7; // interrupt priority 7
 	IPC4bits.OC3IS = 0x0; // interrupt sub-priority 0
 	IFS0bits.OC3IF = 0; // OC3 clear flag
@@ -195,16 +175,6 @@ void Setup()
 	OC3CONbits.ON = 1; // turn OC3 on
 	OC4CONbits.ON = 1; // turn OC4 on
 	OC5CONbits.ON = 1; // turn OC5 on
-	
-	
-	IPC9bits.T8IP = 0x3; // audio interrupt priority 3
-	IPC9bits.T8IS = 0x1; // sub-priority 1
-	IFS1bits.T8IF = 0; // clear flags
-	IEC1bits.T8IE = 1; // enable interrupts
-	IPC10bits.T9IP = 0x3; // audio interrupt priority 3
-	IPC10bits.T9IS = 0x0; // sub-priority 0
-	IFS1bits.T9IF = 0; // clear flags
-	IEC1bits.T9IE = 1; // enable interrupts
 
 	// DMA setup
 	IEC4bits.DMA0IE = 0; // disable interrupts
@@ -243,6 +213,28 @@ void Setup()
 	DCH1DSIZ = 1; // dst size 
 	DCH1CSIZ = 1; // 1 byte per event
 	
+	
+	// new audio timer
+	T8CON = 0x0000; // reset Timer8, prescale of 1:1
+	TMR8 = 0x0000; // zero out counter
+	PR8 = 0x11E2; // determines audio sample rate, around 32.768 Hz for Gameboy
+	IPC9bits.T8IP = 0x3; // audio interrupt priority 3
+	IPC9bits.T8IS = 0x0; // sub-priority 1
+	IFS1bits.T8IF = 0; // clear flags
+	IEC1bits.T8IE = 1; // enable interrupts
+	//IEC1bits.T8IE = 0; // disable interrupts
+	T8CONbits.ON = 1; // turn on TMR8 
+	
+	// new frame timer
+	T9CON = 0x0070; // reset Timer9, prescale of 1:256
+	TMR9 = 0x0000; // zero out counter
+	PR9 = 0x4C90; // determines length of two frames of 59.73 Hz on Gameboy
+	IPC10bits.T9IP = 0x2; // frame interrupt priority 2
+	IPC10bits.T9IS = 0x0; // sub-priority 1
+	IFS1bits.T9IF = 0; // clear flags
+	IEC1bits.T9IE = 1; // enable interrupts
+	//IEC1bits.T9IE = 0; // disable interrupts
+	T9CONbits.ON = 0; // turn off TMR9 
 	
 	// set up PS/2 Keyboard and Mouse on PORTD (RD9-RD10,RD12-RD13)
 	CNCONDbits.ON = 1; // turn on interrupt-on-change
@@ -357,6 +349,8 @@ void Setup()
 	
 	// set black scanline
 	for (unsigned int x=0; x<SCREEN_X; x++) screen_blank[x] = 0x00;
+	
+	for (unsigned int i=0; i<8192; i++) audio_buffer[i] = 0x00;
 	
 	// clear ps2 buffers
 	for (unsigned int i=0; i<256; i++)

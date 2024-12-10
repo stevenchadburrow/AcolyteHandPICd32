@@ -434,34 +434,27 @@ void __attribute__((vector(_UART3_RX_VECTOR), interrupt(ipl4srs))) u3rx_handler(
 	return;
 }
 
+// new audio timer
 void __attribute__((vector(_TIMER_8_VECTOR), interrupt(ipl3srs))) t8_handler()
 {
 	IFS1bits.T8IF = 0;  // clear interrupt flag
 	
-	if (audio_counter[0] > 0)
+	PORTH = (unsigned char)(((audio_buffer[audio_position+1] >> 4) + 0x08) & 0x0F); // 4-bit unsigned audio from 16-bit signed audio, this seems to help
+	audio_position += 4; // mono channel so skip every other other one
+	
+	if (audio_position >= 8184)
 	{
-		audio_counter[0] = audio_counter[0] - 1;
-	}
-	else
-	{
-		T6CONbits.ON = 0; // turn off timers
-		T8CONbits.ON = 0; // turn off timers
-		OC8CONbits.ON = 0; // turn OC8 off
+		for (unsigned int i=0; i<8192; i++) audio_buffer[i] = 0;
+		audio_position = 0;
 	}
 }
 
-void __attribute__((vector(_TIMER_9_VECTOR), interrupt(ipl3srs))) t9_handler()
+// new frame timer
+void __attribute__((vector(_TIMER_9_VECTOR), interrupt(ipl2srs))) t9_handler()
 {
 	IFS1bits.T9IF = 0;  // clear interrupt flag
 	
-	if (audio_counter[1] > 0)
-	{
-		audio_counter[1] = audio_counter[1] - 1;
-	}
-	else
-	{
-		T7CONbits.ON = 0; // turn off timers
-		T9CONbits.ON = 0; // turn off timers
-		OC9CONbits.ON = 0; // turn OC9 off
-	}
+	T9CONbits.ON = 0; // turn off timer
+	
+	frame_trigger = 1;
 }

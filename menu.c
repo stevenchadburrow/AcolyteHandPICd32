@@ -1,7 +1,7 @@
 
 
-const unsigned int menu_x = 24;
-const unsigned int menu_y = 300;
+unsigned int menu_x = 16;
+unsigned int menu_y = 16;
 
 volatile unsigned char menu_pos = 0;
 volatile unsigned char menu_max = 1;
@@ -16,25 +16,19 @@ volatile unsigned int menu_delay = 0x0000;
 
 unsigned char Menu()
 {
-	char test = 0;
+	menu_delay = 0x0000;
+	menu_up = 0;
+	menu_down = 0;
+	menu_loop = 1;
 	
-	display_string(menu_x, 16, "Acolyte Hand PIC'd 32\\");
-
-	display_string(menu_x, menu_y,		" Tetra     \\");
-	display_string(menu_x, menu_y+8,	" Scratchpad\\");
-	display_string(menu_x, menu_y+16,	" Bad Apple \\");
-	display_string(menu_x, menu_y+24,	" User Code \\");
-	display_string(menu_x, menu_y+32,	" Reprogram \\");
-	display_string(menu_x, menu_y+40,	"           \\");
-
-	menu_max = 6; // number of menu items, change accordingly
+	char test = 0;
 
 	display_character(menu_x, menu_y, '>');
 
 	while (menu_loop > 0)
 	{
 		if (menu_up == 1)
-		{
+		{	
 			menu_up = 0;
 			
 			if (menu_pos > 0)
@@ -50,7 +44,7 @@ unsigned char Menu()
 		}
 		
 		if (menu_down == 1)
-		{
+		{	
 			menu_down = 0;
 			
 			if (menu_pos < menu_max-1)
@@ -77,7 +71,7 @@ unsigned char Menu()
 		
 		// if device connected...
 		if (USBA_DEVICE_CONNECTED)
-		{
+		{		
 			USBA_host_tasks();
 			USBA_HID_tasks();
 			if (USBA_EP1_RECEIVED > 0)
@@ -223,6 +217,8 @@ unsigned char Menu()
 	}
 
 	music_note(1047, 250, 0);
+	
+	display_character(menu_x, menu_y + menu_pos * 8, ' ');
 
 	return menu_pos;
 }

@@ -164,7 +164,8 @@ Pin27,RJ11,BUTTON
 #pragma config ICESEL = ICS_PGx1        // ICE/ICD Comm Channel Select (Communicate on PGEC1/PGED1)
 #pragma config TRCEN = OFF               // Trace Disable (Trace features in the CPU are disabled)
 #pragma config BOOTISA = MIPS32         // Boot ISA Selection (Boot code and Exception code is MIPS32)
-#pragma config FECCCON = OFF_UNLOCKED   // Dynamic Flash ECC Configuration (ECC and Dynamic ECC are disabled (ECCCON bits are writable))
+//#pragma config FECCCON = OFF_UNLOCKED   // Dynamic Flash ECC Configuration (ECC and Dynamic ECC are disabled (ECCCON bits are writable))
+#pragma config FECCCON = ON             // Dynamic Flash ECC Configuration (Flash ECC is enabled (ECCCON bits are locked))
 #pragma config FSLEEP = VREGS           // Flash Sleep Mode (Flash power down is controlled by the VREGS bit)
 #pragma config DBGPER = PG_ALL          // Debug Mode CPU Access Permission (Allow CPU access to all permission regions)
 #pragma config SMCLR = MCLR_NORM        // Soft Master Clear Enable bit (MCLR pin generates a normal system Reset)
@@ -187,20 +188,14 @@ Pin27,RJ11,BUTTON
 #include <xc.h>
 
 
-#pragma region name="user_ram" origin=0x80040000 size=0x00040000 
-#pragma region name="user_rom" origin=0x9D100100 size=0x000FFF00
-#define USER_RAM __attribute__((region("user_ram")))
-#define USER_ROM __attribute__((region("user_rom")))
-#define USER_JUMP __attribute__((address(0x9D100000)))
-#define REPROGRAM_BEGIN 0x1D100000
-#define REPROGRAM_END 0x1D200000
+#pragma region name="gb_rom" origin=0x9D100000 size=0x00100000
 
 
 #define SYS_FREQ 150000000 // Running at 150MHz
 
 unsigned long VirtToPhys(volatile void* p) // changed 'const' to 'volatile'
 {
-	return (long)p<0?((long)p&0x1fffffffL):(unsigned long)((unsigned char*)p+0x40000000L);
+	return (long)p<0?((long)p&0x1fffffffL):(unsigned long)((unsigned long*)p+0x40000000L);
 }
 
 void DelayMS(unsigned int s)
@@ -244,27 +239,45 @@ void SendHex(unsigned char value)
 	else U3TXREG = (char)(value%16 + '0');
 }
 
+void SendLongHex(unsigned long value)
+{
+	SendHex((unsigned char)(value >> 24));
+	SendHex((unsigned char)(value >> 16));
+	SendHex((unsigned char)(value >> 8));
+	SendHex((unsigned char)(value));
+}
 
 #define SCREEN_X 512
 #define SCREEN_Y 384
 
-// globally accessable variables
-volatile unsigned char __attribute__((coherent,address(0x80001000))) screen_buffer[SCREEN_Y*SCREEN_X]; // visible portion of screen
+// most important arrays
+volatile unsigned char __attribute__((coherent,address(0x80004000))) screen_buffer[SCREEN_Y*SCREEN_X]; // visible portion of screen
+volatile unsigned char __attribute__((coherent,address(0x80076000))) audio_buffer[8192];
+volatile unsigned int audio_position = 0;
+volatile unsigned int frame_trigger = 0;
+
+// variable arrays
+volatile char __attribute__((coherent)) ps2_state_array[2][256];
+volatile unsigned int __attribute__((coherent)) ps2_cursor_x[2][256];
+volatile unsigned int __attribute__((coherent)) ps2_cursor_y[2][256];
+volatile unsigned char __attribute__((coherent)) ps2_mode[2] = { 0x00, 0x00 };
+volatile unsigned char __attribute__((coherent)) ps2_writepos[2] = { 0x00, 0x00 };
+volatile unsigned char __attribute__((coherent)) ps2_readpos[2] = { 0x00, 0x00 };
+
+volatile char __attribute__((coherent)) usb_state_array[256];
+volatile unsigned int __attribute__((coherent)) usb_cursor_x[256];
+volatile unsigned int __attribute__((coherent)) usb_cursor_y[256];
+volatile unsigned int __attribute__((coherent)) usb_buttons[256];
+volatile unsigned char __attribute__((coherent)) usb_mode = 0x00;
+volatile unsigned char __attribute__((coherent)) usb_writepos = 0x00;
+volatile unsigned char __attribute__((coherent)) usb_readpos = 0x00;
 
 // additional variables
 volatile unsigned char screen_blank[SCREEN_X]; // black scanline
 volatile unsigned int screen_scanline = 771; // start of vertical sync
 volatile unsigned char screen_zero[1] = { 0x00 }; // zero value for black
 
-volatile unsigned int audio_counter[2] = { 0, 0 }; // audio duration
-
-// PS/2 variables
-volatile char ps2_state_array[2][256];
-volatile unsigned int ps2_cursor_x[2][256];
-volatile unsigned int ps2_cursor_y[2][256];
-volatile unsigned char ps2_mode[2] = { 0x00, 0x00 };
-volatile unsigned char ps2_writepos[2] = { 0x00, 0x00 };
-volatile unsigned char ps2_readpos[2] = { 0x00, 0x00 };
+// PS/2 keyboard variables
 volatile unsigned char ps2_counter[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_buffer[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_sequence[2] = { 0xFF, 0xFF }; // starts with 0xFA acknowledge byte
@@ -275,15 +288,6 @@ volatile unsigned char ps2_ready[2] = { 0x00, 0x00 };
 volatile unsigned char ps2_check[2] = { 0x00, 0x00 };
 volatile unsigned int ps2_port = 0x0000;
 volatile unsigned int ps2_flags = 0x0000;
-
-// USB variables
-volatile char usb_state_array[256];
-volatile unsigned int usb_cursor_x[256];
-volatile unsigned int usb_cursor_y[256];
-volatile unsigned int usb_buttons[256];
-volatile unsigned char usb_mode = 0x00;
-volatile unsigned char usb_writepos = 0x00;
-volatile unsigned char usb_readpos = 0x00;
 
 
 #ifdef SPLASH
@@ -301,7 +305,7 @@ volatile unsigned char usb_readpos = 0x00;
 #include "diskio.h"
 #include "diskio.c"
 
-#include "reprogram.c"
+//#include "reprogram.c"
 
 
 
@@ -345,8 +349,8 @@ void EchoFile()
 	{
 		SendString("Found INPUT.TXT, copying now\n\r\\");
 		
-		while (f_read(&file, buffer, 16, &bytes) == 1) { }
-		while (f_close(&file) == 1) { }
+		while (f_read(&file, buffer, 16, &bytes) != 0) { }
+		while (f_close(&file) != 0) { }
 	}
 	else
 	{
@@ -360,14 +364,14 @@ void EchoFile()
 		result = f_open(&file, "/OUTPUT.TXT", FA_CREATE_NEW);
 		if (result == 0)
 		{
-			while (f_close(&file) == 1) { }
+			while (f_close(&file) != 0) { }
 			result = f_open(&file, "/OUTPUT.TXT", FA_WRITE);
 		}
 	}
 	if (result == 0)
 	{	
-		while (f_write(&file, buffer, 16, &bytes) == 1) { }
-		while (f_close(&file) == 1) { }
+		while (f_write(&file, buffer, 16, &bytes) != 0) { }
+		while (f_close(&file) != 0) { }
 		
 		SendString("Copied to OUTPUT.TXT\n\r\\");
 	}
@@ -385,42 +389,6 @@ void EchoFile()
 // frequency in Hz, plays for a short duration
 void music_note(unsigned int frequency, unsigned int duration, unsigned char channel)
 {
-	unsigned int period = (unsigned int)(SYS_FREQ / (64 * frequency));
-	
-	if (channel == 0)
-	{
-		T6CONbits.ON = 0; // turn off timers
-		T8CONbits.ON = 0; // turn off timers
-
-		TMR6 = 0;
-		PR6 = period;
-		TMR8 = 0;
-		PR8 = (unsigned int)(SYS_FREQ / 256000);
-
-		audio_counter[0] = duration;
-
-		T6CONbits.ON = 1; // turn on timers
-		T8CONbits.ON = 1; // turn on timers
-
-		OC8CONbits.ON = 1; // turn OC8 on
-	}
-	else if (channel == 1)
-	{
-		T7CONbits.ON = 0; // turn off timers
-		T9CONbits.ON = 0; // turn off timers
-
-		TMR7 = 0;
-		PR7 = period;
-		TMR9 = 0;
-		PR9 = (unsigned int)(SYS_FREQ / 256000);
-
-		audio_counter[1] = duration;
-
-		T7CONbits.ON = 1; // turn on timers
-		T9CONbits.ON = 1; // turn on timers
-
-		OC9CONbits.ON = 1; // turn OC8 on
-	}
 	
 	return;
 };
@@ -612,16 +580,21 @@ void display_string(unsigned int x, unsigned int y, char *value)
 
 
 
+
+
+
+
 #include "tetra.c"
 #include "badapple.c"
 #include "scratchpad.c"
 #include "menu.c"
 #include "setup.c"
 
-#include "user.c"
+//#include "user.c"
 
 
 
+/*
 #ifdef USER_SPACE
 void USER_JUMP UserCode() // must be a very small function
 {
@@ -633,6 +606,10 @@ void UserCode()
 	while (1) { }
 }
 #endif
+*/
+ 
+
+#include "peanut_gb.c"
 
 
 int main()
@@ -660,15 +637,106 @@ int main()
 	
 	
 	
+	
+	menu_x = 24;
+	menu_y = 300;
+	menu_pos = 0;
+	menu_max = 6; // number of menu items, change accordingly
+	
+	display_string(menu_x, 16, "Acolyte Hand PIC'd 32\\");
+
+	display_string(menu_x, menu_y,		" Tetra     \\");
+	display_string(menu_x, menu_y+8,	" Scratchpad\\");
+	display_string(menu_x, menu_y+16,	" Bad Apple \\");
+	display_string(menu_x, menu_y+24,	" GB Emu    \\");
+	display_string(menu_x, menu_y+32,	" GB Burn   \\");
+	display_string(menu_x, menu_y+40,	"           \\");
+	
 
 	dummy = (char)Menu();
 	
 	if (dummy == 0) Tetra();
 	else if (dummy == 1) Scratchpad();
 	else if (dummy == 2) BadApple();
-	else if (dummy == 3) UserCode();
-	else if (dummy == 4) ReprogramCode();
+	else if (dummy == 3) PeanutGB();
+	else if (dummy == 4) BurnROM();
 	else if (dummy == 5) { }
+	
+	
+	
+	
+	/*
+	// sox OriginalBadApple.wav -c 1 -b 32 -r 56476 -e signed-integer Test.wav
+	// sudo fdisk -l
+	// *** Make sure it is /dev/sdc you want, change according to what 'fdisk' told you! ***
+	// sudo dd if=Test.wav of=/dev/sdc bs=100M conv=fsync
+	
+	T8CONbits.ON = 0; // turn off TMR8 
+	
+	sdcard_initialize();
+	
+	int test = 0;
+	int prev = 0;
+
+	for (int i=0; i<5; i++)
+	{
+		test = sdcard_initialize();
+
+		if (test == 1) break;
+	}
+
+	if (test > 0)
+	{
+		TRISH = 0x0000;
+		PORTH = 0x0000;
+		
+		unsigned char temp_value = 0x00;
+
+		sdcard_disable();
+		sdcard_pump();
+		sdcard_longdelay(); // this is probably not needed
+		sdcard_enable();
+		sdcard_sendbyte(0x52); // CMD18 = 0x40 + 0x12 (18 in hex)
+		sdcard_sendbyte((0x0000&0x00FF));
+		sdcard_sendbyte(((0x0000&0xFF00) >> 8));
+		sdcard_sendbyte((0x0000&0x00FE)); // only blocks of 512 bytes
+		sdcard_sendbyte(0x00);
+		sdcard_sendbyte(0x01); // CRC (general)
+		temp_value = sdcard_waitresult(); // command response
+		if (temp_value == 0xFF) { return 0; }
+		else if (temp_value != 0x00) { return 0; } // expecting 0x00
+		temp_value = sdcard_waitresult(); // data packet starts with 0xFE
+		if (temp_value == 0xFF) { return 0; }
+		else if (temp_value != 0xFE) { return 0; }
+		
+		while (1)
+		{
+			if (screen_scanline != prev)
+			{
+				prev = screen_scanline;
+				
+				// 32-bit signed 1-channel
+				sdcard_receivebyte();
+				sdcard_receivebyte();
+				sdcard_receivebyte();
+				PORTH = (((sdcard_receivebyte() >> 4) + 0x08) & 0x0F);
+				
+				// 16-bit signed 2-channel
+				//sdcard_receivebyte();
+				//PORTH = (((sdcard_receivebyte() >> 4) + 0x08) & 0x0F);
+				//sdcard_receivebyte();
+				//sdcard_receivebyte();
+				
+				// 8-bit unsigned 2-channel
+				//temp_value = sdcard_receivebyte();
+				//PORTH = ((((unsigned int)(temp_value + sdcard_receivebyte()) >> 5) + 0x0000) & 0x000F);
+			}
+		}	
+	}
+	*/
+	
+	
+	
 	
 	
 	while (1)

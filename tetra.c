@@ -703,7 +703,7 @@ void Tetra()
 						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] | 0x20);
 					}
 
-					if ((usb_buttons[usb_readpos] & 0x0800) == 0x0800) // down
+					if ((usb_buttons[usb_readpos] & 0x0800) == 0x0800) // right
 					{
 						tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xEF);
 					}
