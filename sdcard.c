@@ -245,6 +245,10 @@ unsigned int sdcard_writeblock(unsigned int high, unsigned int low)
 		temp_value = sdcard_receivebyte(); // toggle clock 8 times
 		sdcard_disable();
 		
+		// wait for SDcard to finish writing,
+		// necessary when both reading and writing back to back
+		DelayMS(100);
+		
 		return 1;
 	}
 

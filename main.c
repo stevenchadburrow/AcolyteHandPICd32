@@ -719,7 +719,8 @@ int main()
 				sdcard_receivebyte();
 				sdcard_receivebyte();
 				sdcard_receivebyte();
-				PORTH = (((sdcard_receivebyte() >> 4) + 0x08) & 0x0F);
+	 			// Should add 0x08 before shifting in case of rounding???
+				PORTH = (((sdcard_receivebyte() >> 4) + 0x08) & 0x0F); 
 				
 				// 16-bit signed 2-channel
 				//sdcard_receivebyte();
@@ -890,3 +891,22 @@ int main()
 		while (f_close(&file) == 1) { }
 	}
 */
+		/*
+		for (unsigned int i=0; i<0x8000; i++)
+		{
+			if (i % 16 == 0)
+			{
+				SendLongHex(i);
+				SendChar(':');
+			}
+			
+			SendHex(cart_ram[i]);
+			SendChar(' ');
+			
+			if (i % 16 == 15)
+			{
+				SendChar('\r');
+				SendChar('\n');
+			}
+		}
+		*/

@@ -28,6 +28,8 @@ volatile uint8_t __attribute__((coherent,address(0x80078000))) cart_ram[32768];
 uint8_t boot_rom[256];
 uint8_t selected_palette[3][4];
 
+uint8_t cart_bank = 0; // up to 4 banks (for now)
+
 unsigned int NVMUnlock(unsigned int nvmop)
 {
 	// Suspend or Disable all Interrupts
@@ -193,7 +195,7 @@ void read_cart_ram_file(char save_file_name[16], uint8_t *dest,
 		return;
 	}
 	
-	/*
+	
 	for (int i=0; i<16; i++)
 	{
 		if (save_file_name[i] <= 0x20 || save_file_name[i] >= 0x7F)
@@ -241,8 +243,8 @@ void read_cart_ram_file(char save_file_name[16], uint8_t *dest,
 	{
 		SendString("Could not read cart ram from file\n\r\\");
 	}
-	*/
 	
+	/*
 	display_string(8, 8, "Reading Cart RAM...\\");
 	
 	int test = 0;
@@ -258,7 +260,7 @@ void read_cart_ram_file(char save_file_name[16], uint8_t *dest,
 	{
 		for (unsigned int i=0; i<64; i++)
 		{
-			test = sdcard_readblock(0x003F, 0xFF80 + i*2); // last 32KB within the first 1GB
+			test = sdcard_readblock(0x003F, (unsigned int)(0xFE00 + 0x0080 * cart_bank + i*2)); // last 128KB within the first 1GB
 			
 			DelayMS(1);
 			
@@ -281,7 +283,7 @@ void read_cart_ram_file(char save_file_name[16], uint8_t *dest,
 	{
 		SendString("Error initializing when reading Cart RAM\r\n\\");
 	}
-	
+	*/
 	
 	return;
 }
@@ -289,7 +291,7 @@ void read_cart_ram_file(char save_file_name[16], uint8_t *dest,
 void write_cart_ram_file(char save_file_name[16], uint8_t *dest,
 			 const size_t len)
 {
-	/*
+	
 	for (int i=0; i<16; i++)
 	{
 		if (save_file_name[i] <= 0x20 || save_file_name[i] >= 0x7F)
@@ -312,6 +314,7 @@ void write_cart_ram_file(char save_file_name[16], uint8_t *dest,
     // Open the directory
     f_opendir(&dir, ".");
  
+	unsigned char buffer[1];
 	unsigned int bytes;
 	unsigned int result;
 	
@@ -320,7 +323,12 @@ void write_cart_ram_file(char save_file_name[16], uint8_t *dest,
 	{	
 		display_string(8, 8, "Writing Cart RAM to File\\");
 		
-		while (f_write(&file, (uint8_t *)cart_ram, 32768, &bytes) != 0) { }
+		for (unsigned int i=0; i<0x8000; i++)
+		{
+			buffer[0] = cart_ram[i];
+			
+			while (f_write(&file, buffer, 1, &bytes) != 0) { }
+		}
 		
 		while (f_sync(&file) != 0) { }
 		while (f_close(&file) != 0) { }
@@ -329,10 +337,12 @@ void write_cart_ram_file(char save_file_name[16], uint8_t *dest,
 	}
 	else
 	{
+		SendHex(result);
+		
 		SendString("Could not write cart ram to file\n\r\\");
 	}
-	*/
 	
+	/*
 	display_string(8, 8, "Writing Cart RAM...\\");
 	
 	int test = 0;
@@ -353,14 +363,43 @@ void write_cart_ram_file(char save_file_name[16], uint8_t *dest,
 				sdcard_block[j] = cart_ram[i*512 + j];
 			}
 
-			test = sdcard_writeblock(0x003F, 0xFF80 + i*2); // last 32KB within the first 1GB
+			test = sdcard_writeblock(0x003F, (unsigned int)(0xFE00 + 0x0080 * cart_bank + i*2)); // last 128KB within the first 1GB
 			
 			if (test == 0)
 			{
 				SendString("Error occured while writing Cart RAM\r\n\\");
 				
 				return;
-			}		
+			}
+			
+			test = 1;
+			
+			test = sdcard_readblock(0x003F, (unsigned int)(0xFE00 + 0x0080 * cart_bank + i*2));
+			
+			if (test == 0)
+			{
+				SendString("Error occured while reading back Cart RAM\r\n\\");
+				
+				return;
+			}
+			
+			test = 1;
+			
+			for (unsigned int j=0; j<512; j++)
+			{
+				if (sdcard_block[j] != cart_ram[i*512 + j])
+				{
+					test = 0;
+					break;
+				}
+			}
+			
+			if (test == 0)
+			{
+				SendString("Error occured while comparing Cart RAM\r\n\\");
+				
+				return;
+			}
 		}
 		
 		SendString("Success writing Cart RAM\r\n\\");
@@ -369,7 +408,7 @@ void write_cart_ram_file(char save_file_name[16], uint8_t *dest,
 	{
 		SendString("Error initializing when writing Cart RAM\r\n\\");
 	}
-	
+	*/
 	
 	return;
 }
@@ -921,19 +960,19 @@ int PeanutGB()
 	
 	char save_file_name[13];
 	
+	for (int i=0; i<13; i++) save_file_name[i] = 0;
+	
 	save_file_name[0] = '/';
 	save_file_name[1] = 'G';
 	save_file_name[2] = 'A';
 	save_file_name[3] = 'M';
 	save_file_name[4] = 'E';
-	save_file_name[5] = 'F';
-	save_file_name[6] = 'I';
-	save_file_name[7] = 'L';
-	save_file_name[8] = 'E';
-	save_file_name[9] = '.';
-	save_file_name[10] = 'S';
-	save_file_name[11] = 'A';
-	save_file_name[12] = 'V';
+	save_file_name[5] = '-';
+	save_file_name[6] = 'A'; // this to change on 'cart_bank'
+	save_file_name[7] = '.';
+	save_file_name[8] = 'S';
+	save_file_name[9] = 'A';
+	save_file_name[10] = 'V';
 	
 	// This is commented out because I want to make only
 	// one single save file, overwrite it as need be.
@@ -1294,11 +1333,14 @@ int PeanutGB()
 					menu_x = 96;
 					menu_y = 328;
 					menu_pos = 0;
-					menu_max = 3;
+					menu_max = 6;
 
 					display_string(menu_x, menu_y,		" *** Load and Reset?\\");
 					display_string(menu_x, menu_y+8,	" No                 \\");
-					display_string(menu_x, menu_y+16,	" Yes                \\");
+					display_string(menu_x, menu_y+16,	" File A             \\");
+					display_string(menu_x, menu_y+24,	" File B             \\");
+					display_string(menu_x, menu_y+32,	" File C             \\");
+					display_string(menu_x, menu_y+40,	" File D             \\");
 
 					choice = 0;
 					
@@ -1308,8 +1350,12 @@ int PeanutGB()
 					}
 					
 					if (choice == 1) { } // do nothing
-					else if (choice == 2)
+					else if (choice >= 2)
 					{
+						cart_bank = choice - 2;
+						
+						save_file_name[6] = (char)('A' + cart_bank);
+						
 						/* Load Save File. */
 						read_cart_ram_file(save_file_name, (uint8_t *)&cart_ram, gb_get_save_size(&gb));
 
@@ -1332,11 +1378,14 @@ int PeanutGB()
 					menu_x = 96;
 					menu_y = 328;
 					menu_pos = 0;
-					menu_max = 3;
+					menu_max = 6;
 
 					display_string(menu_x, menu_y,		" *** Overwrite Save?\\");
 					display_string(menu_x, menu_y+8,	" No                 \\");
-					display_string(menu_x, menu_y+16,	" Yes                \\");
+					display_string(menu_x, menu_y+16,	" File A             \\");
+					display_string(menu_x, menu_y+24,	" File B             \\");
+					display_string(menu_x, menu_y+32,	" File C             \\");
+					display_string(menu_x, menu_y+40,	" File D             \\");
 
 					choice = 0;
 					
@@ -1346,8 +1395,12 @@ int PeanutGB()
 					}
 					
 					if (choice == 1) { } // do nothing
-					else if (choice == 2)
+					else if (choice >= 2)
 					{
+						cart_bank = choice - 2;
+						
+						save_file_name[6] = (char)('A' + cart_bank);
+						
 						/* Record save file. */
 						write_cart_ram_file(save_file_name, (uint8_t *)&cart_ram, gb_get_save_size(&gb));
 

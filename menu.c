@@ -22,6 +22,8 @@ unsigned char Menu()
 	menu_loop = 1;
 	
 	char test = 0;
+	
+	unsigned char gamepad_flag = 0;
 
 	display_character(menu_x, menu_y, '>');
 
@@ -103,34 +105,40 @@ unsigned char Menu()
 			}
 		}
 		
-		if (PORTJbits.RJ0 == 0) // up
+		if (gamepad_flag == 0)
 		{
-			if ((menu_joy & 0x0001) == 0x0000)
+			if (PORTJbits.RJ0 == 0) // up
 			{
-				menu_joy = (menu_joy | 0x0001);
-				
-				menu_up = 1;
+				if ((menu_joy & 0x0001) == 0x0000)
+				{
+					menu_joy = (menu_joy | 0x0001);
+
+					menu_up = 1;
+				}
 			}
+			else menu_joy = (menu_joy & 0xFFFE);
 		}
-		else menu_joy = (menu_joy & 0xFFFE);
-		
-		if (PORTJbits.RJ1 == 0) // down
+			
+		if (gamepad_flag == 0)
 		{
-			if ((menu_joy & 0x0002) == 0x0000)
+			if (PORTJbits.RJ1 == 0 ) // down
 			{
-				menu_joy = (menu_joy | 0x0002);
-				
-				menu_down = 1;
+				if ((menu_joy & 0x0002) == 0x0000)
+				{
+					menu_joy = (menu_joy | 0x0002);
+
+					menu_down = 1;
+				}
 			}
+			else menu_joy = (menu_joy & 0xFFFD);
 		}
-		else menu_joy = (menu_joy & 0xFFFD);
 		
 		if (PORTJbits.RJ4 == 0 || PORTJbits.RJ5 == 0) // either button
 		{
 			menu_loop = 0;
 		}
 		
-		if (usb_mode != 0x03) // xbox-type controller
+		if (gamepad_flag == 0)
 		{
 			if (PORTJbits.RJ6 == 0) // up
 			{
@@ -142,8 +150,11 @@ unsigned char Menu()
 				}
 			}
 			else menu_joy = (menu_joy & 0xFFBF);
+		}
 
-			if (PORTJbits.RJ7 == 0) // down
+		if (gamepad_flag == 0)
+		{
+			if (PORTJbits.RJ7 == 0 && gamepad_flag == 0) // down
 			{
 				if ((menu_joy & 0x0080) == 0x0000)
 				{
@@ -153,13 +164,14 @@ unsigned char Menu()
 				}
 			}
 			else menu_joy = (menu_joy & 0xFF7F);
-		
-			if (PORTJbits.RJ13 == 0 || PORTJbits.RJ14 == 0) // either button
-			{
-				menu_loop = 0;
-			}
 		}
-		else
+
+		if (PORTJbits.RJ13 == 0 || PORTJbits.RJ14 == 0) // either button
+		{
+			menu_loop = 0;
+		}
+		
+		if (usb_mode == 0x03) // xbox controller
 		{
 			while (usb_readpos != usb_writepos)
 			{
@@ -213,6 +225,18 @@ unsigned char Menu()
 			{
 				menu_loop = 0;
 			}
+		}
+		
+		gamepad_flag = 1 - gamepad_flag;
+
+		if (gamepad_flag == 0)
+		{
+			TRISJbits.TRISJ15 = 1; // float joy-select (pulled high) for next frame
+		}
+		else
+		{
+			PORTJbits.RJ15 = 0;
+			TRISJbits.TRISJ15 = 0; // ground joy-select for next frame
 		}
 	}
 
