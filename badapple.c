@@ -79,8 +79,8 @@ void BadApple()
 			
 			//x = 88;
 			//y = 104;
-			x = 136;
-			y = 96;
+			x = 16;
+			y = 0;
 
 			for (unsigned int i=0; i<12; i++)
 			{
@@ -108,28 +108,34 @@ void BadApple()
 								if ((value & 0x01) == 0x01)
 								{
 									screen_buffer[y*SCREEN_X+x] = 0xFF;
+									screen_buffer[y*SCREEN_X+x+1] = 0xFF;
+									screen_buffer[(y+1)*SCREEN_X+x] = 0xFF;
+									screen_buffer[(y+1)*SCREEN_X+x+1] = 0xFF;
 								}
 								else
 								{
 									screen_buffer[y*SCREEN_X+x] = 0x00;
+									screen_buffer[y*SCREEN_X+x+1] = 0x00;
+									screen_buffer[(y+1)*SCREEN_X+x] = 0x00;
+									screen_buffer[(y+1)*SCREEN_X+x+1] = 0x00;
 								}
 
 								value = (unsigned int)(value >> 1);
 
-								x += 1;
+								x += 2;
 							}
 						}
 
 						// fine tune delay here
-						count = (unsigned long)(63);
+						count = (unsigned long)(26); // 63 for smaller screen
 						_CP0_SET_COUNT(0);
 						while (count > _CP0_GET_COUNT());
 					}
 
-					y += 1;
+					y += 2;
 				
 					//x = 88;
-					x = 136;
+					x = 16;
 				}
 
 				sdcard_receivebyte();
