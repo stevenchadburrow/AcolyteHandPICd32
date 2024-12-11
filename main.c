@@ -290,6 +290,145 @@ volatile unsigned int ps2_port = 0x0000;
 volatile unsigned int ps2_flags = 0x0000;
 
 
+
+
+void ps2_command(unsigned char command, unsigned char port)
+{
+	CNCONDbits.ON = 0; // turn off interrupt-on-change
+	
+	unsigned char copy = command;
+	
+	unsigned char parity_count = 0x00;
+	
+	for (unsigned char i=0; i<8; i++)
+	{
+		if ((copy & 0x01) == 0x01) parity_count++;
+		
+		copy = (copy >> 1);
+	}
+	
+	if (port == 0) // primary port
+	{
+		PORTDbits.RD9 = 0; // when not floating, ground them
+		PORTDbits.RD10 = 0;
+		TRISDbits.TRISD9 = 1; // normally they are both floating though
+		TRISDbits.TRISD10 = 1; 
+
+		DelayMS(1000); // wait a while for mouse to send it's initial code
+
+		TRISDbits.TRISD9 = 0; // ground clock
+
+		DelayMS(1000); // delay for at least 100 ms
+
+		TRISDbits.TRISD10 = 0; // ground data
+		TRISDbits.TRISD9 = 1; // release clock
+
+		while (PORTDbits.RD9 == 0) { } // wait until clock is high
+
+		while (PORTDbits.RD9 == 1) { } // wait until clock is low
+
+		for (unsigned char i=0; i<8; i++)
+		{
+			if ((command & 0x01) == 0x00)
+			{
+				TRISDbits.TRISD10 = 0; // ground data
+			}
+			else
+			{
+				TRISDbits.TRISD10 = 1; // float data to high
+			}
+
+			command = (command >> 1);
+
+			while (PORTDbits.RD9 == 0) { } // wait until clock is high
+
+			while (PORTDbits.RD9 == 1) { } // wait until clock is low
+		}
+
+		if (parity_count % 2 == 1) TRISDbits.TRISD10 = 0; // ground data (for parity)
+		else TRISDbits.TRISD10 = 1; // float data high (for parity)
+
+		while (PORTDbits.RD9 == 0) { } // wait until clock is high
+
+		while (PORTDbits.RD9 == 1) { } // wait until clock is low
+
+		TRISDbits.TRISD10 = 1; // release data line
+
+		while (PORTDbits.RD10 == 0) { } // wait until data is high
+
+		while (PORTDbits.RD10 == 1) { } // wait until data is low
+
+		while (PORTDbits.RD9 == 1) { } // wait until clock is low
+
+		while (PORTDbits.RD10 == 0) { } // wait until data is high
+
+		while (PORTDbits.RD9 == 0) { } // wait until clock is high
+	}
+	else if (port == 1) // secondary port (from splitter)
+	{
+		PORTDbits.RD12 = 0; // when not floating, ground them
+		PORTDbits.RD13 = 0;
+		TRISDbits.TRISD12 = 1; // normally they are both floating though
+		TRISDbits.TRISD13 = 1; 
+
+		DelayMS(1000); // wait a while for mouse to send it's initial code
+
+		TRISDbits.TRISD12 = 0; // ground clock
+
+		DelayMS(1000); // delay for at least 100 ms
+
+		TRISDbits.TRISD13 = 0; // ground data
+		TRISDbits.TRISD12 = 1; // release clock
+
+		while (PORTDbits.RD12 == 0) { } // wait until clock is high
+
+		while (PORTDbits.RD12 == 1) { } // wait until clock is low
+
+		for (unsigned char i=0; i<8; i++)
+		{
+			if ((command & 0x01) == 0x00)
+			{
+				TRISDbits.TRISD13 = 0; // ground data
+			}
+			else
+			{
+				TRISDbits.TRISD13 = 1; // float data to high
+			}
+
+			command = (command >> 1);
+
+			while (PORTDbits.RD12 == 0) { } // wait until clock is high
+
+			while (PORTDbits.RD12 == 1) { } // wait until clock is low
+		}
+		
+		if (parity_count % 2 == 1) TRISDbits.TRISD13 = 0; // ground data (for parity)
+		else TRISDbits.TRISD13 = 1; // float data high (for parity)
+
+		while (PORTDbits.RD12 == 0) { } // wait until clock is high
+
+		while (PORTDbits.RD12 == 1) { } // wait until clock is low
+
+		TRISDbits.TRISD13 = 1; // release data line
+
+		while (PORTDbits.RD13 == 0) { } // wait until data is high
+
+		while (PORTDbits.RD13 == 1) { } // wait until data is low
+
+		while (PORTDbits.RD12 == 1) { } // wait until clock is low
+
+		while (PORTDbits.RD13 == 0) { } // wait until data is high
+
+		while (PORTDbits.RD12 == 0) { } // wait until clock is high
+	}
+	
+	CNCONDbits.ON = 1; // turn on interrupt-on-change
+	
+	return;
+}
+
+
+
 #ifdef SPLASH
 #include "splash_default.c"
 #endif
@@ -304,8 +443,6 @@ volatile unsigned int ps2_flags = 0x0000;
 #include "ff.c"
 #include "diskio.h"
 #include "diskio.c"
-
-//#include "reprogram.c"
 
 
 
@@ -588,27 +725,7 @@ void display_string(unsigned int x, unsigned int y, char *value)
 #include "badapple.c"
 #include "scratchpad.c"
 #include "menu.c"
-#include "setup.c"
-
-//#include "user.c"
-
-
-
-/*
-#ifdef USER_SPACE
-void USER_JUMP UserCode() // must be a very small function
-{
-	UserMain();
-};
-#else
-void UserCode()
-{
-	while (1) { }
-}
-#endif
-*/
- 
-
+#include "setup.c" 
 #include "peanut_gb.c"
 
 
@@ -650,7 +767,7 @@ int main()
 	display_string(menu_x, menu_y+16,	" Bad Apple \\");
 	display_string(menu_x, menu_y+24,	" GB Emu    \\");
 	display_string(menu_x, menu_y+32,	" GB Burn   \\");
-	display_string(menu_x, menu_y+40,	"           \\");
+	display_string(menu_x, menu_y+40,	" Blink Test\\");
 	
 
 	dummy = (char)Menu();
@@ -751,7 +868,6 @@ int main()
 		DelayMS(100);
 
 		PORTDbits.RD11 = 1;
-		DelayMS(100);
 		DelayMS(100);
 		DelayMS(100);
 		DelayMS(100);
