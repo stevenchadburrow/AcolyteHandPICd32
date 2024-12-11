@@ -28,7 +28,7 @@ void BadApple()
 		}
 		else
 		{
-			while (1) { } // lock up
+			return;
 		} 
 
 		T8CONbits.ON = 0; // turn off TMR8 
