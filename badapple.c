@@ -127,7 +127,7 @@ void BadApple()
 						}
 
 						// fine tune delay here
-						count = (unsigned long)(26); // 63 for smaller screen
+						count = (unsigned long)(25); // 63 for smaller screen
 						_CP0_SET_COUNT(0);
 						while (count > _CP0_GET_COUNT());
 					}
