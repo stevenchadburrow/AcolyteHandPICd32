@@ -16,7 +16,7 @@ Links:
 
 <a href="https://www.aidanmocke.com/">https://www.aidanmocke.com/</a> for a bunch of PIC32MZ projects (without Harmony), including USB.<br>
 <a href="http://elm-chan.org/">http://elm-chan.org/</a> for a bunch of other projects, including MMC (aka SDcard) and FatFs.<br>
-<a href="https://github.com/deltabeard/Peanut-GB">https://github.com/deltabeard/</a> for the Peanut-GB (and MiniGB-APU) project.<br>
+<a href="https://github.com/deltabeard/">https://github.com/deltabeard/</a> for the Peanut-GB (and MiniGB-APU) project.<br>
 
 *** Board Edits: Removed the 74HC273 entirely and directly connected latch inputs to outputs.  Also added 4-bit audio DAC to PORTH pins. ***
 
