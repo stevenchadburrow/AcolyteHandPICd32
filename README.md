@@ -2,7 +2,7 @@
 
 Using the PIC32MZ2048EFH144 microcontroller, this new computer runs at 150 MHz, with internal memory of 512KB of RAM and 2MB of Flash ROM.  
 
-Video output of 512x384 VGA with 256-colors.  Supports 2 independent audio square-wave signals.  Input comes from 2x Genesis controllers, PS/2 Port with support for keyboard and mouse through splitter, and USB port with host support for keyboard, mouse, or Xbox360-type gamepad using Aidan Mocke's base code (copied).  The USB port can also be selected to become a device and connect to the PC as a CDC for use with /dev/ttyACM0.  The USB port could eventually support flash drives.
+Video output of 512x384 VGA with 256-colors.  Supports 2 independent audio square-wave signals.  Input comes from 2x Genesis controllers, PS/2 Port with support for keyboard and mouse through splitter, and USB port with host support for keyboard, mouse, or Xbox360-type gamepad.  The USB port can techincally be selected to become a device and connect to the PC as a CDC for use with /dev/ttyACM0.  The USB port could eventually support flash drives.
 
 Comes with attachment possibilities for an SPI Micro SDcard Adapter and a FT232RL USB-to-UART Adapter.  SDcard is required for BadApple and using Elm-Chan's FatFs files (included).  If using UART, use the command 'sudo picocom /dev/ttyUSB0'.  The PIC32 is programmed through ICSP port connecting to a PICkit3, but can also be re-programmed at general memory locations from production hex files through the SDcard.
 
@@ -16,7 +16,7 @@ Links:
 
 <a href="https://www.aidanmocke.com/">https://www.aidanmocke.com/</a> for a bunch of PIC32MZ projects (without Harmony), including USB.<br>
 <a href="http://elm-chan.org/">http://elm-chan.org/</a> for a bunch of other projects, including MMC (aka SDcard) and FatFs.<br>
-<a href="https://github.com/deltabeard/">https://github.com/deltabeard/</a> for the Peanut-GB (and MiniGB-APU) project.<br>
+<a href="https://github.com/deltabeard/">https://github.com/deltabeard/</a> for the Peanut-GB and MiniGB-APU projects.<br>
 
 *** Board Edits: Removed the 74HC273 entirely and directly connected latch inputs to outputs.  Also added 4-bit audio DAC to PORTH pins. ***
 
