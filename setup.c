@@ -218,7 +218,7 @@ void Setup()
 	T8CON = 0x0000; // reset Timer8, prescale of 1:1
 	TMR8 = 0x0000; // zero out counter
 	PR8 = 0x11E2; // determines audio sample rate, around 32.768 Hz for Gameboy
-	IPC9bits.T8IP = 0x3; // audio interrupt priority 3
+	IPC9bits.T8IP = 0x2; // audio interrupt priority 2
 	IPC9bits.T8IS = 0x0; // sub-priority 1
 	IFS1bits.T8IF = 0; // clear flags
 	IEC1bits.T8IE = 1; // enable interrupts
@@ -229,8 +229,8 @@ void Setup()
 	T9CON = 0x0070; // reset Timer9, prescale of 1:256
 	TMR9 = 0x0000; // zero out counter
 	PR9 = 0x4C90; // determines length of two frames of 59.73 Hz on Gameboy
-	IPC10bits.T9IP = 0x2; // frame interrupt priority 2
-	IPC10bits.T9IS = 0x0; // sub-priority 1
+	IPC10bits.T9IP = 0x1; // frame interrupt priority 1
+	IPC10bits.T9IS = 0x0; // sub-priority 0
 	IFS1bits.T9IF = 0; // clear flags
 	IEC1bits.T9IE = 1; // enable interrupts
 	//IEC1bits.T9IE = 0; // disable interrupts
@@ -242,7 +242,7 @@ void Setup()
 	CNNED = 0x1200; // negative edge on RD9 and RD12
 	CNFD = 0x0000; // clear flags
 	
-	IPC30bits.CNDIP = 0x5; // interrupt priority 5
+	IPC30bits.CNDIP = 0x4; // interrupt priority 4
 	IPC30bits.CNDIS = 0x0; // interrupt sub-priority 0
 	IFS3bits.CNDIF = 0;  // clear interrupt flag
 	IEC3bits.CNDIE = 1; // enable interrupts
@@ -266,7 +266,7 @@ void Setup()
 	U3STAbits.URXEN = 1; // enable RX
 	U3STAbits.UTXEN = 1; // enable TX
 	
-	IPC39bits.U3RXIP = 0x4; // U3RX interrupt priority level 4
+	IPC39bits.U3RXIP = 0x3; // U3RX interrupt priority level 3
 	IPC39bits.U3RXIS = 0x0; // U3RX interrupt sub-priority level 0
 	//IPC39bits.U3EIP = 0x5; // U3E interrupt priority level 5
 	//IPC39bits.U3EIS = 0x3; // U3E interrupt sub-priority level 3
@@ -309,10 +309,6 @@ void Setup()
 	T1CONbits.TCKPS = 0b10; // pre-scale of 4
 	T1CONbits.TON = 1; // Turn on the timer 1
 	*/
-	
-	// Init USBA_device_millis
-	// now using H-SYNC interrupt for millis timing
-	USBA_device_millis = 0;
 	
 	// set shadow register priorities???
 	PRISS = 0x76543210;

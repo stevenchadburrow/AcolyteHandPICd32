@@ -23,12 +23,14 @@ struct priv_t
 
 uint8_t draw_frame = 0;
 
-const char *cart_rom = (char *)0x9D100000;
+char *cart_rom = (char *)0x9D100000;
+
 volatile uint8_t __attribute__((coherent,address(0x80078000))) cart_ram[32768];
 uint8_t boot_rom[256];
 uint8_t selected_palette[3][4];
 
 uint8_t cart_bank = 0; // up to 4 banks (for now)
+
 
 unsigned int NVMUnlock(unsigned int nvmop)
 {
@@ -155,26 +157,19 @@ unsigned int NVMBurnROM(char *filename)
 	return 1;
 }
 
-
-/**
- * Returns a byte from the ROM file at the given address.
- */
+// Returns a byte from the ROM file at the given address.
 uint8_t gb_rom_read(struct gb_s *gb, const uint_fast32_t addr)
 {
 	return cart_rom[addr];
 }
 
-/**
- * Returns a byte from the cartridge RAM at the given address.
- */
+// Returns a byte from the cartridge RAM at the given address.
 uint8_t gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr)
 {
 	return cart_ram[addr];
 }
 
-/**
- * Writes a given byte to the cartridge RAM at the given address.
- */
+// Writes a given byte to the cartridge RAM at the given address.
 void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr,
 		       const uint8_t val)
 {
@@ -189,7 +184,7 @@ uint8_t gb_boot_rom_read(struct gb_s *gb, const uint_fast16_t addr)
 void read_cart_ram_file(char save_file_name[16], uint8_t *dest,
 			const size_t len)
 {
-	/* If save file not required. */
+	// If save file not required.
 	if(len == 0)
 	{
 		return;
@@ -1130,6 +1125,8 @@ int PeanutGB()
 	
 	while (1)
 	{
+		USBHostTasks();
+		
 		frame_trigger = 0; // clear frame trigger
 		
 		TMR9 = 0x0000;
@@ -1138,18 +1135,46 @@ int PeanutGB()
 		// two frames per frame trigger
 		for (unsigned char loop=0; loop<2; loop++)
 		{
-			// if device connected...
-			if (USBA_DEVICE_CONNECTED)
+			if (usb_mode == 0x00) // keyboard
 			{
-				USBA_host_tasks();
-				USBA_HID_tasks();
-				if (USBA_EP1_RECEIVED > 0)
+				while (usb_readpos != usb_writepos)
 				{
-					USBA_EP1_receive(USBA_EP1_buffer);
-					USBA_HID_process_report();
-					USBA_EP1_RECEIVED--;
-				}
+					if (usb_state_array[usb_readpos] == 0x0B) // release
+					{
+						usb_readpos++;
 
+						if (usb_state_array[usb_readpos] == 0x11) gb.direct.joypad |= JOYPAD_UP;
+						else if (usb_state_array[usb_readpos] == 0x12) gb.direct.joypad |= JOYPAD_DOWN;
+						else if (usb_state_array[usb_readpos] == 0x13) gb.direct.joypad |= JOYPAD_LEFT;
+						else if (usb_state_array[usb_readpos] == 0x14) gb.direct.joypad |= JOYPAD_RIGHT;
+						else if (usb_state_array[usb_readpos] == 0x0D) gb.direct.joypad |= JOYPAD_START;
+						else if (usb_state_array[usb_readpos] == 0x20) gb.direct.joypad |= JOYPAD_SELECT;
+						else if (usb_state_array[usb_readpos] == 0x58 ||
+							usb_state_array[usb_readpos] == 0x78) gb.direct.joypad |= JOYPAD_A;
+						else if (usb_state_array[usb_readpos] == 0x5A ||
+							usb_state_array[usb_readpos] == 0x7A) gb.direct.joypad |= JOYPAD_B;
+
+						usb_readpos++;
+					}
+					else
+					{
+						if (usb_state_array[usb_readpos] == 0x11) gb.direct.joypad &= ~JOYPAD_UP;
+						else if (usb_state_array[usb_readpos] == 0x12) gb.direct.joypad &= ~JOYPAD_DOWN;
+						else if (usb_state_array[usb_readpos] == 0x13) gb.direct.joypad &= ~JOYPAD_LEFT;
+						else if (usb_state_array[usb_readpos] == 0x14) gb.direct.joypad &= ~JOYPAD_RIGHT;
+						else if (usb_state_array[usb_readpos] == 0x0D) gb.direct.joypad &= ~JOYPAD_START;
+						else if (usb_state_array[usb_readpos] == 0x20) gb.direct.joypad &= ~JOYPAD_SELECT;
+						else if (usb_state_array[usb_readpos] == 0x58 ||
+							usb_state_array[usb_readpos] == 0x78) gb.direct.joypad &= ~JOYPAD_A;
+						else if (usb_state_array[usb_readpos] == 0x5A ||
+							usb_state_array[usb_readpos] == 0x7A) gb.direct.joypad &= ~JOYPAD_B;
+
+						usb_readpos++;
+					}
+				}
+			}
+			else if (usb_mode == 0x02) // xbox 360 controller
+			{
 				if (usb_readpos != usb_writepos)
 				{
 					gb.direct.joypad |= JOYPAD_UP;
@@ -1161,38 +1186,23 @@ int PeanutGB()
 					gb.direct.joypad |= JOYPAD_B;
 					gb.direct.joypad |= JOYPAD_START;
 					
-					if (usb_mode == 0x01) // keyboard
+					while (usb_readpos != usb_writepos)
 					{
-						if (USBA_device_keys[0x52].pressed) gb.direct.joypad &= ~JOYPAD_UP;
-						if (USBA_device_keys[0x51].pressed) gb.direct.joypad &= ~JOYPAD_DOWN;
-						if (USBA_device_keys[0x50].pressed) gb.direct.joypad &= ~JOYPAD_LEFT;
-						if (USBA_device_keys[0x4F].pressed) gb.direct.joypad &= ~JOYPAD_RIGHT;
+						if ((usb_buttons[usb_readpos] & 0x0100) == 0x0100) gb.direct.joypad &= ~JOYPAD_UP;
+						if ((usb_buttons[usb_readpos] & 0x0200) == 0x0200) gb.direct.joypad &= ~JOYPAD_DOWN;
+						if ((usb_buttons[usb_readpos] & 0x0400) == 0x0400) gb.direct.joypad &= ~JOYPAD_LEFT;
+						if ((usb_buttons[usb_readpos] & 0x0800) == 0x0800) gb.direct.joypad &= ~JOYPAD_RIGHT;
+						if ((usb_buttons[usb_readpos] & 0x0010) == 0x0010) gb.direct.joypad &= ~JOYPAD_B;
+						if ((usb_buttons[usb_readpos] & 0x0020) == 0x0020) gb.direct.joypad &= ~JOYPAD_A;
+						if ((usb_buttons[usb_readpos] & 0x0040) == 0x0040) gb.direct.joypad &= ~JOYPAD_START;
+						if ((usb_buttons[usb_readpos] & 0x0080) == 0x0080) gb.direct.joypad &= ~JOYPAD_SELECT;
 
-						if (USBA_device_keys[0x1B].pressed) gb.direct.joypad &= ~JOYPAD_A;
-						if (USBA_device_keys[0x1D].pressed) gb.direct.joypad &= ~JOYPAD_B;
-						if (USBA_device_keys[0x2C].pressed) gb.direct.joypad &= ~JOYPAD_SELECT;
-						if (USBA_device_keys[0x28].pressed) gb.direct.joypad &= ~JOYPAD_START;
-					}
-					else if (usb_mode == 0x03) // joystick
-					{
-						while (usb_readpos != usb_writepos)
-						{
-							if ((usb_buttons[usb_readpos] & 0x0100) == 0x0100) gb.direct.joypad &= ~JOYPAD_UP;
-							if ((usb_buttons[usb_readpos] & 0x0200) == 0x0200) gb.direct.joypad &= ~JOYPAD_DOWN;
-							if ((usb_buttons[usb_readpos] & 0x0400) == 0x0400) gb.direct.joypad &= ~JOYPAD_LEFT;
-							if ((usb_buttons[usb_readpos] & 0x0800) == 0x0800) gb.direct.joypad &= ~JOYPAD_RIGHT;
-							if ((usb_buttons[usb_readpos] & 0x0010) == 0x0010) gb.direct.joypad &= ~JOYPAD_B;
-							if ((usb_buttons[usb_readpos] & 0x0020) == 0x0020) gb.direct.joypad &= ~JOYPAD_A;
-							if ((usb_buttons[usb_readpos] & 0x0040) == 0x0040) gb.direct.joypad &= ~JOYPAD_START;
-							if ((usb_buttons[usb_readpos] & 0x0080) == 0x0080) gb.direct.joypad &= ~JOYPAD_SELECT;
-
-							usb_readpos++;
-						}
+						usb_readpos++;
 					}
 				}
 			}
 			else
-			{
+			{	
 				ps2_found = 0;
 				
 				for (unsigned char p=0; p<2; p++)

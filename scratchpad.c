@@ -1,9 +1,11 @@
 
 
-volatile char scratchpad_buffer[64][48];
+volatile char __attribute__((coherent)) scratchpad_buffer[64][48];
 
 void Scratchpad()
 {
+	TRISJbits.TRISJ15 = 1; // float joy-select (pulled high)
+	
 	char key_value = 0x00;
 	char key_prev = '*';
 	
@@ -48,24 +50,13 @@ void Scratchpad()
 		
 		overall_delay = 0x1FFF;
 		
+		USBHostTasks();
+		
 		key_value = input_ps2_keyboard();
 		
-		// if device connected...
-		if (USBA_DEVICE_CONNECTED)
+		if (key_value == 0x00)
 		{
-			USBA_host_tasks();
-			USBA_HID_tasks();
-			if (USBA_EP1_RECEIVED > 0)
-			{
-				USBA_EP1_receive(USBA_EP1_buffer);
-				USBA_HID_process_report();
-				USBA_EP1_RECEIVED--;
-			}
-			
-			if (key_value == 0x00)
-			{
-				key_value = input_usb_keyboard();
-			}
+			key_value = input_usb_keyboard();
 		}
 		
 		joy_curr[0] = 0xFF; 
@@ -77,7 +68,7 @@ void Scratchpad()
 		if (PORTJbits.RJ4 == 0) joy_curr[0] = (joy_curr[0] & 0xF7);
 		if (PORTJbits.RJ5 == 0) joy_curr[0] = (joy_curr[0] & 0xFB);
 		
-		if (usb_mode != 0x03) // xbox-type controller
+		if (usb_mode != 0x02) // xbox-type controller
 		{
 			joy_curr[1] = 0xFF; 
 			

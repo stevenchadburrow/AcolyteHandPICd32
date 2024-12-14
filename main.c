@@ -5,9 +5,6 @@
 // comment out if you want to program the PIC32 faster
 #define SPLASH
 
-// comment out if you want to program the PIC32 faster
-//#define USER_SPACE
-
 
 /*
 VESA Signal 1024 x 768 @ 70 Hz timing
@@ -434,7 +431,7 @@ void ps2_command(unsigned char command, unsigned char port)
 #endif
 
 #include "tables.c"
-#include "usb_ab.c"
+#include "usbhost.c"
 #include "interrupts.c"
 #include "sdcard.c" 
 
@@ -542,7 +539,11 @@ char input_ps2_keyboard()
 			{
 				if (ps2_state_array[p][ps2_readpos[p]] == 0x0B) // release
 				{
-					ps2_readpos[p] += 2; // skip
+					ps2_readpos[p]++;
+					
+					while (ps2_readpos[p] == ps2_writepos[p]) { }
+					
+					ps2_readpos[p]++; // skip
 				}
 				else
 				{
@@ -600,12 +601,24 @@ char input_usb_keyboard()
 {
 	char value = 0x00;
 	
-	if (usb_mode == 0x01) // keyboard
+	if (usb_mode == 0x00) // keyboard
 	{
 		if (usb_readpos != usb_writepos)
 		{
-			value = usb_state_array[usb_readpos];
-			usb_readpos++;
+			if (usb_state_array[usb_readpos] == 0x0B) // release
+			{
+				usb_readpos++;
+					
+				while (usb_readpos == usb_writepos) { }
+					
+				usb_readpos++; // skip
+			}
+			else
+			{
+				value = usb_state_array[usb_readpos]; // press
+
+				usb_readpos++;
+			}
 		}
 	}
 	
@@ -622,7 +635,7 @@ char input_usb_mouse(unsigned int *array)
 	array[3] = 0;
 	array[4] = 0;
 	
-	if (usb_mode == 0x02) // mouse
+	if (usb_mode == 0x01) // mouse
 	{	
 		if (usb_readpos != usb_writepos)
 		{
@@ -717,43 +730,26 @@ void display_string(unsigned int x, unsigned int y, char *value)
 
 
 
-
-
-
-
+#include "menu.c"
 #include "tetra.c"
 #include "badapple.c"
 #include "scratchpad.c"
-#include "menu.c"
-#include "setup.c" 
 #include "peanut_gb.c"
+#include "setup.c" 
+
 
 
 int main()
 {
-	char dummy = 0x00;
-	
 	Setup();
 	
 	DelayMS(1000); // wait some time
 	
 	SendChar('*'); // just a 'hello world' over the UART
 	
-	// need to change the jumpers on the board
-	
-	if (PORTJbits.RJ11 == 0) // if pressing (or jumpering) the 'button'
-	{
-		USBB_setup(USBB_data_received); // initialize USB device
-	}
-	else
-	{
-		USBA_setup(); // initialize USB host
-	}
+	USBHostSetup();
 	
 	DelayMS(1000); // settling delay, avoid garbage characters
-	
-	
-	
 	
 	menu_x = 24;
 	menu_y = 300;
@@ -769,8 +765,7 @@ int main()
 	display_string(menu_x, menu_y+32,	" GB Burn   \\");
 	display_string(menu_x, menu_y+40,	" Blink Test\\");
 	
-
-	dummy = (char)Menu();
+	char dummy = (char)Menu();
 	
 	if (dummy == 0) Tetra();
 	else if (dummy == 1) Scratchpad();
@@ -778,8 +773,7 @@ int main()
 	else if (dummy == 3) PeanutGB();
 	else if (dummy == 4) BurnROM();
 	else if (dummy == 5) { }
-	
-	
+
 	
 	
 	/*

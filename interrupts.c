@@ -7,12 +7,12 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 	
 	PORTE = 0;
 	
-	USBA_device_millis_delay = USBA_device_millis_delay + 1;
+	usbhost_device_delay = usbhost_device_delay + 1;
 	
-	if (USBA_device_millis_delay >= 56) // should be 56.475 really
+	if (usbhost_device_delay >= 56)
 	{
-		USBA_device_millis_delay = 0;
-		USBA_device_millis++;
+		usbhost_device_delay = 0;
+		usbhost_device_millis++;
 	}
 	
 	screen_scanline = screen_scanline + 1; // increment scanline
@@ -35,7 +35,33 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 	return;
 }
 
-void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_handler()
+void __attribute__((vector(_USB_VECTOR), interrupt(ipl6srs), nomips16)) usb_handler()
+{
+	unsigned long CSR0 = USBCSR0; // must read to clear?
+	unsigned long CSR1 = USBCSR1;
+	unsigned long CSR2 = USBCSR2;
+
+	if ((CSR0 & 0x00010000) > 0) // EP0IF bit
+	{
+		USBCSR0bits.EP0IF = 0; // clear flag
+		usbhost_ep0_interrupt = 1; // set flag
+	}
+	
+	if ((CSR1 & 0x00000002) > 0) // EP1RXIF bit
+	{
+		USBCSR1bits.EP1RXIF = 0; // clear flag
+		usbhost_ep1_interrupt++; // increment flag
+	}
+
+	if ((CSR2 & 0x00100000) > 0) // CONNIF bit
+	{
+		usbhost_connected = 1; // set flag
+	}
+
+	IFS4bits.USBIF = 0; // clear flag
+}
+
+void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl4srs))) cnd_handler()
 {
 	IFS3bits.CNDIF = 0;  // clear interrupt flag
 	
@@ -264,7 +290,7 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl5srs))) cnd_ha
 	return;
 }
 
-void __attribute__((vector(_UART3_RX_VECTOR), interrupt(ipl4srs))) u3rx_handler() //, nomips16)) u3rx_handler()
+void __attribute__((vector(_UART3_RX_VECTOR), interrupt(ipl3srs))) u3rx_handler() //, nomips16)) u3rx_handler()
 {	
 	IFS4bits.U3RXIF = 0;  // clear interrupt flag
 	
@@ -300,7 +326,7 @@ void __attribute__((vector(_UART3_RX_VECTOR), interrupt(ipl4srs))) u3rx_handler(
 }
 
 // new audio timer
-void __attribute__((vector(_TIMER_8_VECTOR), interrupt(ipl3srs))) t8_handler()
+void __attribute__((vector(_TIMER_8_VECTOR), interrupt(ipl2srs))) t8_handler()
 {
 	IFS1bits.T8IF = 0;  // clear interrupt flag
 	
@@ -315,7 +341,7 @@ void __attribute__((vector(_TIMER_8_VECTOR), interrupt(ipl3srs))) t8_handler()
 }
 
 // new frame timer
-void __attribute__((vector(_TIMER_9_VECTOR), interrupt(ipl2srs))) t9_handler()
+void __attribute__((vector(_TIMER_9_VECTOR), interrupt(ipl1srs))) t9_handler()
 {
 	IFS1bits.T9IF = 0;  // clear interrupt flag
 	

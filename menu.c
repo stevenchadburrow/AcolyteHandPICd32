@@ -29,6 +29,8 @@ unsigned char Menu()
 
 	while (menu_loop > 0)
 	{
+		USBHostTasks();
+		
 		if (menu_up == 1)
 		{	
 			menu_up = 0;
@@ -71,22 +73,9 @@ unsigned char Menu()
 		
 		menu_key = input_ps2_keyboard();
 		
-		// if device connected...
-		if (USBA_DEVICE_CONNECTED)
-		{		
-			USBA_host_tasks();
-			USBA_HID_tasks();
-			if (USBA_EP1_RECEIVED > 0)
-			{	
-				USBA_EP1_receive(USBA_EP1_buffer);
-				USBA_HID_process_report();
-				USBA_EP1_RECEIVED--;
-			}
-		
-			if (menu_key == 0x00)
-			{
-				menu_key = input_usb_keyboard();
-			}
+		if (menu_key == 0x00)
+		{
+			menu_key = input_usb_keyboard();
 		}
 		
 		if (menu_key != 0x00)
@@ -121,7 +110,7 @@ unsigned char Menu()
 			
 		if (gamepad_flag == 0)
 		{
-			if (PORTJbits.RJ1 == 0 ) // down
+			if (PORTJbits.RJ1 == 0) // down
 			{
 				if ((menu_joy & 0x0002) == 0x0000)
 				{
@@ -171,7 +160,7 @@ unsigned char Menu()
 			menu_loop = 0;
 		}
 		
-		if (usb_mode == 0x03) // xbox controller
+		if (usb_mode == 0x02) // xbox controller
 		{
 			while (usb_readpos != usb_writepos)
 			{
@@ -239,6 +228,8 @@ unsigned char Menu()
 			TRISJbits.TRISJ15 = 0; // ground joy-select for next frame
 		}
 	}
+	
+	TRISJbits.TRISJ15 = 1; // float joy-select (pulled high)
 
 	music_note(1047, 250, 0);
 	

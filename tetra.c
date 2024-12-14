@@ -263,6 +263,8 @@ struct tetra_struct_vars tetra_vars;
 
 void Tetra()
 {	
+	TRISJbits.TRISJ15 = 1; // float joy-select (pulled high)
+	
 	unsigned int press_delay = 0x0000;
 	unsigned int press_speed = 0x002F;
 	unsigned int heights_delay = 0x0000;
@@ -517,107 +519,127 @@ void Tetra()
 			}
 		}
 		
-		// if device connected...
-		if (USBA_DEVICE_CONNECTED)
+		USBHostTasks();
+			
+		if (key_active == 0)
 		{
-			USBA_host_tasks();
-			USBA_HID_tasks();
-			if (USBA_EP1_RECEIVED > 0)
+			if (usb_mode == 0x00) // keyboard
 			{
-				USBA_EP1_receive(USBA_EP1_buffer);
-				USBA_HID_process_report();
-				USBA_EP1_RECEIVED--;
-			}
-			
-			if (key_active == 0)
-			{
-				directions[0] = 0;
-				directions[1] = 0;
-				directions[2] = 0;
-				directions[3] = 0;
-			
-				if (usb_mode == 0x01) // keyboard
-				{
-					key_active = 1;
+				key_active = 1;
 
-					if (press_delay == 0x0000)
-					{			
-						if (USBA_device_keys[0x52].pressed)
+				if (usb_readpos != usb_writepos)
+				{
+					if (usb_state_array[usb_readpos] == 0x0B) // release
+					{
+						usb_readpos++;
+
+						if (usb_state_array[usb_readpos] == 0x11)
+						{
+							directions[0] = 0;
+						}
+						else if (usb_state_array[usb_readpos] == 0x12)
+						{
+							directions[1] = 0;
+						}
+						else if (usb_state_array[usb_readpos] == 0x13)
+						{
+							directions[2] = 0;
+						}
+						else if (usb_state_array[usb_readpos] == 0x14)
+						{
+							directions[3] = 0;
+						}
+						else if (usb_state_array[usb_readpos] == 0x20)
+						{
+							buttons[0] = 0;
+						}
+						else if (usb_state_array[usb_readpos] == 0x30)
+						{
+							buttons[1] = 0;
+						}
+						else if (usb_state_array[usb_readpos] == 0x7A ||
+							usb_state_array[usb_readpos] == 0x5A)
+						{
+							buttons[2] = 0;
+						}
+						else if (usb_state_array[usb_readpos] == 0x78 ||
+							usb_state_array[usb_readpos] == 0x58)
+						{
+							buttons[3] = 0;
+						}
+
+						usb_readpos++;
+					}
+					else
+					{
+						if (usb_state_array[usb_readpos] == 0x11)
 						{
 							directions[0] = 1;
 						}
-						else if (USBA_device_keys[0x51].pressed)
+						else if (usb_state_array[usb_readpos] == 0x12)
 						{
 							directions[1] = 1;
 						}
-						else if (USBA_device_keys[0x50].pressed)
+						else if (usb_state_array[usb_readpos] == 0x13)
 						{
 							directions[2] = 1;
 						}
-						else if (USBA_device_keys[0x4F].pressed)
+						else if (usb_state_array[usb_readpos] == 0x14)
 						{
 							directions[3] = 1;
 						}
-					}
+						else if (usb_state_array[usb_readpos] == 0x20)
+						{
+							buttons[0] = 1;
+						}
+						else if (usb_state_array[usb_readpos] == 0x30)
+						{
+							buttons[1] = 1;
+						}
+						else if (usb_state_array[usb_readpos] == 0x78 ||
+							usb_state_array[usb_readpos] == 0x58)
+						{
+							buttons[2] = 1;
+						}
+						else if (usb_state_array[usb_readpos] == 0x7A ||
+							usb_state_array[usb_readpos] == 0x5A)
+						{
+							buttons[3] = 1;
+						}
 
-					if (USBA_device_keys[0x2C].pressed)
-					{
-						if (buttons[0] == 0) buttons[0] = 1;
-						else buttons[0] = 2;
+						usb_readpos++;
 					}
-					else buttons[0] = 0;
-					
-					if (USBA_device_keys[0x1B].pressed)
-					{
-						if (buttons[2] == 0) buttons[2] = 1;
-						else buttons[2] = 2;
-					}
-					else buttons[2] = 0;
-
-					if (USBA_device_keys[0x62].pressed)
-					{
-						if (buttons[1] == 0) buttons[1] = 1;
-						else buttons[1] = 2;
-					}
-					else buttons[1] = 0;
-					
-					if (USBA_device_keys[0x1D].pressed)
-					{
-						if (buttons[3] == 0) buttons[3] = 1;
-						else buttons[3] = 2;
-					}
-					else buttons[3] = 0;
 				}
 			}
-			
-			if (mouse_active == 0)
-			{
-				if (usb_mode == 0x02) // mouse
+		}
+
+		if (mouse_active == 0)
+		{
+			if (usb_mode == 0x01) // mouse
+			{	
+				mouse_active = 1;
+
+				if (usb_readpos != usb_writepos)
 				{	
-					mouse_active = 1;
-					
-					if (usb_readpos != usb_writepos)
-					{	
-						mouse_move = 1;
+					mouse_move = 1;
 
-						if ((usb_state_array[usb_readpos]) == 0x01) // left click
-						{
-							if (clicks[1] == 0) clicks[1] = 1;
-						}
-						else clicks[1] = 0;
-
-						if ((usb_state_array[usb_readpos]) == 0x02) // right click
-						{
-							if (clicks[0] == 0) clicks[0] = 1;
-							else clicks[0] = 2;
-						}
-						else clicks[0] = 0;
-
-						cursors[0] = (unsigned int)(usb_cursor_x[usb_readpos]);
-						cursors[1] = (unsigned int)(SCREEN_Y - usb_cursor_y[usb_readpos]);
-
-						usb_readpos++;	
+					if ((usb_state_array[usb_readpos]) == 0x01) // left click
+					{
+						if (clicks[1] == 0) clicks[1] = 1;
 					}
+					else clicks[1] = 0;
+
+					if ((usb_state_array[usb_readpos]) == 0x02) // right click
+					{
+						if (clicks[0] == 0) clicks[0] = 1;
+						else clicks[0] = 2;
+					}
+					else clicks[0] = 0;
+
+					cursors[0] = (unsigned int)(usb_cursor_x[usb_readpos]);
+					cursors[1] = (unsigned int)(SCREEN_Y - usb_cursor_y[usb_readpos]);
+
+					usb_readpos++;	
 				}
 			}
 		}
@@ -648,7 +670,7 @@ void Tetra()
 		}
 		else pause[0]--;
 		
-		if (usb_mode != 0x03) // xbox-type controller
+		if (usb_mode != 0x02) // xbox-type controller
 		{
 			tetra_vars.joy_prev[1] = tetra_vars.joy_curr[1];
 			tetra_vars.joy_curr[1] = 0xFF; 
