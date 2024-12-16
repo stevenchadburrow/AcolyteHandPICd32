@@ -1362,6 +1362,8 @@ int PeanutGB()
 
 			DelayMS(1000);
 
+			for (unsigned int i=0; i<8192; i++) audio_buffer[i] = 0x00;
+			
 			for (unsigned int y=0; y<SCREEN_Y; y++)
 			{
 				for (unsigned int x=0; x<SCREEN_X; x++)
