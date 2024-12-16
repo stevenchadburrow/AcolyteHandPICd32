@@ -1373,7 +1373,7 @@ int PeanutGB()
 			menu_x = 256;
 			menu_y = 240;
 			menu_pos = 0;
-			menu_max = 6;
+			menu_max = 7;
 
 			display_string(menu_x, menu_y,		" Resume        \\");
 			if (sound_toggle == 0)		display_string(menu_x, menu_y+8,  " Sound On      \\");
