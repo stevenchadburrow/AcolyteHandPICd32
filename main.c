@@ -800,8 +800,6 @@ int main()
 	// *** Make sure it is /dev/sdc you want, change according to what 'fdisk' told you! ***
 	// sudo dd if=Test.wav of=/dev/sdc bs=100M conv=fsync
 	
-	T8CONbits.ON = 0; // turn off TMR8 
-	
 	sdcard_initialize();
 	
 	int test = 0;

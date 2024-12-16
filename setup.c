@@ -225,17 +225,6 @@ void Setup()
 	DCH2CSIZ = 1; // 1 byte per event
 	
 	
-	// new audio timer
-	T8CON = 0x0000; // reset Timer8, prescale of 1:1
-	TMR8 = 0x0000; // zero out counter
-	PR8 = 0x17D7; // determines audio sample rate, around 32.768 kHz for Gameboy
-	IPC9bits.T8IP = 0x2; // audio interrupt priority 2
-	IPC9bits.T8IS = 0x0; // sub-priority 1
-	IFS1bits.T8IF = 0; // clear flags
-	IEC1bits.T8IE = 1; // enable interrupts
-	//IEC1bits.T8IE = 0; // disable interrupts
-	T8CONbits.ON = 1; // turn on TMR8 
-	
 	// new frame timer
 	T9CON = 0x0070; // reset Timer9, prescale of 1:256
 	TMR9 = 0x0000; // zero out counter
@@ -246,7 +235,6 @@ void Setup()
 	IEC1bits.T9IE = 1; // enable interrupts
 	//IEC1bits.T9IE = 0; // disable interrupts
 	T9CONbits.ON = 0; // turn off TMR9 
-	
  
 	// set up PS/2 Keyboard and Mouse on PORTD (RD9-RD10,RD12-RD13)
 	CNCONDbits.ON = 1; // turn on interrupt-on-change

@@ -31,7 +31,6 @@ void BadApple()
 			return;
 		} 
 
-		T8CONbits.ON = 0; // turn off TMR8 
 		T9CONbits.ON = 0; // turn off TMR9
 
 		unsigned int x = 0x0000;
