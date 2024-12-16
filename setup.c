@@ -337,6 +337,9 @@ void Setup()
 	
 	// turn LED off by default
 	PORTDbits.RD11 = 1;
+	
+	// set black scanline
+	for (unsigned int x=0; x<SCREEN_X; x++) screen_blank[x] = 0x00;
 
 	
 	// set display buffer
@@ -354,9 +357,6 @@ void Setup()
 #endif
 		}
 	}
-	
-	// set black scanline
-	for (unsigned int x=0; x<SCREEN_X; x++) screen_blank[x] = 0x00;
 	
 	for (unsigned int i=0; i<8192; i++) audio_buffer[i] = 0x00;
 	

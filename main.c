@@ -3,7 +3,7 @@
 
 
 // comment out if you want to program the PIC32 faster
-//#define SPLASH
+#define SPLASH
 
 
 /*
@@ -271,7 +271,7 @@ volatile unsigned char __attribute__((coherent)) usb_writepos = 0x00;
 volatile unsigned char __attribute__((coherent)) usb_readpos = 0x00;
 
 // additional variables
-volatile unsigned char screen_blank[SCREEN_X]; // black scanline
+volatile unsigned char __attribute__((coherent)) screen_blank[SCREEN_X]; // black scanline
 volatile unsigned int screen_scanline = 637; // start of vertical sync
 volatile unsigned char screen_zero[1] = { 0x00 }; // zero value for black
 
