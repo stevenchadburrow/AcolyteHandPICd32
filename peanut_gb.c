@@ -21,7 +21,7 @@ struct priv_t
 };
 
 
-uint8_t draw_frame = 0;
+uint8_t frame_count = 0;
 
 char *cart_rom = (char *)0x9D100000;
 
@@ -31,9 +31,10 @@ uint8_t selected_palette[3][4];
 
 uint8_t cart_bank = 0; // up to 4 banks (for now)
 
-unsigned char sound_toggle = 0; // sound off by default
+unsigned char sound_toggle = 1; // sound on by default
 unsigned char palette_toggle = 1; // palette on by default
 unsigned char screen_toggle = 1; // screen large by default
+unsigned char frame_toggle = 1; // frame half by default
 
 
 unsigned int NVMUnlock(unsigned int nvmop)
@@ -680,7 +681,23 @@ void auto_assign_palette(uint8_t game_checksum)
 void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160],
 		   const uint_fast8_t line)
 {
-	if (draw_frame > 0)
+	char test = 0;
+	
+	if (frame_toggle == 0) test = 1;
+	else if (frame_toggle == 1)
+	{
+		if (frame_count == 0 && line >= 0 && line < 72) test = 1;
+		else if (frame_count == 1 && line >= 72 && line < 144) test = 1;
+	}
+	else if (frame_toggle == 2)
+	{
+		if (frame_count == 0 && line >= 0 && line < 36) test = 1;
+		else if (frame_count == 1 && line >= 36 && line < 72) test = 1;
+		else if (frame_count == 2 && line >= 72 && line < 108) test = 1;
+		else if (frame_count == 3 && line >= 108 && line < 144) test = 1;
+	}
+	
+	if (test == 1)
 	{
 		if (screen_toggle == 0x00)
 		{
@@ -1172,50 +1189,131 @@ int PeanutGB()
 		TMR9 = 0x0000;
 		T9CONbits.ON = 1; // turn on Timer9
 		
-		// two frames per frame trigger
-		for (unsigned char loop=0; loop<2; loop++)
+		if (usb_mode == 0x00) // keyboard
 		{
-			if (usb_mode == 0x00) // keyboard
+			while (usb_readpos != usb_writepos)
 			{
+				if (usb_state_array[usb_readpos] == 0x0B) // release
+				{
+					usb_readpos++;
+
+					if (usb_state_array[usb_readpos] == 0x11) gb.direct.joypad |= JOYPAD_UP;
+					else if (usb_state_array[usb_readpos] == 0x12) gb.direct.joypad |= JOYPAD_DOWN;
+					else if (usb_state_array[usb_readpos] == 0x13) gb.direct.joypad |= JOYPAD_LEFT;
+					else if (usb_state_array[usb_readpos] == 0x14) gb.direct.joypad |= JOYPAD_RIGHT;
+					else if (usb_state_array[usb_readpos] == 0x0D) gb.direct.joypad |= JOYPAD_START;
+					else if (usb_state_array[usb_readpos] == 0x20) gb.direct.joypad |= JOYPAD_SELECT;
+					else if (usb_state_array[usb_readpos] == 0x58 ||
+						usb_state_array[usb_readpos] == 0x78) gb.direct.joypad |= JOYPAD_A;
+					else if (usb_state_array[usb_readpos] == 0x5A ||
+						usb_state_array[usb_readpos] == 0x7A) gb.direct.joypad |= JOYPAD_B;
+
+					usb_readpos++;
+				}
+				else
+				{
+					if (usb_state_array[usb_readpos] == 0x11) gb.direct.joypad &= ~JOYPAD_UP;
+					else if (usb_state_array[usb_readpos] == 0x12) gb.direct.joypad &= ~JOYPAD_DOWN;
+					else if (usb_state_array[usb_readpos] == 0x13) gb.direct.joypad &= ~JOYPAD_LEFT;
+					else if (usb_state_array[usb_readpos] == 0x14) gb.direct.joypad &= ~JOYPAD_RIGHT;
+					else if (usb_state_array[usb_readpos] == 0x0D) gb.direct.joypad &= ~JOYPAD_START;
+					else if (usb_state_array[usb_readpos] == 0x20) gb.direct.joypad &= ~JOYPAD_SELECT;
+					else if (usb_state_array[usb_readpos] == 0x58 ||
+						usb_state_array[usb_readpos] == 0x78) gb.direct.joypad &= ~JOYPAD_A;
+					else if (usb_state_array[usb_readpos] == 0x5A ||
+						usb_state_array[usb_readpos] == 0x7A) gb.direct.joypad &= ~JOYPAD_B;
+
+					usb_readpos++;
+				}
+			}
+		}
+		else if (usb_mode == 0x02) // xbox 360 controller
+		{
+			if (usb_readpos != usb_writepos)
+			{
+				gb.direct.joypad |= JOYPAD_UP;
+				gb.direct.joypad |= JOYPAD_DOWN;
+				gb.direct.joypad |= JOYPAD_LEFT;
+				gb.direct.joypad |= JOYPAD_RIGHT;
+				gb.direct.joypad |= JOYPAD_A;
+				gb.direct.joypad |= JOYPAD_SELECT;
+				gb.direct.joypad |= JOYPAD_B;
+				gb.direct.joypad |= JOYPAD_START;
+
 				while (usb_readpos != usb_writepos)
 				{
-					if (usb_state_array[usb_readpos] == 0x0B) // release
+					if ((usb_buttons[usb_readpos] & 0x0100) == 0x0100) gb.direct.joypad &= ~JOYPAD_UP;
+					if ((usb_buttons[usb_readpos] & 0x0200) == 0x0200) gb.direct.joypad &= ~JOYPAD_DOWN;
+					if ((usb_buttons[usb_readpos] & 0x0400) == 0x0400) gb.direct.joypad &= ~JOYPAD_LEFT;
+					if ((usb_buttons[usb_readpos] & 0x0800) == 0x0800) gb.direct.joypad &= ~JOYPAD_RIGHT;
+					if ((usb_buttons[usb_readpos] & 0x0010) == 0x0010) gb.direct.joypad &= ~JOYPAD_B;
+					if ((usb_buttons[usb_readpos] & 0x0020) == 0x0020) gb.direct.joypad &= ~JOYPAD_A;
+					if ((usb_buttons[usb_readpos] & 0x0040) == 0x0040) gb.direct.joypad &= ~JOYPAD_START;
+					if ((usb_buttons[usb_readpos] & 0x0080) == 0x0080) gb.direct.joypad &= ~JOYPAD_SELECT;
+
+					usb_readpos++;
+				}
+			}
+		}
+		else
+		{	
+			ps2_found = 0;
+
+			for (unsigned char p=0; p<2; p++)
+			{
+				if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x00) // ready and keyboard
+				{
+					ps2_found = 1;
+				}
+			}
+
+			if (ps2_found == 1) // ps2 keyboards
+			{
+				for (unsigned char p=0; p<2; p++)
+				{
+					if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x00) // ready and keyboard
 					{
-						usb_readpos++;
+						while (ps2_readpos[p] != ps2_writepos[p])
+						{
+							if (ps2_state_array[p][ps2_readpos[p]] == 0x0B) // release
+							{
+								ps2_readpos[p]++;
 
-						if (usb_state_array[usb_readpos] == 0x11) gb.direct.joypad |= JOYPAD_UP;
-						else if (usb_state_array[usb_readpos] == 0x12) gb.direct.joypad |= JOYPAD_DOWN;
-						else if (usb_state_array[usb_readpos] == 0x13) gb.direct.joypad |= JOYPAD_LEFT;
-						else if (usb_state_array[usb_readpos] == 0x14) gb.direct.joypad |= JOYPAD_RIGHT;
-						else if (usb_state_array[usb_readpos] == 0x0D) gb.direct.joypad |= JOYPAD_START;
-						else if (usb_state_array[usb_readpos] == 0x20) gb.direct.joypad |= JOYPAD_SELECT;
-						else if (usb_state_array[usb_readpos] == 0x58 ||
-							usb_state_array[usb_readpos] == 0x78) gb.direct.joypad |= JOYPAD_A;
-						else if (usb_state_array[usb_readpos] == 0x5A ||
-							usb_state_array[usb_readpos] == 0x7A) gb.direct.joypad |= JOYPAD_B;
+								if (ps2_state_array[p][ps2_readpos[p]] == 0x11) gb.direct.joypad |= JOYPAD_UP;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x12) gb.direct.joypad |= JOYPAD_DOWN;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x13) gb.direct.joypad |= JOYPAD_LEFT;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x14) gb.direct.joypad |= JOYPAD_RIGHT;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x0D) gb.direct.joypad |= JOYPAD_START;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x20) gb.direct.joypad |= JOYPAD_SELECT;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x58 ||
+									ps2_state_array[p][ps2_readpos[p]] == 0x78) gb.direct.joypad |= JOYPAD_A;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x5A ||
+									ps2_state_array[p][ps2_readpos[p]] == 0x7A) gb.direct.joypad |= JOYPAD_B;
 
-						usb_readpos++;
-					}
-					else
-					{
-						if (usb_state_array[usb_readpos] == 0x11) gb.direct.joypad &= ~JOYPAD_UP;
-						else if (usb_state_array[usb_readpos] == 0x12) gb.direct.joypad &= ~JOYPAD_DOWN;
-						else if (usb_state_array[usb_readpos] == 0x13) gb.direct.joypad &= ~JOYPAD_LEFT;
-						else if (usb_state_array[usb_readpos] == 0x14) gb.direct.joypad &= ~JOYPAD_RIGHT;
-						else if (usb_state_array[usb_readpos] == 0x0D) gb.direct.joypad &= ~JOYPAD_START;
-						else if (usb_state_array[usb_readpos] == 0x20) gb.direct.joypad &= ~JOYPAD_SELECT;
-						else if (usb_state_array[usb_readpos] == 0x58 ||
-							usb_state_array[usb_readpos] == 0x78) gb.direct.joypad &= ~JOYPAD_A;
-						else if (usb_state_array[usb_readpos] == 0x5A ||
-							usb_state_array[usb_readpos] == 0x7A) gb.direct.joypad &= ~JOYPAD_B;
+								ps2_readpos[p]++;
+							}
+							else
+							{
+								if (ps2_state_array[p][ps2_readpos[p]] == 0x11) gb.direct.joypad &= ~JOYPAD_UP;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x12) gb.direct.joypad &= ~JOYPAD_DOWN;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x13) gb.direct.joypad &= ~JOYPAD_LEFT;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x14) gb.direct.joypad &= ~JOYPAD_RIGHT;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x0D) gb.direct.joypad &= ~JOYPAD_START;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x20) gb.direct.joypad &= ~JOYPAD_SELECT;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x58 ||
+									ps2_state_array[p][ps2_readpos[p]] == 0x78) gb.direct.joypad &= ~JOYPAD_A;
+								else if (ps2_state_array[p][ps2_readpos[p]] == 0x5A ||
+									ps2_state_array[p][ps2_readpos[p]] == 0x7A) gb.direct.joypad &= ~JOYPAD_B;
 
-						usb_readpos++;
+								ps2_readpos[p]++;
+							}
+						}
 					}
 				}
 			}
-			else if (usb_mode == 0x02) // xbox 360 controller
+			else // genesis joysticks
 			{
-				if (usb_readpos != usb_writepos)
+				if (frame_count % 2 == 0)
 				{
 					gb.direct.joypad |= JOYPAD_UP;
 					gb.direct.joypad |= JOYPAD_DOWN;
@@ -1223,131 +1321,100 @@ int PeanutGB()
 					gb.direct.joypad |= JOYPAD_RIGHT;
 					gb.direct.joypad |= JOYPAD_A;
 					gb.direct.joypad |= JOYPAD_SELECT;
+
+					if (PORTJbits.RJ0 == 0) gb.direct.joypad &= ~JOYPAD_UP;
+					if (PORTJbits.RJ1 == 0) gb.direct.joypad &= ~JOYPAD_DOWN;
+					if (PORTJbits.RJ2 == 0) gb.direct.joypad &= ~JOYPAD_LEFT;
+					if (PORTJbits.RJ3 == 0) gb.direct.joypad &= ~JOYPAD_RIGHT;
+					if (PORTJbits.RJ4 == 0) gb.direct.joypad &= ~JOYPAD_A;
+					if (PORTJbits.RJ5 == 0) gb.direct.joypad &= ~JOYPAD_SELECT;
+
+					if (PORTJbits.RJ6 == 0) gb.direct.joypad &= ~JOYPAD_UP;
+					if (PORTJbits.RJ7 == 0) gb.direct.joypad &= ~JOYPAD_DOWN;
+					if (PORTJbits.RJ10 == 0) gb.direct.joypad &= ~JOYPAD_LEFT;
+					if (PORTJbits.RJ12 == 0) gb.direct.joypad &= ~JOYPAD_RIGHT;
+					if (PORTJbits.RJ13 == 0) gb.direct.joypad &= ~JOYPAD_A;
+					if (PORTJbits.RJ14 == 0) gb.direct.joypad &= ~JOYPAD_SELECT;
+
+					PORTJbits.RJ15 = 0;
+					TRISJbits.TRISJ15 = 0; // ground joy-select for next frame
+				}
+				else if (frame_count % 2 == 1)
+				{
 					gb.direct.joypad |= JOYPAD_B;
 					gb.direct.joypad |= JOYPAD_START;
-					
-					while (usb_readpos != usb_writepos)
-					{
-						if ((usb_buttons[usb_readpos] & 0x0100) == 0x0100) gb.direct.joypad &= ~JOYPAD_UP;
-						if ((usb_buttons[usb_readpos] & 0x0200) == 0x0200) gb.direct.joypad &= ~JOYPAD_DOWN;
-						if ((usb_buttons[usb_readpos] & 0x0400) == 0x0400) gb.direct.joypad &= ~JOYPAD_LEFT;
-						if ((usb_buttons[usb_readpos] & 0x0800) == 0x0800) gb.direct.joypad &= ~JOYPAD_RIGHT;
-						if ((usb_buttons[usb_readpos] & 0x0010) == 0x0010) gb.direct.joypad &= ~JOYPAD_B;
-						if ((usb_buttons[usb_readpos] & 0x0020) == 0x0020) gb.direct.joypad &= ~JOYPAD_A;
-						if ((usb_buttons[usb_readpos] & 0x0040) == 0x0040) gb.direct.joypad &= ~JOYPAD_START;
-						if ((usb_buttons[usb_readpos] & 0x0080) == 0x0080) gb.direct.joypad &= ~JOYPAD_SELECT;
 
-						usb_readpos++;
-					}
+					if (PORTJbits.RJ4 == 0) gb.direct.joypad &= ~JOYPAD_B;
+					if (PORTJbits.RJ5 == 0) gb.direct.joypad &= ~JOYPAD_START;
+
+					if (PORTJbits.RJ13 == 0) gb.direct.joypad &= ~JOYPAD_B;
+					if (PORTJbits.RJ14 == 0) gb.direct.joypad &= ~JOYPAD_START;
+
+					TRISJbits.TRISJ15 = 1; // float joy-select (pulled high) for next frame
 				}
 			}
-			else
-			{	
-				ps2_found = 0;
-				
-				for (unsigned char p=0; p<2; p++)
-				{
-					if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x00) // ready and keyboard
-					{
-						ps2_found = 1;
-					}
-				}
-				
-				if (ps2_found == 1) // ps2 keyboards
-				{
-					for (unsigned char p=0; p<2; p++)
-					{
-						if (ps2_ready[p] == 0x01 && ps2_mode[p] == 0x00) // ready and keyboard
-						{
-							while (ps2_readpos[p] != ps2_writepos[p])
-							{
-								if (ps2_state_array[p][ps2_readpos[p]] == 0x0B) // release
-								{
-									ps2_readpos[p]++;
-									
-									if (ps2_state_array[p][ps2_readpos[p]] == 0x11) gb.direct.joypad |= JOYPAD_UP;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x12) gb.direct.joypad |= JOYPAD_DOWN;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x13) gb.direct.joypad |= JOYPAD_LEFT;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x14) gb.direct.joypad |= JOYPAD_RIGHT;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x0D) gb.direct.joypad |= JOYPAD_START;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x20) gb.direct.joypad |= JOYPAD_SELECT;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x58 ||
-										ps2_state_array[p][ps2_readpos[p]] == 0x78) gb.direct.joypad |= JOYPAD_A;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x5A ||
-										ps2_state_array[p][ps2_readpos[p]] == 0x7A) gb.direct.joypad |= JOYPAD_B;
+		}
 
-									ps2_readpos[p]++;
-								}
-								else
-								{
-									if (ps2_state_array[p][ps2_readpos[p]] == 0x11) gb.direct.joypad &= ~JOYPAD_UP;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x12) gb.direct.joypad &= ~JOYPAD_DOWN;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x13) gb.direct.joypad &= ~JOYPAD_LEFT;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x14) gb.direct.joypad &= ~JOYPAD_RIGHT;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x0D) gb.direct.joypad &= ~JOYPAD_START;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x20) gb.direct.joypad &= ~JOYPAD_SELECT;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x58 ||
-										ps2_state_array[p][ps2_readpos[p]] == 0x78) gb.direct.joypad &= ~JOYPAD_A;
-									else if (ps2_state_array[p][ps2_readpos[p]] == 0x5A ||
-										ps2_state_array[p][ps2_readpos[p]] == 0x7A) gb.direct.joypad &= ~JOYPAD_B;
+		// special button on board saves the game cart ram
+		if (PORTJbits.RJ11 == 0)
+		{
+			while (PORTJbits.RJ11 == 0) { }
 
-									ps2_readpos[p]++;
-								}
-							}
-						}
-					}
-				}
-				else // genesis joysticks
-				{
-					if (draw_frame > 0)
-					{
-						gb.direct.joypad |= JOYPAD_UP;
-						gb.direct.joypad |= JOYPAD_DOWN;
-						gb.direct.joypad |= JOYPAD_LEFT;
-						gb.direct.joypad |= JOYPAD_RIGHT;
-						gb.direct.joypad |= JOYPAD_A;
-						gb.direct.joypad |= JOYPAD_SELECT;
+			DelayMS(1000);
 
-						if (PORTJbits.RJ0 == 0) gb.direct.joypad &= ~JOYPAD_UP;
-						if (PORTJbits.RJ1 == 0) gb.direct.joypad &= ~JOYPAD_DOWN;
-						if (PORTJbits.RJ2 == 0) gb.direct.joypad &= ~JOYPAD_LEFT;
-						if (PORTJbits.RJ3 == 0) gb.direct.joypad &= ~JOYPAD_RIGHT;
-						if (PORTJbits.RJ4 == 0) gb.direct.joypad &= ~JOYPAD_A;
-						if (PORTJbits.RJ5 == 0) gb.direct.joypad &= ~JOYPAD_SELECT;
-
-						if (PORTJbits.RJ6 == 0) gb.direct.joypad &= ~JOYPAD_UP;
-						if (PORTJbits.RJ7 == 0) gb.direct.joypad &= ~JOYPAD_DOWN;
-						if (PORTJbits.RJ10 == 0) gb.direct.joypad &= ~JOYPAD_LEFT;
-						if (PORTJbits.RJ12 == 0) gb.direct.joypad &= ~JOYPAD_RIGHT;
-						if (PORTJbits.RJ13 == 0) gb.direct.joypad &= ~JOYPAD_A;
-						if (PORTJbits.RJ14 == 0) gb.direct.joypad &= ~JOYPAD_SELECT;
-
-						PORTJbits.RJ15 = 0;
-						TRISJbits.TRISJ15 = 0; // ground joy-select for next frame
-					}
-					else
-					{
-						gb.direct.joypad |= JOYPAD_B;
-						gb.direct.joypad |= JOYPAD_START;
-
-						if (PORTJbits.RJ4 == 0) gb.direct.joypad &= ~JOYPAD_B;
-						if (PORTJbits.RJ5 == 0) gb.direct.joypad &= ~JOYPAD_START;
-
-						if (PORTJbits.RJ13 == 0) gb.direct.joypad &= ~JOYPAD_B;
-						if (PORTJbits.RJ14 == 0) gb.direct.joypad &= ~JOYPAD_START;
-
-						TRISJbits.TRISJ15 = 1; // float joy-select (pulled high) for next frame
-					}
-				}
-			}
-
-			// special button on board saves the game cart ram
-			if (PORTJbits.RJ11 == 0)
+			for (unsigned int y=0; y<SCREEN_Y; y++)
 			{
-				while (PORTJbits.RJ11 == 0) { }
+				for (unsigned int x=0; x<SCREEN_X; x++)
+				{
+					screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
+				}
+			}
 
-				DelayMS(1000);
-				
+			menu_x = 256;
+			menu_y = 240;
+			menu_pos = 0;
+			menu_max = 6;
+
+			display_string(menu_x, menu_y,		" Resume        \\");
+			if (sound_toggle == 0)		display_string(menu_x, menu_y+8,  " Sound On      \\");
+			else						display_string(menu_x, menu_y+8,  " Sound Off     \\");
+			if (palette_toggle == 0)	display_string(menu_x, menu_y+16, " Palette Color \\");
+			else						display_string(menu_x, menu_y+16, " Palette Mono  \\");
+			if (screen_toggle == 0)		display_string(menu_x, menu_y+24, " Screen Large  \\");
+			else						display_string(menu_x, menu_y+24, " Screen Small  \\");
+			if (screen_toggle == 0)		display_string(menu_x, menu_y+24, " Screen Large  \\");
+			else						display_string(menu_x, menu_y+24, " Screen Small  \\");
+			if (frame_toggle == 0)		display_string(menu_x, menu_y+32, " Frame Half    \\");
+			else if (frame_toggle == 1)	display_string(menu_x, menu_y+32, " Frame Quarter \\");
+			else						display_string(menu_x, menu_y+32, " Frame Single  \\");
+			display_string(menu_x, menu_y+40,	" Load and Reset\\");
+			display_string(menu_x, menu_y+48,	" Overwrite Save\\");
+
+			choice = (unsigned char)Menu();
+
+			if (choice == 0) { } // resume
+			else if (choice == 1) // toggle sound
+			{
+				sound_toggle = 1 - sound_toggle;
+			}
+			else if (choice == 2) // toggle palette
+			{
+				palette_toggle = 1 - palette_toggle;
+
+				if (palette_toggle == 1) auto_assign_palette(gb_colour_hash(&gb));
+				else auto_assign_palette(0x00);
+			}
+			else if (choice == 3) // toggle screen
+			{
+				screen_toggle = 1 - screen_toggle;
+			}
+			else if (choice == 4) // toggle frames
+			{
+				frame_toggle++;
+				if (frame_toggle >= 3) frame_toggle = 0;
+			}
+			else if (choice == 5) // load and reset
+			{
 				for (unsigned int y=0; y<SCREEN_Y; y++)
 				{
 					for (unsigned int x=0; x<SCREEN_X; x++)
@@ -1355,129 +1422,44 @@ int PeanutGB()
 						screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
 					}
 				}
-				
+
 				menu_x = 256;
 				menu_y = 240;
 				menu_pos = 0;
 				menu_max = 6;
-				
-				display_string(menu_x, menu_y,		" Resume        \\");
-				if (sound_toggle == 0)		display_string(menu_x, menu_y+8,  " Sound On      \\");
-				else						display_string(menu_x, menu_y+8,  " Sound Off     \\");
-				if (palette_toggle == 0)	display_string(menu_x, menu_y+16, " Palette Color \\");
-				else						display_string(menu_x, menu_y+16, " Palette Mono  \\");
-				if (screen_toggle == 0)		display_string(menu_x, menu_y+24, " Screen Large  \\");
-				else						display_string(menu_x, menu_y+24, " Screen Small  \\");
-				display_string(menu_x, menu_y+32,	" Load and Reset\\");
-				display_string(menu_x, menu_y+40,	" Overwrite Save\\");
-	
-				choice = (unsigned char)Menu();
-				
-				if (choice == 0) { } // resume
-				else if (choice == 1) // toggle sound
+
+				display_string(menu_x, menu_y,		" *** Load and Reset?\\");
+				display_string(menu_x, menu_y+8,	" No                 \\");
+				display_string(menu_x, menu_y+16,	" File A             \\");
+				display_string(menu_x, menu_y+24,	" File B             \\");
+				display_string(menu_x, menu_y+32,	" File C             \\");
+				display_string(menu_x, menu_y+40,	" File D             \\");
+
+				choice = 0;
+
+				while (choice == 0)
 				{
-					sound_toggle = 1 - sound_toggle;
+					choice = (unsigned char)Menu();
 				}
-				else if (choice == 2) // toggle palette
+
+				if (choice == 1) { } // do nothing
+				else if (choice >= 2)
 				{
-					palette_toggle = 1 - palette_toggle;
-					
-					if (palette_toggle == 1) auto_assign_palette(gb_colour_hash(&gb));
-					else auto_assign_palette(0x00);
+					cart_bank = choice - 2;
+
+					save_file_name[6] = (char)('A' + cart_bank);
+
+					/* Load Save File. */
+					read_cart_ram_file(save_file_name, (uint8_t *)&cart_ram, gb_get_save_size(&gb));
+
+					DelayMS(1000);
+
+					// reset afterwards
+					gb_reset(&gb);
 				}
-				else if (choice == 3) // toggle screen
-				{
-					screen_toggle = 1 - screen_toggle;
-				}
-				else if (choice == 4) // load and reset
-				{
-					for (unsigned int y=0; y<SCREEN_Y; y++)
-					{
-						for (unsigned int x=0; x<SCREEN_X; x++)
-						{
-							screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
-						}
-					}
-					
-					menu_x = 256;
-					menu_y = 240;
-					menu_pos = 0;
-					menu_max = 6;
-
-					display_string(menu_x, menu_y,		" *** Load and Reset?\\");
-					display_string(menu_x, menu_y+8,	" No                 \\");
-					display_string(menu_x, menu_y+16,	" File A             \\");
-					display_string(menu_x, menu_y+24,	" File B             \\");
-					display_string(menu_x, menu_y+32,	" File C             \\");
-					display_string(menu_x, menu_y+40,	" File D             \\");
-
-					choice = 0;
-					
-					while (choice == 0)
-					{
-						choice = (unsigned char)Menu();
-					}
-					
-					if (choice == 1) { } // do nothing
-					else if (choice >= 2)
-					{
-						cart_bank = choice - 2;
-						
-						save_file_name[6] = (char)('A' + cart_bank);
-						
-						/* Load Save File. */
-						read_cart_ram_file(save_file_name, (uint8_t *)&cart_ram, gb_get_save_size(&gb));
-
-						DelayMS(1000);
-
-						// reset afterwards
-						gb_reset(&gb);
-					}
-				}
-				else if (choice == 5) // save
-				{
-					for (unsigned int y=0; y<SCREEN_Y; y++)
-					{
-						for (unsigned int x=0; x<SCREEN_X; x++)
-						{
-							screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
-						}
-					}
-					
-					menu_x = 256;
-					menu_y = 240;
-					menu_pos = 0;
-					menu_max = 6;
-
-					display_string(menu_x, menu_y,		" *** Overwrite Save?\\");
-					display_string(menu_x, menu_y+8,	" No                 \\");
-					display_string(menu_x, menu_y+16,	" File A             \\");
-					display_string(menu_x, menu_y+24,	" File B             \\");
-					display_string(menu_x, menu_y+32,	" File C             \\");
-					display_string(menu_x, menu_y+40,	" File D             \\");
-
-					choice = 0;
-					
-					while (choice == 0)
-					{
-						choice = (unsigned char)Menu();
-					}
-					
-					if (choice == 1) { } // do nothing
-					else if (choice >= 2)
-					{
-						cart_bank = choice - 2;
-						
-						save_file_name[6] = (char)('A' + cart_bank);
-						
-						/* Record save file. */
-						write_cart_ram_file(save_file_name, (uint8_t *)&cart_ram, gb_get_save_size(&gb));
-
-						DelayMS(1000);
-					}
-				}
-				
-				// set background
+			}
+			else if (choice == 6) // save
+			{
 				for (unsigned int y=0; y<SCREEN_Y; y++)
 				{
 					for (unsigned int x=0; x<SCREEN_X; x++)
@@ -1485,25 +1467,75 @@ int PeanutGB()
 						screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
 					}
 				}
-			}
-			
-			draw_frame = 1 - draw_frame; // alternate drawing frames
 
-			/* Execute CPU cycles until the screen has to be redrawn. */
-			gb_run_frame(&gb);
+				menu_x = 256;
+				menu_y = 240;
+				menu_pos = 0;
+				menu_max = 6;
+
+				display_string(menu_x, menu_y,		" *** Overwrite Save?\\");
+				display_string(menu_x, menu_y+8,	" No                 \\");
+				display_string(menu_x, menu_y+16,	" File A             \\");
+				display_string(menu_x, menu_y+24,	" File B             \\");
+				display_string(menu_x, menu_y+32,	" File C             \\");
+				display_string(menu_x, menu_y+40,	" File D             \\");
+
+				choice = 0;
+
+				while (choice == 0)
+				{
+					choice = (unsigned char)Menu();
+				}
+
+				if (choice == 1) { } // do nothing
+				else if (choice >= 2)
+				{
+					cart_bank = choice - 2;
+
+					save_file_name[6] = (char)('A' + cart_bank);
+
+					/* Record save file. */
+					write_cart_ram_file(save_file_name, (uint8_t *)&cart_ram, gb_get_save_size(&gb));
+
+					DelayMS(1000);
+				}
+			}
+
+			// set background
+			for (unsigned int y=0; y<SCREEN_Y; y++)
+			{
+				for (unsigned int x=0; x<SCREEN_X; x++)
+				{
+					screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
+				}
+			}
+		}
+
+		frame_count++;
+		
+		if (frame_toggle == 0 || frame_toggle == 1)
+		{
+			if (frame_count >= 2) frame_count = 0; // draws particular rows on the screen
+		}
+		else if (frame_toggle == 2)
+		{
+			if (frame_count >= 4) frame_count = 0; // draws particular rows on the screen
+		}
+
+		/* Execute CPU cycles until the screen has to be redrawn. */
+		gb_run_frame(&gb);
 
 #if ENABLE_SOUND
-			if (sound_toggle > 0)
-			{
-				// playing audio
-				audio_callback(&gb, (uint8_t *)&audio_buffer, AUDIO_NSAMPLES);
-				audio_position = 0;
-			}
-#else
-			if (sound_toggle > 0) audio_position = 0;
-#endif
+		if (sound_toggle > 0)
+		{
+			// playing audio
+			audio_callback(&gb, (uint8_t *)&audio_buffer, AUDIO_NSAMPLES);
+			audio_position = 0;
 		}
-		
+#else
+		if (sound_toggle > 0) audio_position = 0;
+#endif
+			
 		// speed limiter for when occasionally the Gameboy is too fast
 		while (frame_trigger == 0) { } // wait for frame trigger interrupt
 	}

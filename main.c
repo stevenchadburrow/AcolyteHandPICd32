@@ -3,7 +3,7 @@
 
 
 // comment out if you want to program the PIC32 faster
-#define SPLASH
+//#define SPLASH
 
 
 /*

@@ -10,7 +10,7 @@
 #include <string.h>
 
 #define DMG_CLOCK_FREQ_U	((unsigned)DMG_CLOCK_FREQ)
-#define AUDIO_NSAMPLES		(AUDIO_SAMPLES * 2u)
+#define AUDIO_NSAMPLES		((AUDIO_SAMPLES * 2u))
 
 #define AUDIO_MEM_SIZE		(0xFF3F - 0xFF10 + 1)
 #define AUDIO_ADDR_COMPENSATION	0xFF10

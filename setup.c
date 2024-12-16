@@ -228,7 +228,7 @@ void Setup()
 	// new frame timer
 	T9CON = 0x0070; // reset Timer9, prescale of 1:256
 	TMR9 = 0x0000; // zero out counter
-	PR9 = 0x662F; // determines length of two frames of 59.73 Hz on Gameboy
+	PR9 = 0x3317; // determines length of one frame of 59.73 Hz on Gameboy
 	IPC10bits.T9IP = 0x1; // frame interrupt priority 1
 	IPC10bits.T9IS = 0x0; // sub-priority 0
 	IFS1bits.T9IF = 0; // clear flags

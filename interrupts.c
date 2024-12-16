@@ -15,16 +15,16 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 		usbhost_device_millis++;
 	}
 	
-	PORTH = (unsigned char)(((audio_buffer[audio_position+1] >> 4) + 0x08) & 0x0F); // 4-bit unsigned audio from 16-bit signed audio, this seems to help
-	audio_position += 4; // mono channel so skip every other other one
+	// 4-bit unsigned audio from 16-bit signed audio, this seems to help
+	PORTH = (unsigned char)(((((audio_buffer[audio_position+3])) + 0x80) >> 4) & 0x0F);
+	audio_position += 4;
+	if (audio_position >= 8192) audio_position = 0;
 	
 	screen_scanline = screen_scanline + 1; // increment scanline
 	
 	if (screen_scanline == 666)
 	{
 		screen_scanline = 0;
-		
-		audio_position = 0;
 	}
 	
 	if (screen_scanline < 59)
@@ -346,7 +346,10 @@ void __attribute__((vector(_TIMER_9_VECTOR), interrupt(ipl1srs))) t9_handler()
 {
 	IFS1bits.T9IF = 0;  // clear interrupt flag
 	
+	TMR9 = 0x0000; // clear timer
 	T9CONbits.ON = 0; // turn off timer
-	
+
 	frame_trigger = 1;
+
+	PORTEbits.RE8 = 1;
 }
