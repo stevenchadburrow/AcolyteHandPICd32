@@ -9,7 +9,7 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 	
 	usbhost_device_delay = usbhost_device_delay + 1;
 	
-	if (usbhost_device_delay >= 56)
+	if (usbhost_device_delay >= 48) // makes it about each 1 ms
 	{
 		usbhost_device_delay = 0;
 		usbhost_device_millis++;
@@ -17,19 +17,30 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 	
 	screen_scanline = screen_scanline + 1; // increment scanline
 	
-	if (screen_scanline == 806) screen_scanline = 0;
-	
-	if (screen_scanline < 768)
-	{		
-		DCH0INTbits.CHBCIF = 0; // clear transfer complete flag
-		DCH0SSA = VirtToPhys(screen_buffer + (screen_scanline>>1)*SCREEN_X); // transfer source physical address
-		DCH0CONbits.CHEN = 1; // enable channel
-	}
-	else if (screen_scanline == 805)
+	if (screen_scanline == 666)
 	{
-		DCH0INTbits.CHBCIF = 0; // clear transfer complete flag
-		DCH0SSA = VirtToPhys(screen_blank); // transfer source physical address
-		DCH0CONbits.CHEN = 1; // enable channel
+		screen_scanline = 0;
+	}
+	
+	if (screen_scanline < 59)
+	{
+		// do nothing
+	}
+	else if (screen_scanline == 59)
+	{
+		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+		DCH1SSA = VirtToPhys(screen_blank); // transfer source physical address
+		DCH1CONbits.CHEN = 1; // enable channel
+	}
+	else if (screen_scanline < 540)
+	{		
+		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+		DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*(screen_scanline-60)); //(screen_scanline>>1)); // transfer source physical address
+		DCH1CONbits.CHEN = 1; // enable channel
+	}
+	else if (screen_scanline == 665)
+	{
+		// do nothing
 	}
 	
 	return;

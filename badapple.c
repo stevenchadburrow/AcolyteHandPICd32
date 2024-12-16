@@ -77,10 +77,8 @@ void BadApple()
 		{
 			frames += 1; // 60 FPS
 			
-			//x = 88;
-			//y = 104;
-			x = 16;
-			y = 0;
+			x = 80;
+			y = 48;
 
 			for (unsigned int i=0; i<12; i++)
 			{
@@ -127,15 +125,14 @@ void BadApple()
 						}
 
 						// fine tune delay here
-						count = (unsigned long)(26); // 63 for smaller screen
+						count = (unsigned long)(72);
 						_CP0_SET_COUNT(0);
 						while (count > _CP0_GET_COUNT());
 					}
 
 					y += 2;
 				
-					//x = 88;
-					x = 16;
+					x = 80;
 				}
 
 				sdcard_receivebyte();

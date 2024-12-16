@@ -31,6 +31,10 @@ uint8_t selected_palette[3][4];
 
 uint8_t cart_bank = 0; // up to 4 banks (for now)
 
+unsigned char sound_toggle = 0; // sound off by default
+unsigned char palette_toggle = 1; // palette on by default
+unsigned char screen_toggle = 1; // screen large by default
+
 
 unsigned int NVMUnlock(unsigned int nvmop)
 {
@@ -220,7 +224,7 @@ void read_cart_ram_file(char save_file_name[16], uint8_t *dest,
 	result = f_open(&file, save_file_name, FA_READ);
 	if (result == 0)
 	{	
-		display_string(8, 8, "Reading Cart RAM from File\\");
+		display_string(8, 464, "Reading Cart RAM from File\\");
 		
 		for (unsigned int i=0; i<0x8000; i++)
 		{
@@ -240,7 +244,7 @@ void read_cart_ram_file(char save_file_name[16], uint8_t *dest,
 	}
 	
 	/*
-	display_string(8, 8, "Reading Cart RAM...\\");
+	display_string(8, 464, "Reading Cart RAM...\\");
 	
 	int test = 0;
 
@@ -316,7 +320,7 @@ void write_cart_ram_file(char save_file_name[16], uint8_t *dest,
 	result = f_open(&file, save_file_name, FA_CREATE_ALWAYS | FA_WRITE);
 	if (result == 0)
 	{	
-		display_string(8, 8, "Writing Cart RAM to File\\");
+		display_string(8, 464, "Writing Cart RAM to File\\");
 		
 		for (unsigned int i=0; i<0x8000; i++)
 		{
@@ -338,7 +342,7 @@ void write_cart_ram_file(char save_file_name[16], uint8_t *dest,
 	}
 	
 	/*
-	display_string(8, 8, "Writing Cart RAM...\\");
+	display_string(8, 464, "Writing Cart RAM...\\");
 	
 	int test = 0;
 
@@ -451,114 +455,123 @@ void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t addr
  */
 void auto_assign_palette(uint8_t game_checksum)
 {
+	if (game_checksum == 0x00)
+	{
+		for (int i=0; i<3; i++)
+		{
+			selected_palette[i][0] = 0xFF;
+			selected_palette[i][1] = 0x92;
+			selected_palette[i][2] = 0x49;
+			selected_palette[i][3] = 0x00;
+		}
+	}
+	else
+	{
+		for (int i=0; i<3; i++)
+		{
+			for (int j=0; j<4; j++)
+			{
+				selected_palette[i][j] = gb_conversion[gb_lookup[game_checksum]][i*4+j];
+			}
+		}
+	}
+	
+	/*
 	size_t palette_bytes = 3 * 4 * sizeof(uint8_t);
 
 	switch(game_checksum)
 	{
-	/* Balloon Kid and Tetris Blast */
+	// Balloon Kid and Tetris Blast
 	case 0x71:
 	case 0xFF:
 	{
 		const uint8_t palette[3][4] =
 		{
-			//{ 0x7FFF, 0x7E60, 0x7C00, 0x0000 }, /* OBJ0 */
-			//{ 0x7FFF, 0x7E60, 0x7C00, 0x0000 }, /* OBJ1 */
-			//{ 0x7FFF, 0x7E60, 0x7C00, 0x0000 }  /* BG */
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 }, 
+			//{ 0x7FFF, 0x7E60, 0x7C00, 0x0000 }, // OBJ0
+			//{ 0x7FFF, 0x7E60, 0x7C00, 0x0000 }, // OBJ1
+			//{ 0x7FFF, 0x7E60, 0x7C00, 0x0000 }  // BG
+			{ 0xFF, 0xF0, 0xE0, 0x00 },
+			{ 0xFF, 0xF0, 0xE0, 0x00 },
+			{ 0xFF, 0xF0, 0xE0, 0x00 }, 
 		};
 		memcpy(selected_palette, palette, palette_bytes);
 		break;
 	}
 
-	/* Pokemon Yellow and Tetris */
+	// Pokemon Yellow and Tetris 
 	case 0x15:
 	case 0xDB:
-	case 0x95: /* Not officially */
+	case 0x95: // Not officially
 	{
 		const uint8_t palette[3][4] =
 		{
-			//{ 0x7FFF, 0x7FE0, 0x7C00, 0x0000 }, /* OBJ0 */
-			//{ 0x7FFF, 0x7FE0, 0x7C00, 0x0000 }, /* OBJ1 */
-			//{ 0x7FFF, 0x7FE0, 0x7C00, 0x0000 }  /* BG */
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 }, 
+			//{ 0x7FFF, 0x7FE0, 0x7C00, 0x0000 }, // OBJ0
+			//{ 0x7FFF, 0x7FE0, 0x7C00, 0x0000 }, // OBJ1
+			//{ 0x7FFF, 0x7FE0, 0x7C00, 0x0000 }  // BG
+			{ 0xFF, 0xFC, 0xE0, 0x00 },
+			{ 0xFF, 0xFC, 0xE0, 0x00 },
+			{ 0xFF, 0xFC, 0xE0, 0x00 }, 
 		};
 		memcpy(selected_palette, palette, palette_bytes);
 		break;
 	}
 
-	/* Donkey Kong */
+	// Donkey Kong 
 	case 0x19:
 	{
 		const uint8_t palette[3][4] =
 		{
-			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }, /* OBJ0 */
-			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }, /* OBJ1 */
-			//{ 0x7FFF, 0x7E60, 0x7C00, 0x0000 }  /* BG */
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 }, 
+			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }, // OBJ0
+			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }, // OBJ1
+			//{ 0x7FFF, 0x7E60, 0x7C00, 0x0000 }  // BG
+			{ 0xFF, 0xE6, 0x8C, 0x00 },
+			{ 0xFF, 0xE6, 0x8C, 0x00 },
+			{ 0xFF, 0xE4, 0xE0, 0x00 }, 
 		};
 		memcpy(selected_palette, palette, palette_bytes);
 		break;
 	}
 
-	/* Pokemon Blue */
+	// Pokemon Blue 
 	case 0x61:
 	case 0x45:
 
-	/* Pokemon Blue Star */
+	// Pokemon Blue Star 
 	case 0xD8:
 	{
 		const uint8_t palette[3][4] =
 		{
-			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }, /* OBJ0 */
-			//{ 0x7FFF, 0x329F, 0x001F, 0x0000 }, /* OBJ1 */
-			//{ 0x7FFF, 0x329F, 0x001F, 0x0000 }  /* BG */
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 }, 
+			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }, // OBJ0
+			//{ 0x7FFF, 0x329F, 0x001F, 0x0000 }, // OBJ1
+			//{ 0x7FFF, 0x329F, 0x001F, 0x0000 }  // BG
+			{ 0xFF, 0xE6, 0x8C, 0x00 },
+			{ 0xFF, 0xCF, 0x0F, 0x00 },
+			{ 0xFF, 0xCF, 0x0F, 0x00 }, 
 		};
 		memcpy(selected_palette, palette, palette_bytes);
 		break;
 	}
 
-	/* Pokemon Red */
+	// Pokemon Red 
 	case 0x14:
-	{
-		const uint8_t palette[3][4] =
-		{
-			//{ 0x7FFF, 0x3FE6, 0x0200, 0x0000 }, /* OBJ0 */
-			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }, /* OBJ1 */
-			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }  /* BG */
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 }, 
-		};
-		memcpy(selected_palette, palette, palette_bytes);
-		break;
-	}
-
-	/* Pokemon Red Star */
+		
+	// Pokemon Red Star 
 	case 0x8B:
 	{
 		const uint8_t palette[3][4] =
 		{
-			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }, /* OBJ0 */
-			//{ 0x7FFF, 0x329F, 0x001F, 0x0000 }, /* OBJ1 */
-			//{ 0x7FFF, 0x3FE6, 0x0200, 0x0000 }  /* BG */
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 }, 
+			//{ 0x7FFF, 0x3FE6, 0x0200, 0x0000 }, // OBJ0
+			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }, // OBJ1
+			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }  // BG
+			{ 0xFF, 0xFC, 0x80, 0x00 },
+			{ 0xFF, 0xE6, 0x8C, 0x00 },
+			{ 0xFF, 0xE6, 0x8C, 0x00 }, 
 		};
 		memcpy(selected_palette, palette, palette_bytes);
 		break;
 	}
 
-	/* Kirby */
+	// Kirby 
 	case 0x27:
 	case 0x49:
 	case 0x5C:
@@ -566,18 +579,18 @@ void auto_assign_palette(uint8_t game_checksum)
 	{
 		const uint8_t palette[3][4] =
 		{
-			//{ 0x7D8A, 0x6800, 0x3000, 0x0000 }, /* OBJ0 */
-			//{ 0x001F, 0x7FFF, 0x7FEF, 0x021F }, /* OBJ1 */
-			//{ 0x527F, 0x7FE0, 0x0180, 0x0000 }  /* BG */
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 }, 
+			//{ 0x7D8A, 0x6800, 0x3000, 0x0000 }, // OBJ0
+			//{ 0x001F, 0x7FFF, 0x7FEF, 0x021F }, // OBJ1
+			//{ 0x527F, 0x7FE0, 0x0180, 0x0000 }  // BG
+			{ 0xFF, 0xC0, 0x60, 0x00 },
+			{ 0xFF, 0xFF, 0xFD, 0x03 },
+			{ 0xA7, 0xFC, 0x18, 0x00 }, 
 		};
 		memcpy(selected_palette, palette, palette_bytes);
 		break;
 	}
 
-	/* Donkey Kong Land [1/2/III] */
+	// Donkey Kong Land [1/2/III] 
 	case 0x18:
 	case 0x6A:
 	case 0x4B:
@@ -585,34 +598,40 @@ void auto_assign_palette(uint8_t game_checksum)
 	{
 		const uint8_t palette[3][4] =
 		{
-			//{ 0x7F08, 0x7F40, 0x48E0, 0x2400 }, /* OBJ0 */
-			//{ 0x7FFF, 0x2EFF, 0x7C00, 0x001F }, /* OBJ1 */
-			//{ 0x7FFF, 0x463B, 0x2951, 0x0000 }  /* BG */
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 }, 
+			//{ 0x7F08, 0x7F40, 0x48E0, 0x2400 			}
+				}, // OBJ0
+			//{ 0x7FFF, 0x2EFF, 0x7C00, 0x001F }, // OBJ1
+			//{ 0x7FFF, 0x463B, 0x2951, 0x0000 }  // BG
+			{ 0xF1, 0xF4, 0x8C, 0x40 },
+			{ 0xFF, 0x4F, 0xE0, 0x03 },
+			{ 0xFF, 0x83, 0x56, 0x00 }, 
 		};
 		memcpy(selected_palette, palette, palette_bytes);
 		break;
 	}
 
-	/* Link's Awakening */
+	// Link's Awakening 
 	case 0x70:
 	{
 		const uint8_t palette[3][4] =
 		{
-			//{ 0x7FFF, 0x03E0, 0x1A00, 0x0120 }, /* OBJ0 */
-			//{ 0x7FFF, 0x329F, 0x001F, 0x001F }, /* OBJ1 */
-			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }  /* BG */
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 }, 
+			//{ 0x7FFF, 0x03E0, 0x1A00, 0x0120 }, // OBJ0
+			//{ 0x7FFF, 0x329F, 0x001F, 0x001F }, // OBJ1
+			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }  // BG
+			
+			{ 0xFF, 0x1C, 0x30, 0x08 },
+			{ 0xFF, 0x77, 0x03, 0x00 }, 
+			{ 0xFF, 0xF2, 0x84, 0x00 },
+			
+			//{ 0xFF, 0x1C, 0x70, 0x0C },
+			//{ 0xFF, 0x73, 0x03, 0x02 },
+			//{ 0xFF, 0xF2, 0x8E, 0x00 }, 
 		};
 		memcpy(selected_palette, palette, palette_bytes);
 		break;
 	}
 
-	/* Mega Man [1/2/3] & others I don't care about. */
+	// Mega Man [1/2/3] & others I don't care about. 
 	case 0x01:
 	case 0x10:
 	case 0x29:
@@ -624,12 +643,12 @@ void auto_assign_palette(uint8_t game_checksum)
 	{
 		const uint8_t palette[3][4] =
 		{
-			//{ 0x7FFF, 0x329F, 0x001F, 0x0000 }, /* OBJ0 */
-			//{ 0x7FFF, 0x3FE6, 0x0200, 0x0000 }, /* OBJ1 */
-			//{ 0x7FFF, 0x7EAC, 0x40C0, 0x0000 }  /* BG */
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 }, 
+			//{ 0x7FFF, 0x329F, 0x001F, 0x0000 }, // OBJ0
+			//{ 0x7FFF, 0x3FE6, 0x0200, 0x0000 }, // OBJ1
+			//{ 0x7FFF, 0x7EAC, 0x40C0, 0x0000 }  // BG
+			{ 0xFF, 0x6B, 0x03, 0x00 },
+			{ 0xFF, 0x7C, 0x00, 0x00 },
+			{ 0xFF, 0xE9, 0x8C, 0x00 }, 
 		};
 		memcpy(selected_palette, palette, palette_bytes);
 		break;
@@ -637,6 +656,7 @@ void auto_assign_palette(uint8_t game_checksum)
 
 	default:
 	{
+		// greyscale
 		const uint8_t palette[3][4] =
 		{
 			//{ 0x7FFF, 0x5294, 0x294A, 0x0000 },
@@ -649,6 +669,7 @@ void auto_assign_palette(uint8_t game_checksum)
 		memcpy(selected_palette, palette, palette_bytes);
 	}
 	}
+	*/
 }
 
 
@@ -661,16 +682,35 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160],
 {
 	if (draw_frame > 0)
 	{
-		for(unsigned int x = 0; x < LCD_WIDTH*2; x++)
+		if (screen_toggle == 0x00)
 		{
-			screen_buffer[((line<<1)+32) * SCREEN_X + x + 96] = 
-					selected_palette
-					[(pixels[(x>>1)] & LCD_PALETTE_ALL) >> 4]
-					[pixels[(x>>1)] & 3];
-			screen_buffer[((line<<1)+33) * SCREEN_X + x + 96] = 
-					selected_palette
-					[(pixels[(x>>1)] & LCD_PALETTE_ALL) >> 4]
-					[pixels[(x>>1)] & 3];
+			for(unsigned int x = 0; x < LCD_WIDTH*2; x++)
+			{
+				screen_buffer[((line<<1)+80) * SCREEN_X + x + 160] = 
+						selected_palette[(pixels[(x>>1)] & LCD_PALETTE_ALL) >> 4]
+							[pixels[(x>>1)] & 3];
+				screen_buffer[((line<<1)+81) * SCREEN_X + x + 160] = 
+						selected_palette[(pixels[(x>>1)] & LCD_PALETTE_ALL) >> 4]
+							[pixels[(x>>1)] & 3];
+			}
+		}
+		else
+		{
+			for(unsigned int x = 0; x < LCD_WIDTH; x++)
+			{
+				for (unsigned int p = 0; p < 3; p++)
+				{
+					screen_buffer[((line*3) + 16) * SCREEN_X + x * 3 + 80 + p] = 
+							selected_palette[(pixels[(x)] & LCD_PALETTE_ALL) >> 4]
+								[pixels[(x)] & 3];
+					screen_buffer[((line*3) + 17) * SCREEN_X + x * 3 + 80 + p] = 
+							selected_palette[(pixels[(x)] & LCD_PALETTE_ALL) >> 4]
+								[pixels[(x)] & 3];
+					screen_buffer[((line*3) + 18) * SCREEN_X + x * 3 + 80 + p] = 
+							selected_palette[(pixels[(x)] & LCD_PALETTE_ALL) >> 4]
+								[pixels[(x)] & 3];
+				}
+			}
 		}
 	}
 }
@@ -694,7 +734,7 @@ int BurnROM()
 	// Open the directory
 	f_opendir(&dir, ".");
 	
-	menu_x = 344;
+	menu_x = 484;
 	menu_y = 16;
 	menu_pos = 0;
 	menu_max = 33;
@@ -1046,7 +1086,6 @@ int PeanutGB()
 	unsigned int result;
 	
 	unsigned char choice = 0;
-	unsigned char sound_toggle = 1;
 	unsigned char ps2_found = 0;
 
 	result = f_open(&file, "/DMG-BOOT.BIN", FA_READ);
@@ -1108,7 +1147,8 @@ int PeanutGB()
 	gb_init_lcd(&gb, &lcd_draw_line);
 #endif
 
-	auto_assign_palette(gb_colour_hash(&gb));
+	if (palette_toggle == 1) auto_assign_palette(gb_colour_hash(&gb));
+	else auto_assign_palette(0x00);
 	
 	while (PORTJbits.RJ11 == 0) { }
 	
@@ -1308,31 +1348,50 @@ int PeanutGB()
 
 				DelayMS(1000);
 				
-				menu_x = 96;
-				menu_y = 328;
+				for (unsigned int y=0; y<SCREEN_Y; y++)
+				{
+					for (unsigned int x=0; x<SCREEN_X; x++)
+					{
+						screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
+					}
+				}
+				
+				menu_x = 256;
+				menu_y = 240;
 				menu_pos = 0;
-				menu_max = 5;
+				menu_max = 6;
 				
 				display_string(menu_x, menu_y,		" Resume        \\");
-				display_string(menu_x, menu_y+8,	" Sound On      \\");
-				display_string(menu_x, menu_y+16,	" Sound Off     \\");
-				display_string(menu_x, menu_y+24,	" Load and Reset\\");
-				display_string(menu_x, menu_y+32,	" Overwrite Save\\");
+				if (sound_toggle == 0)		display_string(menu_x, menu_y+8,  " Sound On      \\");
+				else						display_string(menu_x, menu_y+8,  " Sound Off     \\");
+				if (palette_toggle == 0)	display_string(menu_x, menu_y+16, " Palette Color \\");
+				else						display_string(menu_x, menu_y+16, " Palette Mono  \\");
+				if (screen_toggle == 0)		display_string(menu_x, menu_y+24, " Screen Large  \\");
+				else						display_string(menu_x, menu_y+24, " Screen Small  \\");
+				display_string(menu_x, menu_y+32,	" Load and Reset\\");
+				display_string(menu_x, menu_y+40,	" Overwrite Save\\");
 	
 				choice = (unsigned char)Menu();
 				
 				if (choice == 0) { } // resume
-				else if (choice == 1) // sound on
+				else if (choice == 1) // toggle sound
 				{
-					sound_toggle = 1;
+					sound_toggle = 1 - sound_toggle;
 				}
-				else if (choice == 2) // sound off
+				else if (choice == 2) // toggle palette
 				{
-					sound_toggle = 0;
+					palette_toggle = 1 - palette_toggle;
+					
+					if (palette_toggle == 1) auto_assign_palette(gb_colour_hash(&gb));
+					else auto_assign_palette(0x00);
 				}
-				else if (choice == 3) // load and reset
+				else if (choice == 3) // toggle screen
 				{
-					for (unsigned int y=320; y<SCREEN_Y; y++)
+					screen_toggle = 1 - screen_toggle;
+				}
+				else if (choice == 4) // load and reset
+				{
+					for (unsigned int y=0; y<SCREEN_Y; y++)
 					{
 						for (unsigned int x=0; x<SCREEN_X; x++)
 						{
@@ -1340,8 +1399,8 @@ int PeanutGB()
 						}
 					}
 					
-					menu_x = 96;
-					menu_y = 328;
+					menu_x = 256;
+					menu_y = 240;
 					menu_pos = 0;
 					menu_max = 6;
 
@@ -1375,9 +1434,9 @@ int PeanutGB()
 						gb_reset(&gb);
 					}
 				}
-				else if (choice == 4) // save
+				else if (choice == 5) // save
 				{
-					for (unsigned int y=320; y<SCREEN_Y; y++)
+					for (unsigned int y=0; y<SCREEN_Y; y++)
 					{
 						for (unsigned int x=0; x<SCREEN_X; x++)
 						{
@@ -1385,8 +1444,8 @@ int PeanutGB()
 						}
 					}
 					
-					menu_x = 96;
-					menu_y = 328;
+					menu_x = 256;
+					menu_y = 240;
 					menu_pos = 0;
 					menu_max = 6;
 

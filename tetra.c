@@ -196,11 +196,11 @@ const char tetra_map[448] =
 // solid is one single value
 void tetra_solid(unsigned int x, unsigned int y, unsigned char value)
 {	
-	for (unsigned int i=0; i<8; i++)
+	for (unsigned int i=0; i<16; i++)
 	{
-		for (unsigned int j=0; j<8; j++)
+		for (unsigned int j=0; j<16; j++)
 		{
-			screen_buffer[(y*8+i)*SCREEN_X+x*8+j] = value;
+			screen_buffer[(y*16+i)*SCREEN_X+x*16+j] = value;
 		}
 	}		
 };
@@ -208,13 +208,13 @@ void tetra_solid(unsigned int x, unsigned int y, unsigned char value)
 // block is fancy looking
 void tetra_block(unsigned int x, unsigned int y, unsigned char value)
 {
-	for (unsigned int i=0; i<8; i++)
+	for (unsigned int i=0; i<16; i++)
 	{
-		for (unsigned int j=0; j<8; j++)
+		for (unsigned int j=0; j<16; j++)
 		{
-			if (i == 0) screen_buffer[(y*8+i)*SCREEN_X+x*8+j] = 0xFF;
-			else if (j == 0) screen_buffer[(y*8+i)*SCREEN_X+x*8+j] = 0xFF;
-			else screen_buffer[(y*8+i)*SCREEN_X+x*8+j] = value;
+			if (i == 0) screen_buffer[(y*16+i)*SCREEN_X+x*16+j] = 0xFF;
+			else if (j == 0) screen_buffer[(y*16+i)*SCREEN_X+x*16+j] = 0xFF;
+			else screen_buffer[(y*16+i)*SCREEN_X+x*16+j] = value;
 		}
 	}	
 };
@@ -265,10 +265,13 @@ void Tetra()
 {	
 	TRISJbits.TRISJ15 = 1; // float joy-select (pulled high)
 	
+	display_foreground_color = 0xFF; // change color of text!
+	display_background_color = 0x00; 
+	
 	unsigned int press_delay = 0x0000;
-	unsigned int press_speed = 0x002F;
+	unsigned int press_speed = 0x001F;
 	unsigned int heights_delay = 0x0000;
-	unsigned int heights_speed = 0x002F;
+	unsigned int heights_speed = 0x001F;
 	
 	unsigned char directions[4] = { 0, 0, 0, 0 };
 	unsigned char buttons[4] = { 2, 2, 2, 2 };
@@ -783,14 +786,14 @@ void Tetra()
 
 			tetra_vars.timer[z]++;
 
-			if (tetra_vars.timer[z] > 288 - 16 * tetra_vars.speed[z]) // determines how fast it falls
+			if (tetra_vars.timer[z] > 128 - 8 * tetra_vars.speed[z]) // determines how fast it falls
 			{
 				tetra_vars.timer[z] = 0;
 			}
 
 			tetra_vars.joy_delay[z]++;
 
-			if (tetra_vars.joy_delay[z] > 40) // determines button turbo speed
+			if (tetra_vars.joy_delay[z] > 20) // determines button turbo speed
 			{
 				tetra_vars.joy_delay[z] = 0;
 				tetra_vars.joy_prev[z] = tetra_vars.joy_prev[z] | 0xF0;
@@ -1157,24 +1160,24 @@ void Tetra()
 			}
 		}
 		
-		unsigned int vert = 0x06;
-		unsigned int horz = 0x04;
+		unsigned int vert = 0x02;
+		unsigned int horz = 0x02;
 		
-		for (unsigned int i=0; i<(tetra_size_y-1)*8; i++)
+		for (unsigned int i=0; i<(tetra_size_y-1)*16; i++)
 		{
-			for (unsigned int j=0; j<8; j++)
+			for (unsigned int j=0; j<16; j++)
 			{
-				screen_buffer[(i+(vert+2)*8)*SCREEN_X+j+horz*8-8] = 0x92; // light grey
-				screen_buffer[(i+(vert+2)*8)*SCREEN_X+j+horz*8+tetra_size_x*8] = 0x92; // light grey
+				screen_buffer[(i+(vert+2)*16)*SCREEN_X+j+horz*16-16] = 0x92; // light grey
+				screen_buffer[(i+(vert+2)*16)*SCREEN_X+j+horz*16+tetra_size_x*16] = 0x92; // light grey
 			}
 		}
 		
-		for (unsigned int i=0; i<4; i++)
+		for (unsigned int i=0; i<16; i++)
 		{
-			for (unsigned int j=0; j<(tetra_size_x+2)*8; j++)
+			for (unsigned int j=0; j<(tetra_size_x+2)*16; j++)
 			{
-				screen_buffer[(i+(vert+2)*8-4)*SCREEN_X+j+horz*8-8] = 0x92; // light grey
-				screen_buffer[(i+(vert+2)*8+(tetra_size_y-1)*8)*SCREEN_X+j+horz*8-8] = 0x92; // light grey
+				screen_buffer[(i+(vert+2)*16-16)*SCREEN_X+j+horz*16-16] = 0x92; // light grey
+				screen_buffer[(i+(vert+2)*16+(tetra_size_y-1)*16)*SCREEN_X+j+horz*16-16] = 0x92; // light grey
 			}
 		}
 
@@ -1209,45 +1212,45 @@ void Tetra()
 			}
 		}
 
-		display_decimal((unsigned int)((horz + 0x05) * 8), vert * 8, tetra_vars.lines[0]);
+		display_decimal((unsigned int)((horz + 0x07) * 16 + 8), vert * 16, tetra_vars.lines[0]);
 
-		if (tetra_vars.new_piece[0] == 0) display_character(horz * 8, vert * 8, 'I');
-		else if (tetra_vars.new_piece[0] == 1) display_character(horz * 8, vert * 8, 'J');
-		else if (tetra_vars.new_piece[0] == 2) display_character(horz * 8, vert * 8, 'L');
-		else if (tetra_vars.new_piece[0] == 3) display_character(horz * 8, vert * 8, 'O');
-		else if (tetra_vars.new_piece[0] == 4) display_character(horz * 8, vert * 8, 'S');
-		else if (tetra_vars.new_piece[0] == 5) display_character(horz * 8, vert * 8, 'T');
-		else if (tetra_vars.new_piece[0] == 6) display_character(horz * 8, vert * 8, 'Z');
+		if (tetra_vars.new_piece[0] == 0) display_character(horz * 16, vert * 16, 'I');
+		else if (tetra_vars.new_piece[0] == 1) display_character(horz * 16, vert * 16, 'J');
+		else if (tetra_vars.new_piece[0] == 2) display_character(horz * 16, vert * 16, 'L');
+		else if (tetra_vars.new_piece[0] == 3) display_character(horz * 16, vert * 16, 'O');
+		else if (tetra_vars.new_piece[0] == 4) display_character(horz * 16, vert * 16, 'S');
+		else if (tetra_vars.new_piece[0] == 5) display_character(horz * 16, vert * 16, 'T');
+		else if (tetra_vars.new_piece[0] == 6) display_character(horz * 16, vert * 16, 'Z');
 
 		if (tetra_vars.game_over[0] != 0x00)
 		{
-			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "Press \\");
-			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "Button\\");
+			display_string((unsigned int)((horz + 0x04) * 16 - 8), (unsigned int)(0x0170 + vert * 16), "Press \\");
+			display_string((unsigned int)((horz + 0x04) * 16 - 8), (unsigned int)(0x0178 + vert * 16), "Button\\");
 		}
 		else
 		{
-			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "      \\");
-			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "      \\");
+			display_string((unsigned int)((horz + 0x04) * 16 - 8), (unsigned int)(0x0170 + vert * 16), "      \\");
+			display_string((unsigned int)((horz + 0x04) * 16 - 8), (unsigned int)(0x0178 + vert * 16), "      \\");
 		}
 		
-		vert = 0x06;
-		horz = 0x32;
+		vert = 0x02;
+		horz = 0x44;
 		
-		for (unsigned int i=0; i<(tetra_size_y-1)*8; i++)
+		for (unsigned int i=0; i<(tetra_size_y-1)*16; i++)
 		{
-			for (unsigned int j=0; j<8; j++)
+			for (unsigned int j=0; j<16; j++)
 			{
-				screen_buffer[(i+(vert+2)*8)*SCREEN_X+j+horz*8-8] = 0x92; // light grey
-				screen_buffer[(i+(vert+2)*8)*SCREEN_X+j+horz*8+tetra_size_x*8] = 0x92; // light grey
+				screen_buffer[(i+(vert+2)*16)*SCREEN_X+j+horz*16-16] = 0x92; // light grey
+				screen_buffer[(i+(vert+2)*16)*SCREEN_X+j+horz*16+tetra_size_x*16] = 0x92; // light grey
 			}
 		}
 		
-		for (unsigned int i=0; i<4; i++)
+		for (unsigned int i=0; i<16; i++)
 		{
-			for (unsigned int j=0; j<(tetra_size_x+2)*8; j++)
+			for (unsigned int j=0; j<(tetra_size_x+2)*16; j++)
 			{
-				screen_buffer[(i+(vert+2)*8-4)*SCREEN_X+j+horz*8-8] = 0x92; // light grey
-				screen_buffer[(i+(vert+2)*8+(tetra_size_y-1)*8)*SCREEN_X+j+horz*8-8] = 0x92; // light grey
+				screen_buffer[(i+(vert+2)*16-16)*SCREEN_X+j+horz*16-16] = 0x92; // light grey
+				screen_buffer[(i+(vert+2)*16+(tetra_size_y-1)*16)*SCREEN_X+j+horz*16-16] = 0x92; // light grey
 			}
 		}
 
@@ -1282,25 +1285,25 @@ void Tetra()
 			}
 		}
 
-		display_decimal((unsigned int)((horz + 0x05) * 8), vert * 8, tetra_vars.lines[1]);
+		display_decimal((unsigned int)((horz + 0x07) * 16 + 8), vert * 16, tetra_vars.lines[1]);
 
-		if (tetra_vars.new_piece[1] == 0) display_character(horz * 8, vert * 8, 'I');
-		else if (tetra_vars.new_piece[1] == 1) display_character(horz * 8, vert * 8, 'J');
-		else if (tetra_vars.new_piece[1] == 2) display_character(horz * 8, vert * 8, 'L');
-		else if (tetra_vars.new_piece[1] == 3) display_character(horz * 8, vert * 8, 'O');
-		else if (tetra_vars.new_piece[1] == 4) display_character(horz * 8, vert * 8, 'S');
-		else if (tetra_vars.new_piece[1] == 5) display_character(horz * 8, vert * 8, 'T');
-		else if (tetra_vars.new_piece[1] == 6) display_character(horz * 8, vert * 8, 'Z');
+		if (tetra_vars.new_piece[1] == 0) display_character(horz * 16, vert * 16, 'I');
+		else if (tetra_vars.new_piece[1] == 1) display_character(horz * 16, vert * 16, 'J');
+		else if (tetra_vars.new_piece[1] == 2) display_character(horz * 16, vert * 16, 'L');
+		else if (tetra_vars.new_piece[1] == 3) display_character(horz * 16, vert * 16, 'O');
+		else if (tetra_vars.new_piece[1] == 4) display_character(horz * 16, vert * 16, 'S');
+		else if (tetra_vars.new_piece[1] == 5) display_character(horz * 16, vert * 16, 'T');
+		else if (tetra_vars.new_piece[1] == 6) display_character(horz * 16, vert * 16, 'Z');
 
-		if (tetra_vars.game_over[1] != 0x00)
+		if (tetra_vars.game_over[0] != 0x00)
 		{
-			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "Press \\");
-			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "Button\\");
+			display_string((unsigned int)((horz + 0x04) * 16 - 8), (unsigned int)(0x0170 + vert * 16), "Press \\");
+			display_string((unsigned int)((horz + 0x04) * 16 - 8), (unsigned int)(0x0178 + vert * 16), "Button\\");
 		}
 		else
 		{
-			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB0 + vert * 8), "      \\");
-			display_string((unsigned int)((horz + 0x02) * 8), (unsigned int)(0xB8 + vert * 8), "      \\");
+			display_string((unsigned int)((horz + 0x04) * 16 - 8), (unsigned int)(0x0170 + vert * 16), "      \\");
+			display_string((unsigned int)((horz + 0x04) * 16 - 8), (unsigned int)(0x0178 + vert * 16), "      \\");
 		}
 	}
 };

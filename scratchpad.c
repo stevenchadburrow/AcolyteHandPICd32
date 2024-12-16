@@ -1,10 +1,13 @@
 
 
-volatile char __attribute__((coherent)) scratchpad_buffer[64][48];
+volatile char __attribute__((coherent)) scratchpad_buffer[80][60];
 
 void Scratchpad()
 {
 	TRISJbits.TRISJ15 = 1; // float joy-select (pulled high)
+	
+	display_foreground_color = 0xFF; // change color of text!
+	display_background_color = 0x25; 
 	
 	char key_value = 0x00;
 	char key_prev = '*';
@@ -26,13 +29,13 @@ void Scratchpad()
 	{
 		for (unsigned int x=0; x<SCREEN_X; x++)
 		{
-			screen_buffer[y*SCREEN_X+x] = 0x00; // black
+			screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
 		}
 	}
 	
-	for (unsigned int y=0; y<48; y++)
+	for (unsigned int y=0; y<60; y++)
 	{
-		for (unsigned int x=0; x<64; x++)
+		for (unsigned int x=0; x<80; x++)
 		{
 			scratchpad_buffer[x][y] = ' ';
 		}
@@ -200,7 +203,7 @@ void Scratchpad()
 				{
 					for (unsigned int x=0; x<SCREEN_X; x++)
 					{
-						screen_buffer[y*SCREEN_X+x] = 0x00; // black
+						screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
 					}
 				}
 
@@ -235,21 +238,21 @@ void Scratchpad()
 					{
 						for (unsigned int x=0; x<SCREEN_X; x++)
 						{
-							screen_buffer[y*SCREEN_X+x] = 0x00; // black
+							screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
 						}
 					}
 					
-					for (unsigned int y=0; y<47; y++)
+					for (unsigned int y=0; y<59; y++)
 					{
-						for (unsigned int x=0; x<64; x++)
+						for (unsigned int x=0; x<80; x++)
 						{
 							scratchpad_buffer[x][y] = scratchpad_buffer[x][y+1];
 						}
 					}
 					
-					for (unsigned int x=0; x<64; x++)
+					for (unsigned int x=0; x<80; x++)
 					{
-						scratchpad_buffer[x][47] = ' ';
+						scratchpad_buffer[x][59] = ' ';
 					}
 					
 					pos_y -= 8;
@@ -307,7 +310,7 @@ void Scratchpad()
 			{
 				display_character(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);
 				
-				if (pos_x < 496)
+				if (pos_x < SCREEN_X-16)
 				{
 					pos_x += 8;
 				}

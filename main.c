@@ -3,34 +3,36 @@
 
 
 // comment out if you want to program the PIC32 faster
-#define SPLASH
+//#define SPLASH
 
 
 /*
-VESA Signal 1024 x 768 @ 70 Hz timing
+VESA Signal 800 x 600 @ 72 Hz timing
+
+Interested in easy to use VGA solution for embedded applications? Click here!
 
 General timing
-Screen refresh rate	70 Hz
-Vertical refresh	56.475903614458 kHz
-Pixel freq.	75.0 MHz
+Screen refresh rate	72 Hz
+Vertical refresh	48.076923076923 kHz
+Pixel freq.	50.0 MHz
 Horizontal timing (line)
-Polarity of horizontal sync pulse is negative.
+Polarity of horizontal sync pulse is positive.
 
 Scanline part	Pixels	Time [µs]
-Visible area	1024	13.653333333333
-Front porch	24	0.32
-Sync pulse	136	1.8133333333333
-Back porch	144	1.92
-Whole line	1328	17.706666666667
+Visible area	800	16
+Front porch	56	1.12
+Sync pulse	120	2.4
+Back porch	64	1.28
+Whole line	1040	20.8
 Vertical timing (frame)
-Polarity of vertical sync pulse is negative.
+Polarity of vertical sync pulse is positive.
 
 Frame part	Lines	Time [ms]
-Visible area	768	13.59872
-Front porch	3	0.05312
-Sync pulse	6	0.10624
-Back porch	29	0.51349333333333
-Whole frame	806	14.271573333333
+Visible area	600	12.48
+Front porch	37	0.7696
+Sync pulse	6	0.1248
+Back porch	23	0.4784
+Whole frame	666	13.8528
 */
 
 /*	
@@ -40,7 +42,6 @@ DMA1 transfers ~400 pixels to PMP on Pixel Timer.
 DMA1 chains to DMA2 which transfers a zero to PMP or PORTx.
 All of this is independent of sync signals and timers!
 Increment line number and change addresses on separate interrupt!
-This setup *must* have a 74HCT273 and the pixel clock is also using an OC
 */ 
 
 /*
@@ -244,11 +245,11 @@ void SendLongHex(unsigned long value)
 	SendHex((unsigned char)(value));
 }
 
-#define SCREEN_X 512
-#define SCREEN_Y 384
+#define SCREEN_X 640
+#define SCREEN_Y 480
 
 // most important arrays
-volatile unsigned char __attribute__((coherent,address(0x80004000))) screen_buffer[SCREEN_Y*SCREEN_X]; // visible portion of screen
+volatile unsigned char __attribute__((coherent,address(0x8002B000))) screen_buffer[SCREEN_Y*SCREEN_X]; // visible portion of screen
 volatile unsigned char __attribute__((coherent,address(0x80076000))) audio_buffer[8192];
 volatile unsigned int audio_position = 0;
 volatile unsigned int frame_trigger = 0;
@@ -271,7 +272,7 @@ volatile unsigned char __attribute__((coherent)) usb_readpos = 0x00;
 
 // additional variables
 volatile unsigned char screen_blank[SCREEN_X]; // black scanline
-volatile unsigned int screen_scanline = 771; // start of vertical sync
+volatile unsigned int screen_scanline = 637; // start of vertical sync
 volatile unsigned char screen_zero[1] = { 0x00 }; // zero value for black
 
 // PS/2 keyboard variables
@@ -663,6 +664,9 @@ char input_usb_mouse(unsigned int *array)
 	return value;
 };
 
+unsigned char display_foreground_color = 0xFF;
+unsigned char display_background_color = 0x00;
+
 void display_character(unsigned int x, unsigned int y, unsigned char value)
 {
 	unsigned int pos = (unsigned int)(value - 32) * 64;
@@ -671,7 +675,14 @@ void display_character(unsigned int x, unsigned int y, unsigned char value)
 	{		
 		for (unsigned int j=0; j<8; j++)
 		{
-			screen_buffer[(y+i)*SCREEN_X+(x+j)] = (text_bitmap[pos+i*8+j]);
+			if (text_bitmap[pos+i*8+j] == 0x00)
+			{
+				screen_buffer[(y+i)*SCREEN_X+(x+j)] = display_background_color;
+			}
+			else
+			{
+				screen_buffer[(y+i)*SCREEN_X+(x+j)] = display_foreground_color;
+			}
 		}
 	}
 };
@@ -684,7 +695,14 @@ void display_inverse(unsigned int x, unsigned int y, unsigned char value)
 	{		
 		for (unsigned int j=0; j<8; j++)
 		{
-			screen_buffer[(y+i)*SCREEN_X+(x+j)] = (unsigned char)((text_bitmap[pos+i*8+j] ^ 0xFF));
+			if (text_bitmap[pos+i*8+j] == 0x00)
+			{
+				screen_buffer[(y+i)*SCREEN_X+(x+j)] = display_foreground_color;
+			}
+			else
+			{
+				screen_buffer[(y+i)*SCREEN_X+(x+j)] = display_background_color;
+			}
 		}
 	}
 };
@@ -752,7 +770,7 @@ int main()
 	DelayMS(1000); // settling delay, avoid garbage characters
 	
 	menu_x = 24;
-	menu_y = 300;
+	menu_y = 400;
 	menu_pos = 0;
 	menu_max = 6; // number of menu items, change accordingly
 	
