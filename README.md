@@ -1,10 +1,10 @@
 <b>Acolyte Hand PIC'd 32 Retraux Computer</b>
 
-Using the PIC32MZ2048EFH144 microcontroller, this new computer runs at 150 MHz, with internal memory of 512KB of RAM and 2MB of Flash ROM.  
+Using the PIC32MZ2048EFH144 microcontroller, this new now computer runs at 200 MHz, with internal memory of 512KB of RAM and 2MB of Flash ROM.  
 
-Video output of 512x384 VGA with 256-colors.  Supports 2 independent audio square-wave signals.  Input comes from 2x Genesis controllers, PS/2 Port with support for keyboard and mouse through splitter, and USB port with host support for keyboard, mouse, or Xbox360-type gamepad.  The USB port can techincally be selected to become a device and connect to the PC as a CDC for use with /dev/ttyACM0.  The USB port could eventually support flash drives.
+Video output of 640x480 VGA with 256-colors.  Now supports a single 4-bit audio channel, with possiblity of 4 total channels.  Input comes from 2x Genesis controllers, PS/2 Port with support for keyboard and mouse through splitter, and USB port with host support for keyboard, mouse, or Xbox360-type gamepad.  The USB port will eventually be used to connect to the PC as a CDC for use with /dev/ttyACM0.  The USB port could eventually support flash drives.
 
-Comes with attachment possibilities for an SPI Micro SDcard Adapter and a FT232RL USB-to-UART Adapter.  SDcard is required for BadApple and using Elm-Chan's FatFs files (included).  If using UART, use the command 'sudo picocom /dev/ttyUSB0'.  The PIC32 is programmed through ICSP port connecting to a PICkit3, but can also be re-programmed at general memory locations from production hex files through the SDcard.
+Comes with attachment possibilities for an SPI Micro SDcard Adapter and a FT232RL USB-to-UART Adapter.  SDcard is required for BadApple and using Elm-Chan's FatFs files (included).  If using the UART, use the command 'sudo picocom /dev/ttyUSB0'.  The PIC32 is programmed through ICSP port connecting to a PICkit3, but can also be re-programmed at general memory locations from production hex files through the SDcard.
 
 PORTH has been bodge-wired to make an audio DAC using an R-2R Ladder.  Currently it only has 4-bits, but does the job pretty well.
 
