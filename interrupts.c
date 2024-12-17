@@ -23,6 +23,8 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 		audio_position = 0;
 	}
 	
+	frame_position++;
+	
 	screen_scanline = screen_scanline + 1; // increment scanline
 	
 	if (screen_scanline == 666)
@@ -342,17 +344,4 @@ void __attribute__((vector(_UART3_RX_VECTOR), interrupt(ipl3srs))) u3rx_handler(
 	}
 	
 	return;
-}
-
-// new frame timer
-void __attribute__((vector(_TIMER_9_VECTOR), interrupt(ipl1srs))) t9_handler()
-{
-	IFS1bits.T9IF = 0;  // clear interrupt flag
-	
-	TMR9 = 0x0000; // clear timer
-	T9CONbits.ON = 0; // turn off timer
-
-	frame_trigger = 1;
-
-	PORTEbits.RE8 = 1;
 }

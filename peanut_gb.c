@@ -1184,10 +1184,7 @@ int PeanutGB()
 	{
 		USBHostTasks();
 		
-		frame_trigger = 0; // clear frame trigger
-		
-		TMR9 = 0x0000;
-		T9CONbits.ON = 1; // turn on Timer9
+		frame_position = 0; // clear frame position
 		
 		if (usb_mode == 0x00) // keyboard
 		{
@@ -1539,7 +1536,7 @@ int PeanutGB()
 #endif
 			
 		// speed limiter for when occasionally the Gameboy is too fast
-		while (frame_trigger == 0) { } // wait for frame trigger interrupt
+		while (frame_position < 805) { } // wait for frame trigger interrupt
 	}
 
 	return ret;

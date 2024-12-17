@@ -31,8 +31,6 @@ void BadApple()
 			return;
 		} 
 
-		T9CONbits.ON = 0; // turn off TMR9
-
 		unsigned int x = 0x0000;
 		unsigned int y = 0x0000;
 		unsigned char value = 0x00;

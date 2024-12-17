@@ -223,19 +223,8 @@ void Setup()
 	DCH2SSIZ = 1; // source size
 	DCH2DSIZ = 1; // dst size 
 	DCH2CSIZ = 1; // 1 byte per event
-	
-	
-	// new frame timer
-	T9CON = 0x0070; // reset Timer9, prescale of 1:256
-	TMR9 = 0x0000; // zero out counter
-	PR9 = 0x3317; // determines length of one frame of 59.73 Hz on Gameboy
-	IPC10bits.T9IP = 0x1; // frame interrupt priority 1
-	IPC10bits.T9IS = 0x0; // sub-priority 0
-	IFS1bits.T9IF = 0; // clear flags
-	IEC1bits.T9IE = 1; // enable interrupts
-	//IEC1bits.T9IE = 0; // disable interrupts
-	T9CONbits.ON = 0; // turn off TMR9 
  
+	
 	// set up PS/2 Keyboard and Mouse on PORTD (RD9-RD10,RD12-RD13)
 	CNCONDbits.ON = 1; // turn on interrupt-on-change
 	CNCONDbits.EDGEDETECT = 1; // edge detect, not mismatch
