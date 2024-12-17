@@ -37,15 +37,20 @@ sudo dd if=TouhouBadApple-Final.bin of=/dev/sdc bs=100M conv=fsync
 // Video is at 60 FPS at 240x192 resolution, color (but will be mono).
 
 unsigned long min_frames = 0; // should be 0
-unsigned long max_frames = 16000; // should be 13138, change as need be for debug
+unsigned long max_frames = 0; // means changed by arguments, should be 13138 for Bad Apple, change as need be for debug
 unsigned long single = 0; // should be 0 unless testing
 
 int main(const int argc, const char **argv)
 {
-	if (argc < 3)
+	if (argc < 5)
 	{
-		printf("Arguments: <input.xxx> <output.bin>\n");
+		printf("Arguments: <input.xxx> <output.bin> <minutes> <seconds>\n");
 		return 0;
+	}
+
+	if (max_frames == 0) // ready for a new value
+	{
+		max_frames = 60 * (atoi(argv[3]) * 60 + atoi(argv[4]));
 	}
 
 	char command[512];
