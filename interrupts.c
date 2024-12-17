@@ -15,12 +15,15 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 		usbhost_device_millis++;
 	}
 	
-	// 4-bit unsigned audio from 16-bit signed audio, this seems to help
-	PORTH = (unsigned char)(((((audio_buffer[audio_position+3])) + 0x80) >> 4) & 0x0F);
-	audio_position += 4;
-	if (audio_position >= 8192)
+	if (audio_switch > 0)
 	{
-		audio_position = 0;
+		// 4-bit unsigned audio from 16-bit signed audio, this seems to help
+		PORTH = (unsigned char)(((((audio_buffer[audio_position+3])) + 0x80) >> 4) & 0x0F);
+		audio_position += 4;
+		if (audio_position >= 8192)
+		{
+			audio_position = 0;
+		}
 	}
 	
 	frame_position++;

@@ -3,6 +3,8 @@
 
 void BadApple()
 { 
+	audio_switch = 0; // turn off audio_buffer[]
+	
 	while (1)
 	{
 		for (unsigned int y=0; y<SCREEN_Y; y++)

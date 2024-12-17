@@ -252,6 +252,7 @@ void SendLongHex(unsigned long value)
 volatile unsigned char __attribute__((coherent,address(0x8002B000))) screen_buffer[SCREEN_Y*SCREEN_X]; // visible portion of screen
 volatile unsigned char __attribute__((coherent,address(0x80076000))) audio_buffer[8192];
 volatile unsigned int audio_position = 0;
+volatile unsigned int audio_switch = 0;
 volatile unsigned int frame_position = 0;
 
 // variable arrays

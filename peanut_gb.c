@@ -1004,6 +1004,8 @@ int PeanutGB()
 		}
 	}
 	
+	audio_switch = 1; // turn on audio_buffer[]
+	
 	struct gb_s gb;
 	struct priv_t priv;
 
