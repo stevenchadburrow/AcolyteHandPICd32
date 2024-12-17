@@ -3,7 +3,7 @@
 
 
 // comment out if you want to program the PIC32 faster
-#define SPLASH
+//#define SPLASH
 
 
 /*
@@ -751,7 +751,7 @@ void display_string(unsigned int x, unsigned int y, char *value)
 
 #include "menu.c"
 #include "tetra.c"
-#include "badapple.c"
+#include "av_demo.c"
 #include "scratchpad.c"
 #include "peanut_gb.c"
 #include "setup.c" 
@@ -779,7 +779,7 @@ int main()
 
 	display_string(menu_x, menu_y,		" Tetra     \\");
 	display_string(menu_x, menu_y+8,	" Scratchpad\\");
-	display_string(menu_x, menu_y+16,	" Bad Apple \\");
+	display_string(menu_x, menu_y+16,	" AV Demo   \\");
 	display_string(menu_x, menu_y+24,	" GB Emu    \\");
 	display_string(menu_x, menu_y+32,	" GB Burn   \\");
 	display_string(menu_x, menu_y+40,	" Blink Test\\");
@@ -788,7 +788,7 @@ int main()
 	
 	if (dummy == 0) Tetra();
 	else if (dummy == 1) Scratchpad();
-	else if (dummy == 2) BadApple();
+	else if (dummy == 2) AudioVideoDemo();
 	else if (dummy == 3) PeanutGB();
 	else if (dummy == 4) BurnROM();
 	else if (dummy == 5) { }
