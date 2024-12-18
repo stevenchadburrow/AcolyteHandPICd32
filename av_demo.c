@@ -1,5 +1,6 @@
 
 
+// use VideoExtractor.cpp to convert!
 
 void AudioVideoDemo()
 { 
@@ -42,7 +43,7 @@ void AudioVideoDemo()
 		
 		unsigned char temp_value = 0x00;
 
-		unsigned long count = 0;
+		//unsigned long count = 0;
 
 		sdcard_disable();
 		sdcard_pump();
@@ -62,7 +63,7 @@ void AudioVideoDemo()
 		else if (temp_value != 0xFE) { return; }
 
 		// I don't know why I need to do this?
-		for (unsigned int i=0; i<12407; i++) sdcard_receivebyte(); // ???
+		for (unsigned int i=0; i<49631; i++) sdcard_receivebyte(); // ???, 49631 works with color
 		 
 		while (loop > 0) // total frames in the video
 		{
@@ -71,85 +72,55 @@ void AudioVideoDemo()
 			x = 80;
 			y = 48;
 
-			for (unsigned int i=0; i<24; i++)
+			for (unsigned int i=0; i<96; i++)
 			{
 				if (frames != 1)
 				{
 					sdcard_receivebyte(); // data packet begins with 0xFE
 				}
 
-				for (unsigned int j=0; j<8; j++)
-				{	
-					for (unsigned int k=0; k<64; k++)
-					{
-						// get value from SDcard
-						value = sdcard_receivebyte();
+				for (unsigned int j=0; j<2; j++)
+				{
+					for (unsigned int j=0; j<4; j++)
+					{	
+						for (unsigned int k=0; k<64; k++)
+						{
+							// get value from SDcard
+							value = sdcard_receivebyte();
 
-						if (k == 30 || k == 62) // audio (unused)
-						{
-							if (value == 0x00 && frames > 360) loop = 0;
-						}
-						else if (k == 31 || k == 63) // audio
-						{
-							// Should add 0x07 before shifting in case of rounding???
-							PORTH = (((value >> 4) + 0x08) & 0x0F); 
-						}
-						else // comment the 'else' out to show the audio
-						{				
-							for (unsigned int l=0; l<4; l++)
+							if (k % 64 == 60) // audio (unused)
 							{
-								switch ((value & 0x03))
-								{
-									case 0x00: // black
-									{
-										screen_buffer[y*SCREEN_X+x] = 0x00;
-										screen_buffer[y*SCREEN_X+x+1] = 0x00;
-										screen_buffer[(y+1)*SCREEN_X+x] = 0x00;
-										screen_buffer[(y+1)*SCREEN_X+x+1] = 0x00;
-										break;
-									}
-									case 0x01: // dark-grey
-									{
-										screen_buffer[y*SCREEN_X+x] = 0x49;
-										screen_buffer[y*SCREEN_X+x+1] = 0x49;
-										screen_buffer[(y+1)*SCREEN_X+x] = 0x49;
-										screen_buffer[(y+1)*SCREEN_X+x+1] = 0x49;
-										break;
-									}
-									case 0x02: // light-grey
-									{
-										screen_buffer[y*SCREEN_X+x] = 0x92;
-										screen_buffer[y*SCREEN_X+x+1] = 0x92;
-										screen_buffer[(y+1)*SCREEN_X+x] = 0x92;
-										screen_buffer[(y+1)*SCREEN_X+x+1] = 0x92;
-										break;
-									}
-									case 0x03: // white
-									{
-										screen_buffer[y*SCREEN_X+x] = 0xFF;
-										screen_buffer[y*SCREEN_X+x+1] = 0xFF;
-										screen_buffer[(y+1)*SCREEN_X+x] = 0xFF;
-										screen_buffer[(y+1)*SCREEN_X+x+1] = 0xFF;
-										break;
-									}
-								}
-									
-								value = (unsigned int)(value >> 2);
-
+								if (value == 0x00 && frames > 360) loop = 0; // exit loop if zero
+							}
+							else if (k % 64 == 61 || k % 64 == 62)  // audio (unused)
+							{
+								// do nothing
+							}
+							else if (k % 64 == 63) // audio
+							{
+								// Should add 0x07 before shifting in case of rounding???
+								PORTH = (((value >> 4) + 0x08) & 0x0F); 
+							}
+							else // comment the 'else' out to show the audio
+							{				
+								screen_buffer[y*SCREEN_X+x] = value;
+								screen_buffer[y*SCREEN_X+x+1] = value;
+								screen_buffer[(y+1)*SCREEN_X+x] = value;
+								screen_buffer[(y+1)*SCREEN_X+x+1] = value;
+						
 								x += 2;
 							}
+
+							/*
+							// fine tune delay here
+							count = (unsigned long)(96);
+							_CP0_SET_COUNT(0);
+							while (count > _CP0_GET_COUNT());
+							*/
 						}
-
-						
-						// fine tune delay here
-						count = (unsigned long)(96);
-						_CP0_SET_COUNT(0);
-						while (count > _CP0_GET_COUNT());
-						
 					}
-
+					
 					y += 2;
-				
 					x = 80;
 				}
 

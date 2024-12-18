@@ -56,7 +56,7 @@ int main(const int argc, const char **argv)
 	char command[512];
 
 	for (int i=0; i<512; i++) command[i] = 0;
-	sprintf(command, "ffmpeg -y -i %s -s 240x192 -r 60 Temp.mp4", argv[1]);
+	sprintf(command, "ffmpeg -y -i %s -s 240x192 -r 60 Temp1.mp4", argv[1]);
 	system(command);
 
 	for (int i=0; i<512; i++) command[i] = 0;
@@ -104,13 +104,17 @@ int main(const int argc, const char **argv)
 
 	for (unsigned long frame=(single==0?min_frames:max_frames-1); frame<max_frames; frame+=1000) // change to 13138 frames in the video
 	{
+		for (int i=0; i<512; i++) command[i] = 0;
+		sprintf(command, "ffmpeg -y -i Temp1.mp4 -hide_banner -loglevel error -vf select='between(n\\,%lu\\,%lu),setpts=PTS-STARTPTS' Temp2.mp4", frame, frame+999);
+		system(command);
+
 		printf("Frame %lu/%lu\n", frame, max_frames);
 
 		system("rm Temp2.bin");
 
-		for (unsigned long block=0; block<(frame+1000>=max_frames?max_frames-frame:1000); block+=2)
+		for (unsigned long block=0; block<(frame+1000>=max_frames?max_frames-frame:1000); block+=4)
 		{
-			sprintf(command, "ffmpeg -i Temp.mp4 -y -hide_banner -loglevel error -vf 'select=eq(n\\,%lu)' -vframes 1 Temp.bmp;", frame+block);
+			sprintf(command, "ffmpeg -i Temp2.mp4 -y -hide_banner -loglevel error -vf 'select=eq(n\\,%lu)' -vframes 1 Temp.bmp;", block);
 			system(command);
 
 			if (block % 100 == 0) printf("Block %lu\n", block);
@@ -135,23 +139,9 @@ int main(const int argc, const char **argv)
 				{
 					fscanf(video, "%c%c%c", &blue, &green, &red);
 
-					color = (unsigned char)((red + green + blue) / 3);
+					color = (red & 0xE0) + ((green & 0xE0) >> 3) + ((blue & 0xC0) >> 6);
 
-					if (color >= 0xC0) picture[i * 240 + j] = 0xC0;
-					else if (color >= 0x80) picture[i * 240 + j] = 0x80;
-					else if (color >= 0x40) picture[i * 240 + j] = 0x40;
-					else picture[i * 240 + j] = 0x00;
-
-					/*
-					if (red >= 0x80 || green >= 0x80 || blue >= 0x80)
-					{
-						picture[i * 240 + j] = 0x80;
-					}
-					else
-					{
-						picture[i * 240 + j] = 0x00;
-					}
-					*/
+					picture[i * 240 + j] = color;
 				}
 			}
 
@@ -171,82 +161,27 @@ int main(const int argc, const char **argv)
 
 			for (int i=192-1; i>=0; i--) // invert y-values
 			{
-				for (int j=0; j<120; j+=4)
+				for (int j=0; j<4; j++)
 				{
-					shift = 0x00;
-
-					for (int l=0; l<4; l++)
+					for (int k=j*60; k<(j+1)*60; k++)
 					{
-						shift = shift >> 2;
+						shift = 0x00;
 
-						shift = shift | picture[i * 240 + j + l];
+						shift = picture[i * 240 + k];
+
+						fprintf(output, "%c", shift);
 					}
 
-					fprintf(output, "%c", shift);
+					fscanf(audio, "%c", &buffer);
+					if (buffer == 0x00) buffer = 0x01; // when zero, marks end of video
+					fprintf(output, "%c", buffer);
+					fscanf(audio, "%c", &buffer);
+					fprintf(output, "%c", buffer);
+					fscanf(audio, "%c", &buffer);
+					fprintf(output, "%c", buffer);
+					fscanf(audio, "%c", &buffer);
+					fprintf(output, "%c", buffer);
 				}
-
-				/*
-				for (int j=0; j<120; j+=8)
-				{
-					shift = 0x00;
-
-					for (int l=0; l<8; l++)
-					{
-						shift = shift >> 1;
-
-						shift = shift | picture[i * 240 + j + l];
-					}
-					
-					fprintf(output, "%c", shift);
-				}
-				*/
-
-				fscanf(audio, "%c", &buffer);  // reducing 32-bit to 16-bit
-				fscanf(audio, "%c", &buffer);
-				fscanf(audio, "%c", &buffer);
-				if (buffer == 0x00) buffer = 0x01; // when zero, marks end of video
-				fprintf(output, "%c", buffer);
-				fscanf(audio, "%c", &buffer);
-				fprintf(output, "%c", buffer);
-				
-
-				for (int j=120; j<240; j+=4)
-				{
-					shift = 0x00;
-
-					for (int l=0; l<4; l++)
-					{
-						shift = shift >> 2;
-
-						shift = shift | picture[i * 240 + j + l];
-					}
-
-					fprintf(output, "%c", shift);
-				}
-
-				/*
-				for (int j=0; j<120; j+=8)
-				{
-					shift = 0x00;
-
-					for (int l=0; l<8; l++)
-					{
-						shift = shift >> 1;
-
-						shift = shift | picture[i * 240 + j + l];
-					}
-					
-					fprintf(output, "%c", shift);
-				}
-				*/
-
-				fscanf(audio, "%c", &buffer);  // reducing 32-bit to 16-bit
-				fscanf(audio, "%c", &buffer);
-				fscanf(audio, "%c", &buffer);
-				if (buffer == 0x00) buffer = 0x01; // when zero, marks end of video
-				fprintf(output, "%c", buffer);
-				fscanf(audio, "%c", &buffer);
-				fprintf(output, "%c", buffer);
 			}
 
 			fclose(output);
