@@ -189,7 +189,7 @@ Pin27,RJ11,BUTTON
 #pragma region name="gb_rom" origin=0x9D100000 size=0x00100000
 
 
-#define SYS_FREQ 150000000 // Running at 150MHz
+#define SYS_FREQ 200000000 // Running at 200MHz
 
 unsigned long VirtToPhys(volatile void* p) // changed 'const' to 'volatile'
 {
