@@ -28,7 +28,7 @@ Links:
 
 <img src="MIKU-TETRA.jpg">
 
-<img style="text-align:center" src="BAD-APPLE.jpg">
+<img src="BAD-APPLE.jpg">
 
 <img src="SCRATCH-PAD.jpg">
 
