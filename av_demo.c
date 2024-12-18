@@ -6,6 +6,9 @@ void AudioVideoDemo()
 { 
 	audio_switch = 0; // turn off audio_buffer[]
 	
+	unsigned int high_block = 0x0040; // starting at 1 GB into the SDcard
+	unsigned int low_block = 0x0000;
+	
 	while (1)
 	{
 		for (unsigned int y=0; y<SCREEN_Y; y++)
@@ -50,9 +53,9 @@ void AudioVideoDemo()
 		sdcard_longdelay(); // this is probably not needed
 		sdcard_enable();
 		sdcard_sendbyte(0x52); // CMD18 = 0x40 + 0x12 (18 in hex)
-		sdcard_sendbyte((0x0000&0x00FF));
-		sdcard_sendbyte(((0x0000&0xFF00) >> 8));
-		sdcard_sendbyte((0x0000&0x00FE)); // only blocks of 512 bytes
+		sdcard_sendbyte((high_block&0x00FF));
+		sdcard_sendbyte(((low_block&0xFF00) >> 8));
+		sdcard_sendbyte((low_block&0x00FE)); // only blocks of 512 bytes
 		sdcard_sendbyte(0x00);
 		sdcard_sendbyte(0x01); // CRC (general)
 		temp_value = sdcard_waitresult(); // command response

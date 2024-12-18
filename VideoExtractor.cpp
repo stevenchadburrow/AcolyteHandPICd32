@@ -1,31 +1,21 @@
 /*
 
-How to extract data for Bad Apple?
+This works for any .flv, .mp4, etc, whatever 'ffmpeg' will handle.
+Must also have 'sox' installed for audio purposes.
 
-First, I found the TouhouBadApple.flv online on archive.org.  Just get a clean version.
+Run with command like this (for 3 minutes and 21 seconds of video):
 
-Then run:
+./VideoExtractor.o Input.mp4 Output.bin 3 21
 
-ffmpeg -i TouhouBadApple.flv -s 240x192 -r 60 TouhouBadApple-Compressed.mp4
-
-That brings the video into a compressed form.  
-
-For the audio side of things:
-
-ffmpeg -i TouhouBadApple.flv TouhouBadApple.wav
-sox TouhouBadApple.wav -r 23040 -c 1 -b 32 -e signed-integer TouhouBadApple-Compressed.wav
-
-Now you have everything you need to run the ExtractData.cpp program!
-
-Finally to put on SD card:
+When done, check for your drive with this command:
 
 sudo fdisk -l
 
-Make sure to find the right drive!!!
+We are assuming you want /dev/sdc here, so use put it on that drive with a command like this:
 
-Then:
+sudo dd if=Output.bin of=/dev/sdc bs=100M conv=fsync oflag=seek_bytes seek=1073741824
 
-sudo dd if=TouhouBadApple-Final.bin of=/dev/sdc bs=100M conv=fsync
+The 'oflag' and 'seek' portions put it at a specific address.  Remove if you want it starting at address 0.
 
 */
 
