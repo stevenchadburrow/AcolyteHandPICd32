@@ -41,7 +41,9 @@ FT232RL USB-to-UART adapter (use command 'sudo picocom /dev/ttyUSB0')
 <b>Custom Applications</b>
 
 Tetra - Tetris clone recopied from previous PIC-related projects
+<br>
 Scratchpad - Proof-of-concept 'text editor' without save/load features
+<br>
 AV Demo - Audio/Video playback of modified video files with a resolution 240x192 at 30 Hz with 256 colors and up to 32-bit mono audio
 
 <b>Gameboy Emulator</b>
