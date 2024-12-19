@@ -1,16 +1,20 @@
-<b><h1>Acolyte Hand PIC'd 32 Retraux Computer / Video Game Console</h1></b>
+<b><h1>Acolyte Hand PIC'd 32 Retraux Computer and Video Game Console</h1></b>
 
 <b>Background</b>
 
-Originally inspired by The 8-Bit Guy's <a href="https://www.youtube.com/watch?v=ayh0qebfD2g">"Dream Computer"</a>, and after some initial attempts (aka failures), I eventually produced the original <a href="https://github.com/stevenchadburrow/AcolyteComputer">Acolyte Computer</a> using a W65C02 processor.  I had great help from <a href="https://wilsonminesco.com/">Garth Wilson</a> and the guys on the <a href="http://6502.org/">6502.org</a> Forum.  
+Why build a "computer"?  Why build a "video game console"?  
+
+I had been programming video games for about 20 years before all of this.  It started in high school on a Borland Turbo C++ in the computer lab, and then in college on a Ubuntu Linux computer with g++ and OpenGL.  Most my early attempts are not even worth mentioning.  After graduate school and getting a job at the local college as a math teacher, I began trying to make a Harvest Moon type of game.  It seems that Stardew Valley beat me to it though.  After many attempts on many different platforms, including Linux/OpenGL/C++, HTML/Javascript, and Android/Java, I have declared them all as 'demos', though I learned a lot.  
+
+Meanwhile, I began programming 'arcade' video games for our annual Math Appreciation Day events, a few are listed <a href="https://github.com/stevenchadburrow/MathDayGames">here</a>.  As the years continued, my older Linux computers started to break down one-by-one, and I was not going to buy replacements.  After starting research on a water-based calculator, I thought to myself, "Wouldn't electricity be so much easier?"  
+
+After stumbling upon Garth Wilson's 6502 Primer, link <a href="https://wilsonminesco.com/">here</a>, I emailed him and he invited me to join the 6502.org Forum, link <a href="http://forum.6502.org/">here</a>.  I began researching and prototyping (aka breadboarding) with basic logic chips, and learning how to create schematics.  While learning more about digital electronics, I found The 8-Bit Guy, Adrian's Digital Basement, and Ben Eater on Youtube.  
+
+Inspired by The 8-Bit Guy's <a href="https://www.youtube.com/watch?v=ayh0qebfD2g">"Dream Computer"</a>, and after some initial attempts (aka failures) and a couple of successes, I eventually produced the original <a href="https://github.com/stevenchadburrow/AcolyteComputer">Acolyte Computer</a> using a W65C02 processor.  I had great help from Garth Wilson and the guys on the 6502.org Forum as I worked through many prototypes to get to that point. 
 
 From there, the project grew to the <a href="https://github.com/stevenchadburrow/NewAcolyte">New Acolyte</a> coupled with an XC9572XL CPLD, then the <a href="https://github.com/stevenchadburrow/Acolyte816">Acolyte '816</a> using a W65C816 processor but with a PIC16F886 microcontroller as a bootloader.  Wanting to continue pursuing PIC microcontrollers, I created the original <a href="https://github.com/stevenchadburrow/AcolyteHandPICd">Acolyte Hand PIC'd</a> using the PIC18F47J13 microcontroller, then the <a href="https://github.com/stevenchadburrow/AcolyteHandPICd24">Acolyte Hand PIC'd 24</a> using the PIC24EP512GP204 microcontroller finally without a CPLD.
 
 This project, the Acolyte Hand PIC'd 32, is supposed to show the culmination of my knowledge in PCB design and microcontroller programming over the past 3 years.
-
-<b>Reasoning</b>
-
-Why build a "computer"?  Why build a "video game console"?
 
 <b>Microcontroller</b>
 
