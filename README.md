@@ -36,5 +36,6 @@ Links:
 
 <img src="ZELDA-GB.jpg">
 
-<center><img src="AV-SKYRIM.gif"></center>
+<img src="AV-SKYRIM.gif">
+<img src="AV-BADAPPLE.gif">
 
