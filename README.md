@@ -8,7 +8,7 @@ Comes with attachment possibilities for an SPI Micro SDcard Adapter and a FT232R
 
 PORTH has been bodge-wired to make an audio DAC using an R-2R Ladder.  Currently it only has 4-bits, but does the job pretty well.
 
-The Gameboy emulator Peanut-GB (with MiniGB-APU) has been recoded for the PIC32!  Some games tested and working include: Tetris, Dr. Mario, Link's Awakening, and Pokemon Red.  Many options have been added, such as Save/Load, GBC palettes, screen size, frame rate, and sound on/off.
+The Gameboy emulator Peanut-GB (with MiniGB-APU) has been recoded for the PIC32!  Some games tested and working include: Tetris, Dr. Mario, Zelda: Link's Awakening, and Pokemon Red.  Many options have been added, such as Save/Load, GBC palettes, screen size, frame rate, and sound on/off.
 
 Instead of playing just Bad Apple, it is now capable of running any type of video that has been modified.  The output is 240x192 in 256 colors, with support for up to 32-bit audio at a 11520 Hz sample rate.  As of now only the 4-bit audio DAC is used though.
 
