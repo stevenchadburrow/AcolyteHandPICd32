@@ -252,6 +252,7 @@ void SendLongHex(unsigned long value)
 volatile unsigned char __attribute__((coherent,address(0x8002B000))) screen_buffer[SCREEN_Y*SCREEN_X]; // visible portion of screen
 volatile unsigned char __attribute__((coherent,address(0x80076000))) audio_buffer[8192];
 volatile unsigned int audio_position = 0;
+volatile unsigned int audio_length = 0;
 volatile unsigned int audio_switch = 0;
 volatile unsigned int frame_position = 0;
 
@@ -525,6 +526,31 @@ void EchoFile()
 // frequency in Hz, plays for a short duration
 void music_note(unsigned int frequency, unsigned int duration, unsigned char channel)
 {
+	// each increment of 'audio_buffer[]' is about 20.8 us long
+	// each 'audio_switch' is about 170.4 ms long
+	
+	unsigned int period = (unsigned int)((unsigned long)(1000000 * 5) / (unsigned long)(104 * frequency)) + 1;
+	
+	unsigned int position = 0;
+	
+	for (unsigned int i=0; i<8192; i+=period*2)
+	{
+		for (unsigned int j=0; j<period; j++)
+		{
+			audio_buffer[i+j] = 0x00;
+		}
+		
+		for (unsigned int j=0; j<period; j++)
+		{
+			audio_buffer[i+j+period] = 0x80;
+		}
+		
+		position += 2 * period;
+	}
+	
+	audio_length = position;
+	
+	audio_switch = (unsigned int)((unsigned long)(duration * 8192 * 5) / (unsigned long)(852 * position)) + 1;
 	
 	return;
 };

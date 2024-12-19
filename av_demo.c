@@ -4,8 +4,6 @@
 
 void AudioVideoDemo()
 { 
-	audio_switch = 0; // turn off audio_buffer[]
-	
 	unsigned int high_block = 0x0040; // starting at 1 GB into the SDcard
 	unsigned int low_block = 0x0000;
 	

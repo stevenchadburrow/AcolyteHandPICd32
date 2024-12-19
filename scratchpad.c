@@ -23,6 +23,8 @@ void Scratchpad()
 	unsigned int joy_delay = 0x0000;
 	unsigned int joy_speed = 0x01FF;
 	
+	unsigned char joy_toggle = 1;
+	
 	unsigned int overall_delay = 0x0000;
 	
 	for (unsigned int y=0; y<SCREEN_Y; y++)
@@ -62,25 +64,45 @@ void Scratchpad()
 			key_value = input_usb_keyboard();
 		}
 		
-		joy_curr[0] = 0xFF; 
-		
-		if (PORTJbits.RJ0 == 0) joy_curr[0] = (joy_curr[0] & 0x7F);
-		if (PORTJbits.RJ1 == 0) joy_curr[0] = (joy_curr[0] & 0xBF);
-		if (PORTJbits.RJ2 == 0) joy_curr[0] = (joy_curr[0] & 0xDF);
-		if (PORTJbits.RJ3 == 0) joy_curr[0] = (joy_curr[0] & 0xEF);
-		if (PORTJbits.RJ4 == 0) joy_curr[0] = (joy_curr[0] & 0xF7);
-		if (PORTJbits.RJ5 == 0) joy_curr[0] = (joy_curr[0] & 0xFB);
+		if (joy_toggle == 1)
+		{
+			joy_curr[0] = joy_curr[0] | 0xFC; 
+
+			if (PORTJbits.RJ0 == 0) joy_curr[0] = (joy_curr[0] & 0x7F);
+			if (PORTJbits.RJ1 == 0) joy_curr[0] = (joy_curr[0] & 0xBF);
+			if (PORTJbits.RJ2 == 0) joy_curr[0] = (joy_curr[0] & 0xDF);
+			if (PORTJbits.RJ3 == 0) joy_curr[0] = (joy_curr[0] & 0xEF);
+			if (PORTJbits.RJ4 == 0) joy_curr[0] = (joy_curr[0] & 0xF7);
+			if (PORTJbits.RJ5 == 0) joy_curr[0] = (joy_curr[0] & 0xFB);
+		}
+		else
+		{
+			joy_curr[0] = joy_curr[0] | 0x03; 
+
+			if (PORTJbits.RJ4 == 0) joy_curr[0] = (joy_curr[0] & 0xFD);
+			if (PORTJbits.RJ5 == 0) joy_curr[0] = (joy_curr[0] & 0xFE);
+		}
 		
 		if (usb_mode != 0x02) // xbox-type controller
 		{
-			joy_curr[1] = 0xFF; 
-			
-			if (PORTJbits.RJ6 == 0) joy_curr[1] = (joy_curr[1] & 0x7F);
-			if (PORTJbits.RJ7 == 0) joy_curr[1] = (joy_curr[1] & 0xBF);
-			if (PORTJbits.RJ10 == 0) joy_curr[1] = (joy_curr[1] & 0xDF);
-			if (PORTJbits.RJ12 == 0) joy_curr[1] = (joy_curr[1] & 0xEF);
-			if (PORTJbits.RJ13 == 0) joy_curr[1] = (joy_curr[1] & 0xF7);
-			if (PORTJbits.RJ14 == 0) joy_curr[1] = (joy_curr[1] & 0xFB);
+			if (joy_toggle == 1)
+			{
+				joy_curr[1] = joy_curr[1] | 0xFC; 
+
+				if (PORTJbits.RJ6 == 0) joy_curr[1] = (joy_curr[1] & 0x7F);
+				if (PORTJbits.RJ7 == 0) joy_curr[1] = (joy_curr[1] & 0xBF);
+				if (PORTJbits.RJ10 == 0) joy_curr[1] = (joy_curr[1] & 0xDF);
+				if (PORTJbits.RJ12 == 0) joy_curr[1] = (joy_curr[1] & 0xEF);
+				if (PORTJbits.RJ13 == 0) joy_curr[1] = (joy_curr[1] & 0xF7);
+				if (PORTJbits.RJ14 == 0) joy_curr[1] = (joy_curr[1] & 0xFB);
+			}
+			else
+			{
+				joy_curr[1] = joy_curr[1] | 0x03; 
+
+				if (PORTJbits.RJ13 == 0) joy_curr[1] = (joy_curr[1] & 0xFD);
+				if (PORTJbits.RJ14 == 0) joy_curr[1] = (joy_curr[1] & 0xFE);
+			}
 		}
 		else
 		{
@@ -146,19 +168,31 @@ void Scratchpad()
 			}
 		}
 		
+		joy_toggle = 1 - joy_toggle;
+		
+		if (joy_toggle == 1)
+		{
+			TRISJbits.TRISJ15 = 1; // float joy-select (pulled high)
+		}
+		else
+		{
+			PORTJbits.RJ15 = 0;
+			TRISJbits.TRISJ15 = 0; // ground joy-select
+		}
+		
 		if (key_value == 0x00)
 		{
 			for (unsigned char z=0; z<2; z++)
 			{
 				if (joy_delay == 0x0000)
 				{
-					if ((joy_curr[z] & 0x08) == 0x00) //&& (joy_prev[z] & 0x08) == 0x08) // button 1
+					if ((joy_curr[z] & 0x08) == 0x00 || (joy_curr[z] & 0x01) == 0x00) //&& (joy_prev[z] & 0x08) == 0x08) // button 1
 					{
 						scratchpad_buffer[pos_x/8][pos_y/8] = ' ';
 						display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);	
 						joy_delay = joy_speed;
 					}
-					else if ((joy_curr[z] & 0x04) == 0x00) //&& (joy_prev[z] & 0x04) == 0x04) // button 2
+					else if ((joy_curr[z] & 0x04) == 0x00 || (joy_curr[z] & 0x02) == 0x00) //&& (joy_prev[z] & 0x04) == 0x04) // button 2
 					{
 						scratchpad_buffer[pos_x/8][pos_y/8] = key_prev;
 						display_inverse(pos_x+4, pos_y, scratchpad_buffer[pos_x/8][pos_y/8]);	

@@ -279,6 +279,8 @@ void Tetra()
 	unsigned char clicks[2] = { 2, 2 };
 	unsigned char heights = 1;
 	
+	unsigned char joy_toggle = 1;
+	
 	unsigned char key_active = 0;
 	unsigned char mouse_active = 0;
 	unsigned char mouse_move = 0;
@@ -657,37 +659,65 @@ void Tetra()
 			if (heights_delay > 0x0000) heights_delay--;
 		}
 		
-		tetra_vars.joy_prev[0] = tetra_vars.joy_curr[0];
-		tetra_vars.joy_curr[0] = 0xFF; 
+		if (joy_toggle == 1)
+		{
+			tetra_vars.joy_prev[0] = tetra_vars.joy_curr[0];
+			tetra_vars.joy_curr[0] = tetra_vars.joy_curr[0] | 0xFC; 
+		}
+		else
+		{
+			tetra_vars.joy_prev[0] = tetra_vars.joy_curr[0];
+			tetra_vars.joy_curr[0] = tetra_vars.joy_curr[0] | 0x03; 
+		}
 		
 		if (pause[0] == 0)
 		{
-			if (PORTJbits.RJ0 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0x7F);
-			if (PORTJbits.RJ1 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xBF);
-			if (PORTJbits.RJ2 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xDF);
-			if (PORTJbits.RJ3 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xEF);
-			if (PORTJbits.RJ4 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xF7);
-			if (PORTJbits.RJ5 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xFB);
-			
-			// change joystick select pin here if you want
+			if (joy_toggle == 1)
+			{	
+				if (PORTJbits.RJ0 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0x7F);
+				if (PORTJbits.RJ1 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xBF);
+				if (PORTJbits.RJ2 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xDF);
+				if (PORTJbits.RJ3 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xEF);
+				if (PORTJbits.RJ4 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xF7);
+				if (PORTJbits.RJ5 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xFB);
+			}
+			else
+			{
+				if (PORTJbits.RJ4 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xFD);
+				if (PORTJbits.RJ5 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xFE);
+			}
 		}
 		else pause[0]--;
 		
 		if (usb_mode != 0x02) // xbox-type controller
 		{
-			tetra_vars.joy_prev[1] = tetra_vars.joy_curr[1];
-			tetra_vars.joy_curr[1] = 0xFF; 
+			if (joy_toggle == 1)
+			{
+				tetra_vars.joy_prev[1] = tetra_vars.joy_curr[1];
+				tetra_vars.joy_curr[1] = tetra_vars.joy_curr[1] | 0xFC; 
+			}
+			else
+			{
+				tetra_vars.joy_prev[1] = tetra_vars.joy_curr[1];
+				tetra_vars.joy_curr[1] = tetra_vars.joy_curr[1] | 0x03; 
+			}
 
 			if (pause[1] == 0)
 			{
-				if (PORTJbits.RJ6 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0x7F);
-				if (PORTJbits.RJ7 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xBF);
-				if (PORTJbits.RJ10 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xDF);
-				if (PORTJbits.RJ12 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xEF);
-				if (PORTJbits.RJ13 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xF7);
-				if (PORTJbits.RJ14 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xFB);
-				
-				// change joystick select pin here if you want
+				if (joy_toggle == 1)
+				{
+					if (PORTJbits.RJ6 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0x7F);
+					if (PORTJbits.RJ7 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xBF);
+					if (PORTJbits.RJ10 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xDF);
+					if (PORTJbits.RJ12 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xEF);
+					if (PORTJbits.RJ13 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xF7);
+					if (PORTJbits.RJ14 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xFB);
+				}
+				else
+				{
+					if (PORTJbits.RJ13 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xFD);
+					if (PORTJbits.RJ14 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xFE);
+				}
 			}
 			else pause[1]--;
 		}
@@ -762,6 +792,18 @@ void Tetra()
 		}
 		
 		tetra_vars.seed++; // random 
+		
+		joy_toggle = 1 - joy_toggle;
+		
+		if (joy_toggle == 1)
+		{
+			TRISJbits.TRISJ15 = 1; // float joy-select (pulled high)
+		}
+		else
+		{
+			PORTJbits.RJ15 = 0;
+			TRISJbits.TRISJ15 = 0; // ground joy-select
+		}
 		
 		// DELAY HERE!!!
 		
@@ -851,6 +893,7 @@ void Tetra()
 				if (z == 0) press_delay = press_speed;
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x08) == 0x00) && ((tetra_vars.joy_prev[z] & 0x08) == 0x08) && tetra_vars.joy_button_delay[z] == 0) ||
+				(((tetra_vars.joy_curr[z] & 0x01) == 0x00) && ((tetra_vars.joy_prev[z] & 0x01) == 0x01) && tetra_vars.joy_button_delay[z] == 0) ||
 				(press_delay == 0x0000 && (buttons[0] == 1 || buttons[2] == 1) && z == 0) ||
 				(clicks[0] == 1 && z == 1)) // button 1
 			{
@@ -898,6 +941,7 @@ void Tetra()
 				}
 			}
 			else if ((((tetra_vars.joy_curr[z] & 0x04) == 0x00) && ((tetra_vars.joy_prev[z] & 0x04) == 0x04) && tetra_vars.joy_button_delay[z] == 0) ||
+				(((tetra_vars.joy_curr[z] & 0x02) == 0x00) && ((tetra_vars.joy_prev[z] & 0x02) == 0x02) && tetra_vars.joy_button_delay[z] == 0) ||
 				(press_delay == 0x0000 && (buttons[1] == 1 || buttons[3] == 1) && z == 0) ||
 				(clicks[1] == 1 && z == 1)) // button 2
 			{
@@ -1034,14 +1078,14 @@ void Tetra()
 					}
 					
 					// SOUND HERE
-					music_note(523, 250, 0);
+					music_note(523, 500, 0);
 
 					if (tetra_vars.pos_y[z] == 4)
 					{
 						tetra_vars.game_over[z] = 1;
 						
 						// SOUND HERE
-						music_note(262, 250, 0);
+						music_note(262, 500, 0);
 					}
 					else
 					{
@@ -1091,7 +1135,7 @@ void Tetra()
 								pause[1] = 0x3F;
 								
 								// SOUND HERE
-								music_note(1047, 250, 0);
+								music_note(1047, 500, 0);
 							}
 						}
 
@@ -1295,7 +1339,7 @@ void Tetra()
 		else if (tetra_vars.new_piece[1] == 5) display_character(horz * 16, vert * 16, 'T');
 		else if (tetra_vars.new_piece[1] == 6) display_character(horz * 16, vert * 16, 'Z');
 
-		if (tetra_vars.game_over[0] != 0x00)
+		if (tetra_vars.game_over[1] != 0x00)
 		{
 			display_string((unsigned int)((horz + 0x04) * 16 - 8), (unsigned int)(0x0170 + vert * 16), "Press \\");
 			display_string((unsigned int)((horz + 0x04) * 16 - 8), (unsigned int)(0x0178 + vert * 16), "Button\\");

@@ -244,47 +244,6 @@ void read_cart_ram_file(char save_file_name[16], uint8_t *dest,
 		SendString("Could not read cart ram from file\n\r\\");
 	}
 	
-	/*
-	display_string(8, 464, "Reading Cart RAM...\\");
-	
-	int test = 0;
-
-	for (int i=0; i<5; i++)
-	{
-		test = sdcard_initialize();
-
-		if (test == 1) break;
-	}
-
-	if (test == 1)
-	{
-		for (unsigned int i=0; i<64; i++)
-		{
-			test = sdcard_readblock(0x003F, (unsigned int)(0xFE00 + 0x0080 * cart_bank + i*2)); // last 128KB within the first 1GB
-			
-			DelayMS(1);
-			
-			if (test == 0)
-			{
-				SendString("Error occured while reading Cart RAM\r\n\\");
-				
-				return;
-			}
-			
-			for (unsigned int j=0; j<512; j++)
-			{
-				cart_ram[i*512 + j] = sdcard_block[j];
-			}
-		}
-		
-		SendString("Success reading Cart RAM\r\n\\");
-	}
-	else
-	{
-		SendString("Error initializing when reading Cart RAM\r\n\\");
-	}
-	*/
-	
 	return;
 }
 
@@ -341,74 +300,6 @@ void write_cart_ram_file(char save_file_name[16], uint8_t *dest,
 		
 		SendString("Could not write cart ram to file\n\r\\");
 	}
-	
-	/*
-	display_string(8, 464, "Writing Cart RAM...\\");
-	
-	int test = 0;
-
-	for (int i=0; i<5; i++)
-	{
-		test = sdcard_initialize();
-
-		if (test == 1) break;
-	}
-
-	if (test == 1)
-	{
-		for (unsigned int i=0; i<64; i++)
-		{
-			for (unsigned int j=0; j<512; j++)
-			{
-				sdcard_block[j] = cart_ram[i*512 + j];
-			}
-
-			test = sdcard_writeblock(0x003F, (unsigned int)(0xFE00 + 0x0080 * cart_bank + i*2)); // last 128KB within the first 1GB
-			
-			if (test == 0)
-			{
-				SendString("Error occured while writing Cart RAM\r\n\\");
-				
-				return;
-			}
-			
-			test = 1;
-			
-			test = sdcard_readblock(0x003F, (unsigned int)(0xFE00 + 0x0080 * cart_bank + i*2));
-			
-			if (test == 0)
-			{
-				SendString("Error occured while reading back Cart RAM\r\n\\");
-				
-				return;
-			}
-			
-			test = 1;
-			
-			for (unsigned int j=0; j<512; j++)
-			{
-				if (sdcard_block[j] != cart_ram[i*512 + j])
-				{
-					test = 0;
-					break;
-				}
-			}
-			
-			if (test == 0)
-			{
-				SendString("Error occured while comparing Cart RAM\r\n\\");
-				
-				return;
-			}
-		}
-		
-		SendString("Success writing Cart RAM\r\n\\");
-	}
-	else
-	{
-		SendString("Error initializing when writing Cart RAM\r\n\\");
-	}
-	*/
 	
 	return;
 }
@@ -476,201 +367,6 @@ void auto_assign_palette(uint8_t game_checksum)
 			}
 		}
 	}
-	
-	/*
-	size_t palette_bytes = 3 * 4 * sizeof(uint8_t);
-
-	switch(game_checksum)
-	{
-	// Balloon Kid and Tetris Blast
-	case 0x71:
-	case 0xFF:
-	{
-		const uint8_t palette[3][4] =
-		{
-			//{ 0x7FFF, 0x7E60, 0x7C00, 0x0000 }, // OBJ0
-			//{ 0x7FFF, 0x7E60, 0x7C00, 0x0000 }, // OBJ1
-			//{ 0x7FFF, 0x7E60, 0x7C00, 0x0000 }  // BG
-			{ 0xFF, 0xF0, 0xE0, 0x00 },
-			{ 0xFF, 0xF0, 0xE0, 0x00 },
-			{ 0xFF, 0xF0, 0xE0, 0x00 }, 
-		};
-		memcpy(selected_palette, palette, palette_bytes);
-		break;
-	}
-
-	// Pokemon Yellow and Tetris 
-	case 0x15:
-	case 0xDB:
-	case 0x95: // Not officially
-	{
-		const uint8_t palette[3][4] =
-		{
-			//{ 0x7FFF, 0x7FE0, 0x7C00, 0x0000 }, // OBJ0
-			//{ 0x7FFF, 0x7FE0, 0x7C00, 0x0000 }, // OBJ1
-			//{ 0x7FFF, 0x7FE0, 0x7C00, 0x0000 }  // BG
-			{ 0xFF, 0xFC, 0xE0, 0x00 },
-			{ 0xFF, 0xFC, 0xE0, 0x00 },
-			{ 0xFF, 0xFC, 0xE0, 0x00 }, 
-		};
-		memcpy(selected_palette, palette, palette_bytes);
-		break;
-	}
-
-	// Donkey Kong 
-	case 0x19:
-	{
-		const uint8_t palette[3][4] =
-		{
-			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }, // OBJ0
-			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }, // OBJ1
-			//{ 0x7FFF, 0x7E60, 0x7C00, 0x0000 }  // BG
-			{ 0xFF, 0xE6, 0x8C, 0x00 },
-			{ 0xFF, 0xE6, 0x8C, 0x00 },
-			{ 0xFF, 0xE4, 0xE0, 0x00 }, 
-		};
-		memcpy(selected_palette, palette, palette_bytes);
-		break;
-	}
-
-	// Pokemon Blue 
-	case 0x61:
-	case 0x45:
-
-	// Pokemon Blue Star 
-	case 0xD8:
-	{
-		const uint8_t palette[3][4] =
-		{
-			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }, // OBJ0
-			//{ 0x7FFF, 0x329F, 0x001F, 0x0000 }, // OBJ1
-			//{ 0x7FFF, 0x329F, 0x001F, 0x0000 }  // BG
-			{ 0xFF, 0xE6, 0x8C, 0x00 },
-			{ 0xFF, 0xCF, 0x0F, 0x00 },
-			{ 0xFF, 0xCF, 0x0F, 0x00 }, 
-		};
-		memcpy(selected_palette, palette, palette_bytes);
-		break;
-	}
-
-	// Pokemon Red 
-	case 0x14:
-		
-	// Pokemon Red Star 
-	case 0x8B:
-	{
-		const uint8_t palette[3][4] =
-		{
-			//{ 0x7FFF, 0x3FE6, 0x0200, 0x0000 }, // OBJ0
-			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }, // OBJ1
-			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }  // BG
-			{ 0xFF, 0xFC, 0x80, 0x00 },
-			{ 0xFF, 0xE6, 0x8C, 0x00 },
-			{ 0xFF, 0xE6, 0x8C, 0x00 }, 
-		};
-		memcpy(selected_palette, palette, palette_bytes);
-		break;
-	}
-
-	// Kirby 
-	case 0x27:
-	case 0x49:
-	case 0x5C:
-	case 0xB3:
-	{
-		const uint8_t palette[3][4] =
-		{
-			//{ 0x7D8A, 0x6800, 0x3000, 0x0000 }, // OBJ0
-			//{ 0x001F, 0x7FFF, 0x7FEF, 0x021F }, // OBJ1
-			//{ 0x527F, 0x7FE0, 0x0180, 0x0000 }  // BG
-			{ 0xFF, 0xC0, 0x60, 0x00 },
-			{ 0xFF, 0xFF, 0xFD, 0x03 },
-			{ 0xA7, 0xFC, 0x18, 0x00 }, 
-		};
-		memcpy(selected_palette, palette, palette_bytes);
-		break;
-	}
-
-	// Donkey Kong Land [1/2/III] 
-	case 0x18:
-	case 0x6A:
-	case 0x4B:
-	case 0x6B:
-	{
-		const uint8_t palette[3][4] =
-		{
-			//{ 0x7F08, 0x7F40, 0x48E0, 0x2400 			}
-				}, // OBJ0
-			//{ 0x7FFF, 0x2EFF, 0x7C00, 0x001F }, // OBJ1
-			//{ 0x7FFF, 0x463B, 0x2951, 0x0000 }  // BG
-			{ 0xF1, 0xF4, 0x8C, 0x40 },
-			{ 0xFF, 0x4F, 0xE0, 0x03 },
-			{ 0xFF, 0x83, 0x56, 0x00 }, 
-		};
-		memcpy(selected_palette, palette, palette_bytes);
-		break;
-	}
-
-	// Link's Awakening 
-	case 0x70:
-	{
-		const uint8_t palette[3][4] =
-		{
-			//{ 0x7FFF, 0x03E0, 0x1A00, 0x0120 }, // OBJ0
-			//{ 0x7FFF, 0x329F, 0x001F, 0x001F }, // OBJ1
-			//{ 0x7FFF, 0x7E10, 0x48E7, 0x0000 }  // BG
-			
-			{ 0xFF, 0x1C, 0x30, 0x08 },
-			{ 0xFF, 0x77, 0x03, 0x00 }, 
-			{ 0xFF, 0xF2, 0x84, 0x00 },
-			
-			//{ 0xFF, 0x1C, 0x70, 0x0C },
-			//{ 0xFF, 0x73, 0x03, 0x02 },
-			//{ 0xFF, 0xF2, 0x8E, 0x00 }, 
-		};
-		memcpy(selected_palette, palette, palette_bytes);
-		break;
-	}
-
-	// Mega Man [1/2/3] & others I don't care about. 
-	case 0x01:
-	case 0x10:
-	case 0x29:
-	case 0x52:
-	case 0x5D:
-	case 0x68:
-	case 0x6D:
-	case 0xF6:
-	{
-		const uint8_t palette[3][4] =
-		{
-			//{ 0x7FFF, 0x329F, 0x001F, 0x0000 }, // OBJ0
-			//{ 0x7FFF, 0x3FE6, 0x0200, 0x0000 }, // OBJ1
-			//{ 0x7FFF, 0x7EAC, 0x40C0, 0x0000 }  // BG
-			{ 0xFF, 0x6B, 0x03, 0x00 },
-			{ 0xFF, 0x7C, 0x00, 0x00 },
-			{ 0xFF, 0xE9, 0x8C, 0x00 }, 
-		};
-		memcpy(selected_palette, palette, palette_bytes);
-		break;
-	}
-
-	default:
-	{
-		// greyscale
-		const uint8_t palette[3][4] =
-		{
-			//{ 0x7FFF, 0x5294, 0x294A, 0x0000 },
-			//{ 0x7FFF, 0x5294, 0x294A, 0x0000 },
-			//{ 0x7FFF, 0x5294, 0x294A, 0x0000 }
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 },
-			{ 0xFF, 0x92, 0x49, 0x00 }, 
-		};
-		memcpy(selected_palette, palette, palette_bytes);
-	}
-	}
-	*/
 }
 
 
@@ -754,11 +450,11 @@ int BurnROM()
 	menu_x = 484;
 	menu_y = 16;
 	menu_pos = 0;
-	menu_max = 33;
+	menu_max = 51;
 	
 	int total = 0;
-	char filename[32][13];
-	char gamename[32][17];
+	char filename[50][13];
+	char gamename[50][17];
 	unsigned char choice = 0;
 	
 	char buffer[1];
@@ -819,7 +515,7 @@ int BurnROM()
 				total++;
 			}
 			
-			if (total >= 32) break;
+			if (total >= 50) break;
 		}
 	}
 	
@@ -862,7 +558,7 @@ int BurnROM()
 		}
 	}
 	
-	for (int i=total; i<32; i++)
+	for (int i=total; i<50; i++)
 	{	
 		display_string(menu_x + 8, menu_y, "                \\");
 		menu_y += 8;
@@ -872,78 +568,11 @@ int BurnROM()
 	
 	menu_y = 16;
 	
-	for (int i=0; i<33; i++)
+	for (int i=0; i<51; i++)
 	{
 		display_character(menu_x, menu_y + i * 8, ' ');
 	}
 
-/*	
-	unsigned int list_loop = 1;
-	unsigned long list_delay = 0;
-	unsigned char list_up = 0;
-	unsigned char list_down = 0;
-	
-	while (list_loop > 0)
-	{
-		if (list_up == 1)
-		{
-			list_up = 2;
-			
-			display_character(list_x, list_y + choice * 8, ' ');
-
-			if (choice > 0) choice--;
-
-			display_character(list_x, list_y + choice * 8, '>');
-		}
-		
-		if (list_down == 1)
-		{
-			list_down = 2;
-			
-			display_character(list_x, list_y + choice * 8, ' ');
-
-			if (choice < 31) choice++;
-
-			display_character(list_x, list_y + choice * 8, '>');
-		}
-		
-		if (list_delay > 0)
-		{
-			list_delay--;
-			
-			continue;
-		}
-		
-		list_delay = 0x0007FFFF;
-		
-		if (PORTJbits.RJ0 == 0)
-		{
-			if (list_up == 0)
-			{
-				list_up = 1;
-			}
-		}
-		else list_up = 0;
-		
-		if (PORTJbits.RJ1 == 0)
-		{
-			if (list_down == 0)
-			{
-				list_down = 1;
-			}
-		}
-		else list_down = 0;
-		
-		if (PORTJbits.RJ4 == 0 || PORTJbits.RJ5 == 0)
-		{
-			if (choice < total)
-			{
-				list_loop = 0;
-			}
-		}
-	}
-*/	
-	
 	choice = 0;
 	
 	while (choice == 0)
@@ -1531,7 +1160,9 @@ int PeanutGB()
 		{
 			// playing audio
 			audio_callback(&gb, (uint8_t *)&audio_buffer, AUDIO_NSAMPLES);
-			audio_position = 0;
+			audio_position = 0; // start at beginning
+			audio_length = 8192; // full length
+			audio_switch = 1; // only one run through buffer
 		}
 #else
 		if (sound_toggle > 0) audio_position = 0;
