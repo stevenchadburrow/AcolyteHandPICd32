@@ -13,7 +13,10 @@ sudo fdisk -l
 
 We are assuming you want /dev/sdc here, so use put it on that drive with a command like this:
 
+sudo dd if=Output.bin of=/dev/sdc bs=100M conv=fsync oflag=seek_bytes seek=0
+sudo dd if=Output.bin of=/dev/sdc bs=100M conv=fsync oflag=seek_bytes seek=536870912
 sudo dd if=Output.bin of=/dev/sdc bs=100M conv=fsync oflag=seek_bytes seek=1073741824
+sudo dd if=Output.bin of=/dev/sdc bs=100M conv=fsync oflag=seek_bytes seek=1610612736
 
 The 'oflag' and 'seek' portions put it at a specific address.  Remove if you want it starting at address 0.
 
