@@ -14,7 +14,7 @@ Inspired by The 8-Bit Guy's <a href="https://www.youtube.com/watch?v=ayh0qebfD2g
 
 From there, the project grew to the <a href="https://github.com/stevenchadburrow/NewAcolyte">New Acolyte</a> coupled with an XC9572XL CPLD, then the <a href="https://github.com/stevenchadburrow/Acolyte816">Acolyte '816</a> using a W65C816 processor but with a PIC16F886 microcontroller as a bootloader.  Wanting to continue pursuing PIC microcontrollers, I created the original <a href="https://github.com/stevenchadburrow/AcolyteHandPICd">Acolyte Hand PIC'd</a> using the PIC18F47J13 microcontroller, then the <a href="https://github.com/stevenchadburrow/AcolyteHandPICd24">Acolyte Hand PIC'd 24</a> using the PIC24EP512GP204 microcontroller finally without a CPLD.  During Summer 2024, I programmed a 2-player <a href="https://www.youtube.com/watch?v=8EHRpKk9gPc">Pokemon demo</a> using <a href="https://tuxemon.org/">Tuxemon</a> art assets, pushing that PIC24 to the limit.
 
-This project, the Acolyte Hand PIC'd 32, is supposed to show the culmination of my knowledge in PCB design and microcontroller programming over the past 3 years.  The intention is to create a standardized development platform for many new video games that will be displayed during the Math Appreciation Day events.
+This project, the Acolyte Hand PIC'd 32, is supposed to show the culmination of my knowledge in PCB design and microcontroller programming over the past 3 years.  The intention is to create a standardized development platform for many new video games that will be displayed during the Math Appreciation Day events.  At this point I have been able to replace all of my broken Linux computers with these various projects and the video games I programmed for them.
 
 <b>Microcontroller</b>
 
