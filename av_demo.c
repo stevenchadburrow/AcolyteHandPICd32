@@ -4,8 +4,47 @@
 
 void AudioVideoDemo()
 { 
-	unsigned int high_block = 0x0040; // starting at 1 GB into the SDcard
+	unsigned int high_block = 0x0040; // default starting at 1 GB into the SDcard
 	unsigned int low_block = 0x0000;
+	
+	menu_x = 484;
+	menu_y = 16;
+	menu_pos = 0;
+	menu_max = 5;
+	
+	display_string(menu_x, menu_y,		" *** Select Start\\");
+	display_string(menu_x, menu_y+8,	" Seek +0.0 GB    \\");
+	display_string(menu_x, menu_y+16,	" Seek +0.5 GB    \\");
+	display_string(menu_x, menu_y+24,	" Seek +1.0 GB    \\");
+	display_string(menu_x, menu_y+32,	" Seek +1.5 GB    \\");
+
+	unsigned char pos = 0;
+	
+	while (pos == 0)
+	{
+		pos = Menu();
+	}
+	
+	if (pos == 1)
+	{
+		high_block = 0x0000; // 0 MB into SDcard
+		low_block = 0x0000;
+	}
+	else if (pos == 2)
+	{
+		high_block = 0x0020; // 500 MB into SDcard
+		low_block = 0x0000;
+	}
+	else if (pos == 3)
+	{
+		high_block = 0x0040; // 1000 MB into SDcard
+		low_block = 0x0000;
+	}
+	else if (pos == 4)
+	{
+		high_block = 0x0060; // 1500 MB into SDcard
+		low_block = 0x0000;
+	}
 	
 	while (1)
 	{
