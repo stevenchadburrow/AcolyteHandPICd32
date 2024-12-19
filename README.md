@@ -62,19 +62,35 @@ Tested with many games, including: Tetris, Dr. Mario, Zelda: Link's Awakening, a
 
 *** Board Edits: Removed the 74HC273 entirely and directly connected latch inputs to outputs.  Also added 4-bit audio DAC to PORTH pins. ***
 
+Older picture of PCB without audio DAC installed.
+<br>
 <img src="BOARD-PICTURE.jpg">
 
+3D printed case fits perfectly!
+<br>
 <img src="PRINTED-CASE.jpg">
 
+Main menu format with splash screen.
+<br>
 <img src="MIKU-MENU.jpg">
 
+Everybody loves 2-player Tetris!
+<br>
 <img src="MIKU-TETRA.jpg">
 
+Every system must attempt Bad Apple it seems.
+<br>
 <img src="BAD-APPLE.jpg">
 
+Fuzzy picture of the Scratchpad.
+<br>
 <img src="SCRATCH-PAD.jpg">
 
+Can now play any Gameboy game!
+<br>
 <img src="ZELDA-GB.jpg">
 
+Video playback seems to run without lag.
+<br>
 <img src="AV-SKYRIM.gif">&nbsp;&nbsp;&nbsp;&nbsp;<img src="AV-BADAPPLE.gif">
 
