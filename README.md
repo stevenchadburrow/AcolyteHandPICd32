@@ -1,8 +1,6 @@
 <b>Acolyte Hand PIC'd 32 Retraux Computer</b>
 
-PIC32MZ2048EFH144 microcontroller
-<br>
-Runs at 200 MHz
+PIC32MZ2048EFH144 microcontroller running at 200 MHz
 <br>
 Internal memory of 512KB of RAM and 2MB of Flash ROM
 
@@ -17,9 +15,9 @@ Single 4-bit audio channel, adding more bits and channels in the future
 <b>HID</b>
 
 2x Sega Genesis controller ports
-
+<br>
 Dual PS/2 port for keyboard and mouse through splitter
-
+<br>
 USB port for keyboard, mouse, or Xbox-360 controller
 
 <b>File System</b>
