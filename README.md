@@ -1,4 +1,4 @@
-<b><h1>Acolyte Hand PIC'd 32 Retraux Computer and Video Game Console</h1></b>
+<b><h1>Acolyte Hand PIC'd 32 Retraux Computer / Video Game Console</h1></b>
 
 <b>Background</b>
 
