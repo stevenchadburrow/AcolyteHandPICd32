@@ -44,7 +44,7 @@ FT232RL USB-to-UART adapter
 
 <b>Custom Applications</b>
 
-Tetra - Tetris clone recopied from previous PIC-related projects
+Tetra - Tetris clone recopied from my previous PIC-related projects
 <br>
 Scratchpad - Proof-of-concept 'text editor' without save/load features
 <br>
