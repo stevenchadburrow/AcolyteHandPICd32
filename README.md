@@ -32,7 +32,7 @@ USB port for keyboard, mouse, or Xbox-360 controller
 
 <b>File System</b>
 
-Elm-Chan's FatFS files using SPI Micro SD Card adapter
+Elm-Chan's <a href="http://elm-chan.org/fsw/ff/">FatFS</a> files using SPI Micro SD Card adapter
 
 <b>UART</b>
 
@@ -48,7 +48,7 @@ AV Demo - Audio/Video playback of modified video files with a resolution 240x192
 
 <b>Gameboy Emulator</b>
 
-Mahyar Koshkouei's Peanut-GB (with MiniGB-APU) Gameboy Emulator
+Mahyar Koshkouei's <a href="https://github.com/deltabeard/Peanut-GB">Peanut-GB (with MiniGB-APU) Gameboy Emulator</a>
 <br>
 Added support for GBC default color palettes, game file save/load, and screen size and refresh rate adjustments
 <br>
