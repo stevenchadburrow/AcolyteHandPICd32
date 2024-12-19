@@ -1,5 +1,9 @@
 <b><h1>Acolyte Hand PIC'd 32 Retraux Computer</h1></b>
 
+<b>Background</b>
+
+Originally inspired by The 8-Bit Guy's "Dream Computer", after some initial attempts, I eventually produced the original Acolyte Computer <a href="https://github.com/stevenchadburrow/AcolyteComputer">here</a>.  
+
 <b>Microcontroller</b>
 
 PIC32MZ2048EFH144 running at 200 MHz
