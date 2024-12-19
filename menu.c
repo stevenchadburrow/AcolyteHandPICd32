@@ -43,7 +43,7 @@ unsigned char Menu()
 					
 				display_character(menu_x, menu_y + menu_pos * 8, '>');
 				
-				music_note(523, 500, 0);
+				//music_note(523, 500, 0);
 			}
 		}
 		
@@ -59,7 +59,7 @@ unsigned char Menu()
 
 				display_character(menu_x, menu_y + menu_pos * 8, '>');
 				
-				music_note(523, 500, 0);
+				//music_note(523, 500, 0);
 			}
 		}	
 
@@ -204,7 +204,7 @@ unsigned char Menu()
 
 					display_character(menu_x, menu_y + menu_pos * 8, '>');
 
-					music_note(523, 500, 0);
+					//music_note(523, 500, 0);
 					
 					break;
 				}
