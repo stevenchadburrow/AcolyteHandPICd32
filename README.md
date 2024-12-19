@@ -48,7 +48,9 @@ AV Demo - Audio/Video playback of modified video files with a resolution 240x192
 
 <b>Gameboy Emulator</b>
 
-Mahyar Koshkouei's Peanut-GB (with MiniGB-APU) Gameboy Emulator with GBC default color palettes and save file support
+Mahyar Koshkouei's Peanut-GB (with MiniGB-APU) Gameboy Emulator
+<br>
+Added support for GBC default color palettes, game file save/load, and screen size and refresh rate adjustments
 <br>
 Tested with many games, including: Tetris, Dr. Mario, Zelda: Link's Awakening, and Pokemon Red
 
