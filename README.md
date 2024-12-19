@@ -1,4 +1,4 @@
-<b>Acolyte Hand PIC'd 32 Retraux Computer</b>
+<b><u>Acolyte Hand PIC'd 32 Retraux Computer</u></b>
 
 PIC32MZ2048EFH144 microcontroller running at 200 MHz
 <br>
