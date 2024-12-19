@@ -62,7 +62,7 @@ Tested with many games, including: Tetris, Dr. Marigeneric FAT/exFAT filesystem 
 
 *** Board Edits: Removed the 74HC273 entirely and directly connected latch inputs to outputs.  Also added 4-bit audio DAC to PORTH pins. ***
 
-<b>Older picture of PCB without audio DAC installed.</b>
+<b>Older picture of PCB with 74HC273 installed and without audio DAC installed.</b>
 <br>
 <img src="BOARD-PICTURE.jpg">
 
