@@ -38,13 +38,17 @@ Elm-Chan's FatFS files using SPI Micro SD Card adapter
 
 FT232RL USB-to-UART adapter (use command 'sudo picocom /dev/ttyUSB0')
 
+<b>Custom Applications</b>
+
+Tetra - Tetris clone recopied from previous PIC-related projects
+Scratchpad - Proof-of-concept 'text editor' without save/load features
+AV Demo - Audio/Video playback of modified video files with a resolution 240x192 at 30 Hz with 256 colors and up to 32-bit mono audio
+
 <b>Gameboy Emulator</b>
 
 Mahyar Koshkouei's Peanut-GB (with MiniGB-APU) Gameboy Emulator with GBC default color palettes and save file support
-
-<b>Video Playback</b>
-
-Plays modified video files with a resolution 240x192 at 30 Hz with 256 colors and up to 32-bit mono audio
+<br>
+Tested with many games, including: Tetris, Dr. Mario, Zelda: Link's Awakening, and Pokemon Red
 
 <b>Links</b>
 
