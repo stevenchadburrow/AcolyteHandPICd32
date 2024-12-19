@@ -74,7 +74,7 @@ Tested with many games, including: Tetris, Dr. Marigeneric FAT/exFAT filesystem 
 <br>
 <img src="MIKU-MENU.jpg">
 
-<b>Everybody loves 2-player Tetris!</b>
+<b>Gotta love some 2-player Tetris!</b>
 <br>
 <img src="MIKU-TETRA.jpg">
 
