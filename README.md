@@ -16,7 +16,7 @@ Internal memory of 512KB of RAM and 2MB of Flash ROM
 
 <b>Video</b>
 
-VGA 640x480 resolution at 72 Hz with 256 colors
+VGA 800x600 resolution at 72 Hz with 256 colors
 
 <b>Audio</b>
 
