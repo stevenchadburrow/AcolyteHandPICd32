@@ -32,11 +32,15 @@ USB port for keyboard, mouse, or Xbox-360 controller
 
 <b>File System</b>
 
-Elm-Chan's <a href="http://elm-chan.org/fsw/ff/">FatFS Generic FAT Filesystem Module</a> using SPI Micro SD Card adapter (use command 'sudo mkfs.vfat /dev/sdX' to format SDcard)
+Elm-Chan's <a href="http://elm-chan.org/fsw/ff/">FatFS Generic FAT Filesystem Module</a> using SPI Micro SD Card adapter
+<br>
+(use command 'sudo mkfs.vfat /dev/sdX' to format SDcard)
 
 <b>UART</b>
 
-FT232RL USB-to-UART adapter (use command 'sudo picocom /dev/ttyUSB0' for default 9600 baud connection)
+FT232RL USB-to-UART adapter
+<br>
+(use command 'sudo picocom /dev/ttyUSB0' for default 9600 baud connection)
 
 <b>Custom Applications</b>
 
