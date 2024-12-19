@@ -40,7 +40,7 @@ FT232RL USB-to-UART adapter (use command 'sudo picocom /dev/ttyUSB0')
 
 <b>Gameboy Emulator</b>
 
-Peanut-GB (with MiniGB-APU) Gameboy Emulator with GBC default color palettes and save file support
+Mahyar Koshkouei's Peanut-GB (with MiniGB-APU) Gameboy Emulator with GBC default color palettes and save file support
 
 <b>Video Playback</b>
 
