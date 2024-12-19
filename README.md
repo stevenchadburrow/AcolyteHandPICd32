@@ -32,7 +32,7 @@ USB port for keyboard, mouse, or Xbox-360 controller
 
 <b>File System</b>
 
-Elm-Chan's <a href="http://elm-chan.org/fsw/ff/">FatFS</a> files using SPI Micro SD Card adapter (sudo command 'sudo mkfs.vfat /dev/sdX' to format SDcard)
+Elm-Chan's <a href="http://elm-chan.org/fsw/ff/">FatFS Generic FAT Filesystem Module</a> using SPI Micro SD Card adapter (sudo command 'sudo mkfs.vfat /dev/sdX' to format SDcard)
 
 <b>UART</b>
 
