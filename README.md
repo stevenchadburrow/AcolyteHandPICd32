@@ -44,7 +44,7 @@ Mahyar Koshkouei's Peanut-GB (with MiniGB-APU) Gameboy Emulator with GBC default
 
 <b>Video Playback</b>
 
-Plays modified video files with a resolution 240x192 at 30 Hz with 256 colors
+Plays modified video files with a resolution 240x192 at 30 Hz with 256 colors and up to 32-bit mono audio
 
 <b>Links</b>
 
