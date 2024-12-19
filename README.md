@@ -1,6 +1,8 @@
 <b><h1>Acolyte Hand PIC'd 32 Retraux Computer</h1></b>
 
-PIC32MZ2048EFH144 microcontroller running at 200 MHz
+<b>Microcontroller</b>
+
+PIC32MZ2048EFH144 running at 200 MHz
 <br>
 Internal memory of 512KB of RAM and 2MB of Flash ROM
 
