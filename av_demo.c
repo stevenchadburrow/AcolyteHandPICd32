@@ -139,7 +139,7 @@ void AudioVideoDemo()
 							else if (k % 64 == 63) // audio
 							{
 								// Should add 0x07 before shifting in case of rounding???
-								PORTH = (((value >> 4) + 0x08) & 0x0F); 
+								PORTH = (unsigned char)(((value + 0x80) >> 2) & 0x3F); 
 							}
 							else // comment the 'else' out to show the audio
 							{				

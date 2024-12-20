@@ -26,7 +26,7 @@ uint8_t frame_count = 0;
 char *cart_rom = (char *)0x9D100000;
 
 volatile uint8_t __attribute__((coherent,address(0x80078000))) cart_ram[32768];
-uint8_t boot_rom[256];
+uint8_t __attribute__((coherent)) boot_rom[256];
 uint8_t selected_palette[3][4];
 
 uint8_t cart_bank = 0; // up to 4 banks (for now)
@@ -633,8 +633,6 @@ int PeanutGB()
 		}
 	}
 	
-	audio_switch = 1; // turn on audio_buffer[]
-	
 	struct gb_s gb;
 	struct priv_t priv;
 
@@ -990,7 +988,10 @@ int PeanutGB()
 
 			DelayMS(1000);
 
-			for (unsigned int i=0; i<8192; i++) audio_buffer[i] = 0x00;
+			for (unsigned int i=0; i<2; i++)
+			{
+				for (unsigned int j=0; j<8192; j++) audio_buffer[i][j] = 0x00;
+			}
 			
 			for (unsigned int y=0; y<SCREEN_Y; y++)
 			{
@@ -1159,17 +1160,28 @@ int PeanutGB()
 		if (sound_toggle > 0)
 		{
 			// playing audio
-			audio_callback(&gb, (uint8_t *)&audio_buffer, AUDIO_NSAMPLES);
+			audio_callback(&gb, (uint8_t *)&audio_buffer[1-audio_bank], AUDIO_NSAMPLES);
+		}
+#endif
+			
+		// speed limiter for when occasionally the Gameboy is too fast
+		while (frame_position < 805) { } // wait for frame trigger interrupt 
+		
+#if ENABLE_SOUND
+		if (sound_toggle > 0)
+		{
+			audio_bank = 1 - audio_bank;
 			audio_position = 0; // start at beginning
-			audio_length = 8192; // full length
+			audio_length = 8192; // could be up to 8192 if full length
 			audio_switch = 1; // only one run through buffer
 		}
 #else
 		if (sound_toggle > 0) audio_position = 0;
 #endif
-			
-		// speed limiter for when occasionally the Gameboy is too fast
-		while (frame_position < 805) { } // wait for frame trigger interrupt
+		
+		
+		
+		PORTEbits.RE8 = 1; // TEMPORARY!!!
 	}
 
 	return ret;

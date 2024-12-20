@@ -3,7 +3,7 @@
 
 
 // comment out if you want to program the PIC32 faster
-#define SPLASH
+//#define SPLASH
 
 
 /*
@@ -249,9 +249,11 @@ void SendLongHex(unsigned long value)
 #define SCREEN_Y 480
 
 // most important arrays
-volatile unsigned char __attribute__((coherent,address(0x8002B000))) screen_buffer[SCREEN_Y*SCREEN_X]; // visible portion of screen
-volatile unsigned char __attribute__((coherent,address(0x80076000))) audio_buffer[8192];
+volatile unsigned char __attribute__((coherent,address(0x80029000))) screen_buffer[SCREEN_Y*SCREEN_X]; // visible portion of screen
+
+volatile unsigned char __attribute__((coherent,address(0x80074000))) audio_buffer[2][8192];
 volatile unsigned int audio_position = 0;
+volatile unsigned int audio_bank = 0;
 volatile unsigned int audio_length = 0;
 volatile unsigned int audio_switch = 0;
 volatile unsigned int frame_position = 0;
@@ -537,12 +539,14 @@ void music_note(unsigned int frequency, unsigned int duration, unsigned char cha
 	{
 		for (unsigned int j=0; j<period; j++)
 		{
-			audio_buffer[i+j] = 0x00;
+			audio_buffer[0][i+j] = 0x00;
+			audio_buffer[1][i+j] = 0x00;
 		}
 		
 		for (unsigned int j=0; j<period; j++)
 		{
-			audio_buffer[i+j+period] = 0x80;
+			audio_buffer[0][i+j+period] = 0x80;
+			audio_buffer[1][i+j+period] = 0x80;
 		}
 		
 		position += 2 * period;

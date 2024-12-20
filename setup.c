@@ -335,7 +335,10 @@ void Setup()
 		}
 	}
 	
-	for (unsigned int i=0; i<8192; i++) audio_buffer[i] = 0x00;
+	for (unsigned int i=0; i<2; i++)
+	{
+		for (unsigned int j=0; j<8192; j++) audio_buffer[i][j] = 0x00;
+	}
 	
 	// clear ps2 buffers
 	for (unsigned int i=0; i<256; i++)
