@@ -1054,6 +1054,37 @@ int PeanutGB()
 				display_string(menu_x, menu_y+120,	" Custom 10          \\");
 				display_string(menu_x, menu_y+128,	" Custom 11          \\");
 				display_string(menu_x, menu_y+136,	" Custom 12          \\");
+				
+				// display color preview
+				for (int p=0; p<12; p++)
+				{
+					for (int x=0; x<4; x++)
+					{
+						for (int y=0; y<8; y++)
+						{
+							screen_buffer[(menu_y+8+y)*SCREEN_X + (menu_x+112 + p*4 + x)] = 
+								gb_conversion[gb_lookup[gb_colour_hash(&gb)]][p]; // GBC default
+							
+							screen_buffer[(menu_y+16+y)*SCREEN_X + (menu_x+112 + p*4 + x)] = 
+								gb_custom[0][p]; // GB original
+							
+							screen_buffer[(menu_y+24+y)*SCREEN_X + (menu_x+112 + p*4 + x)] = 
+								gb_custom[1][p]; // GB pocket
+							
+							screen_buffer[(menu_y+32+y)*SCREEN_X + (menu_x+112 + p*4 + x)] = 
+								gb_custom[2][p]; // GB light
+							
+							screen_buffer[(menu_y+40+y)*SCREEN_X + (menu_x+112 + p*4 + x)] = 
+								gb_conversion[0x00][p]; // grayscale
+							
+							for (int i=0; i<12; i++)
+							{
+								screen_buffer[(menu_y+48 + i*8 + y)*SCREEN_X + (menu_x+112 + p*4 + x)] = 
+									gb_custom[i+3][p]; // custom
+							}
+						}
+					}
+				}
 
 				choice = 0;
 
