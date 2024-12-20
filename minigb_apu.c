@@ -370,7 +370,14 @@ void audio_callback(void *userdata, uint8_t *stream, int len)
 	/* Appease unused variable warning. */
 	(void)userdata;
 
-	memset(stream, 0, 8192); // not using length?
+	if (len * 4 >= 8192)
+	{
+		memset(stream, 0, 8192);
+	}
+	else
+	{
+		memset(stream, 0, len * 4); /// needs at least len * 2 for 16-bit audio, up to 8192 total
+	}
 
 	update_square(samples, 0);
 	update_square(samples, 1);
