@@ -32,7 +32,6 @@ uint8_t selected_palette[3][4];
 uint8_t cart_bank = 0; // up to 4 banks (for now)
 
 unsigned char sound_toggle = 1; // sound on by default
-unsigned char palette_toggle = 1; // palette on by default
 unsigned char screen_toggle = 1; // screen large by default
 unsigned char frame_toggle = 1; // frame half by default
 
@@ -793,8 +792,7 @@ int PeanutGB()
 	gb_init_lcd(&gb, &lcd_draw_line);
 #endif
 
-	if (palette_toggle == 1) auto_assign_palette(gb_colour_hash(&gb));
-	else auto_assign_palette(0x00);
+	auto_assign_palette(gb_colour_hash(&gb)); // default
 	
 	while (PORTJbits.RJ11 == 0) { }
 	
@@ -1007,10 +1005,9 @@ int PeanutGB()
 			menu_max = 7;
 
 			display_string(menu_x, menu_y,		" Resume        \\");
-			if (sound_toggle == 0)		display_string(menu_x, menu_y+8,  " Sound On      \\");
-			else						display_string(menu_x, menu_y+8,  " Sound Off     \\");
-			if (palette_toggle == 0)	display_string(menu_x, menu_y+16, " Palette Color \\");
-			else						display_string(menu_x, menu_y+16, " Palette Mono  \\");
+			display_string(menu_x, menu_y+8,	" Palette Choice\\");
+			if (sound_toggle == 0)		display_string(menu_x, menu_y+16, " Sound On      \\");
+			else						display_string(menu_x, menu_y+16, " Sound Off     \\");
 			if (screen_toggle == 0)		display_string(menu_x, menu_y+24, " Screen Large  \\");
 			else						display_string(menu_x, menu_y+24, " Screen Small  \\");
 			if (screen_toggle == 0)		display_string(menu_x, menu_y+24, " Screen Large  \\");
@@ -1024,16 +1021,73 @@ int PeanutGB()
 			choice = (unsigned char)Menu();
 
 			if (choice == 0) { } // resume
-			else if (choice == 1) // toggle sound
+			else if (choice == 1) // palette choice
+			{
+				for (unsigned int y=0; y<SCREEN_Y; y++)
+				{
+					for (unsigned int x=0; x<SCREEN_X; x++)
+					{
+						screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
+					}
+				}
+
+				menu_x = 256;
+				menu_y = 240;
+				menu_pos = 0;
+				menu_max = 18;
+
+				display_string(menu_x, menu_y,		" *** Palette Choice?\\");
+				display_string(menu_x, menu_y+8,	" GBC Default        \\");
+				display_string(menu_x, menu_y+16,	" GB Original        \\");
+				display_string(menu_x, menu_y+24,	" GB Pocket          \\");
+				display_string(menu_x, menu_y+32,	" GB Light           \\");
+				display_string(menu_x, menu_y+40,	" Grayscale          \\");
+				display_string(menu_x, menu_y+48,	" Custom 1           \\");
+				display_string(menu_x, menu_y+56,	" Custom 2           \\");
+				display_string(menu_x, menu_y+64,	" Custom 3           \\");
+				display_string(menu_x, menu_y+72,	" Custom 4           \\");
+				display_string(menu_x, menu_y+80,	" Custom 5           \\");
+				display_string(menu_x, menu_y+88,	" Custom 6           \\");
+				display_string(menu_x, menu_y+96,	" Custom 7           \\");
+				display_string(menu_x, menu_y+104,	" Custom 8           \\");
+				display_string(menu_x, menu_y+112,	" Custom 9           \\");
+				display_string(menu_x, menu_y+120,	" Custom 10          \\");
+				display_string(menu_x, menu_y+128,	" Custom 11          \\");
+				display_string(menu_x, menu_y+136,	" Custom 12          \\");
+
+				choice = 0;
+
+				while (choice == 0)
+				{
+					choice = (unsigned char)Menu();
+				}
+
+				if (choice == 1) auto_assign_palette(gb_colour_hash(&gb));
+				else if (choice >= 2 && choice <= 4)
+				{
+					for (int i=0; i<3; i++)
+					{
+						for (int j=0; j<4; j++)
+						{
+							selected_palette[i][j] = gb_custom[choice-2][i*4+j];
+						}
+					}
+				}
+				else if (choice == 5) auto_assign_palette(0x00);
+				else
+				{
+					for (int i=0; i<3; i++)
+					{
+						for (int j=0; j<4; j++)
+						{
+							selected_palette[i][j] = gb_custom[choice-3][i*4+j];
+						}
+					}
+				}
+			}
+			else if (choice == 2) // toggle sound
 			{
 				sound_toggle = 1 - sound_toggle;
-			}
-			else if (choice == 2) // toggle palette
-			{
-				palette_toggle = 1 - palette_toggle;
-
-				if (palette_toggle == 1) auto_assign_palette(gb_colour_hash(&gb));
-				else auto_assign_palette(0x00);
 			}
 			else if (choice == 3) // toggle screen
 			{
