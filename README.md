@@ -28,7 +28,7 @@ VGA 800x600 max resolution (640x480 typical resolution) at 72 Hz with 256 colors
 
 <b>Audio</b>
 
-Single 4-bit audio channel, adding more bits and channels in the future
+Single 6-bit audio channel, adding more bits and channels in the future
 
 <b>HID</b>
 
@@ -72,7 +72,7 @@ Tested with many games, including: Tetris, Dr. Mario, Zelda: Link's Awakening, a
 <a href="http://elm-chan.org/">http://elm-chan.org/</a> for a bunch of projects, including MMC (aka SDcard) and FatFs.<br>
 <a href="https://github.com/deltabeard/">https://github.com/deltabeard/</a> for a bunch of projects, including Peanut-GB and MiniGB-APU projects.<br>
 
-*** Board Edits: Removed the 74HC273 entirely and directly connected latch inputs to outputs.  Also added 4-bit audio DAC to PORTH pins. ***
+*** Board Edits: Removed the 74HC273 entirely and directly connected latch inputs to outputs.  Also added 6-bit audio DAC to PORTH pins. ***
 
 <b>Older picture of PCB with 74HC273 installed and without audio DAC installed.</b>
 <br>
