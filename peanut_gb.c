@@ -32,7 +32,7 @@ uint8_t selected_palette[3][4];
 uint8_t cart_bank = 0; // up to 4 banks (for now)
 
 unsigned char sound_toggle = 1; // sound on by default
-unsigned char screen_toggle = 1; // screen large by default
+unsigned char screen_toggle = 2; // screen large by default
 unsigned char frame_toggle = 1; // frame half by default
 
 char game_name[8];
@@ -436,7 +436,16 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160],
 	
 	if (test == 1)
 	{
-		if (screen_toggle == 0x00)
+		if (screen_toggle == 0)
+		{
+			for(unsigned int x = 0; x < LCD_WIDTH; x++)
+			{
+				screen_buffer[((line)+168) * SCREEN_X + x + 248] = 
+						selected_palette[(pixels[(x)] & LCD_PALETTE_ALL) >> 4]
+							[pixels[(x)] & 3];
+			}
+		}
+		else if (screen_toggle == 1)
 		{
 			for(unsigned int x = 0; x < LCD_WIDTH*2; x++)
 			{
@@ -448,7 +457,7 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160],
 							[pixels[(x>>1)] & 3];
 			}
 		}
-		else
+		else if (screen_toggle == 2)
 		{
 			for(unsigned int x = 0; x < LCD_WIDTH; x++)
 			{
@@ -1042,15 +1051,14 @@ int PeanutGB()
 
 			display_string(menu_x, menu_y,		" Resume        \\");
 			display_string(menu_x, menu_y+8,	" Palette Choice\\");
-			if (sound_toggle == 0)		display_string(menu_x, menu_y+16, " Sound On      \\");
-			else						display_string(menu_x, menu_y+16, " Sound Off     \\");
-			if (screen_toggle == 0)		display_string(menu_x, menu_y+24, " Screen Large  \\");
-			else						display_string(menu_x, menu_y+24, " Screen Small  \\");
-			if (screen_toggle == 0)		display_string(menu_x, menu_y+24, " Screen Large  \\");
-			else						display_string(menu_x, menu_y+24, " Screen Small  \\");
-			if (frame_toggle == 0)		display_string(menu_x, menu_y+32, " Frame Half    \\");
-			else if (frame_toggle == 1)	display_string(menu_x, menu_y+32, " Frame Quarter \\");
-			else						display_string(menu_x, menu_y+32, " Frame Single  \\");
+			if (sound_toggle == 0)			display_string(menu_x, menu_y+16, " Sound On      \\");
+			else							display_string(menu_x, menu_y+16, " Sound Off     \\");
+			if (screen_toggle == 0)			display_string(menu_x, menu_y+24, " Screen Large  \\");
+			else if (screen_toggle == 1)	display_string(menu_x, menu_y+24, " Screen Small  \\");
+			else							display_string(menu_x, menu_y+24, " Screen Medium \\");
+			if (frame_toggle == 0)			display_string(menu_x, menu_y+32, " Frame Half    \\");
+			else if (frame_toggle == 1)		display_string(menu_x, menu_y+32, " Frame Quarter \\");
+			else							display_string(menu_x, menu_y+32, " Frame Single  \\");
 			display_string(menu_x, menu_y+40,	" Load and Reset\\");
 			display_string(menu_x, menu_y+48,	" Overwrite Save\\");
 
@@ -1158,7 +1166,8 @@ int PeanutGB()
 			}
 			else if (choice == 3) // toggle screen
 			{
-				screen_toggle = 1 - screen_toggle;
+				if (screen_toggle == 0) screen_toggle = 2;
+				else screen_toggle--;
 			}
 			else if (choice == 4) // toggle frames
 			{
