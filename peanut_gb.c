@@ -1488,9 +1488,7 @@ int PeanutGB()
 		if (sound_toggle > 0) audio_position = 0;
 #endif
 		
-		
-		
-		PORTEbits.RE8 = 1; // TEMPORARY!!!
+		//PORTEbits.RE8 = 1; // TEMPORARY!!!
 	}
 
 	return ret;

@@ -3,7 +3,7 @@
 
 
 // comment out if you want to program the PIC32 faster
-#define SPLASH
+//#define SPLASH
 
 
 /*
@@ -531,7 +531,7 @@ void music_note(unsigned int frequency, unsigned int duration, unsigned char cha
 	// each increment of 'audio_buffer[]' is about 20.8 us long
 	// each 'audio_switch' is about 170.4 ms long
 	
-	unsigned int period = (unsigned int)((unsigned long)(1000000 * 5) / (unsigned long)(104 * frequency)) + 1;
+	unsigned int period = (unsigned int)((unsigned long)(1000000 * 5) / (unsigned long)(208 * frequency)) + 1;
 	
 	unsigned int position = 0;
 	
@@ -554,7 +554,7 @@ void music_note(unsigned int frequency, unsigned int duration, unsigned char cha
 	
 	audio_length = position;
 	
-	audio_switch = (unsigned int)((unsigned long)(duration * 8192 * 5) / (unsigned long)(852 * position)) + 1;
+	audio_switch = (unsigned int)((unsigned long)(duration * 8192 * 5) / (unsigned long)(1704 * position)) + 1;
 	
 	return;
 };

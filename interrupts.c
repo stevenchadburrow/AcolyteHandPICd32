@@ -17,9 +17,9 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 	
 	if (audio_switch > 0)
 	{
-		// 6-bit unsigned audio from 16-bit signed audio, this seems to help
-		PORTH = (unsigned char)((((audio_buffer[audio_bank][audio_position+3]) + 0x80) >> 2) & 0x3F);
-		audio_position += 4;
+		// 6-bit unsigned audio from 8-bit signed audio, this seems to help
+		PORTH = (unsigned char)((((audio_buffer[audio_bank][audio_position]) + 0x80) >> 2) & 0x3F);
+		audio_position++;
 		if (audio_position >= audio_length)
 		{
 			audio_bank = 1 - audio_bank;
