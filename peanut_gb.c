@@ -35,6 +35,8 @@ unsigned char sound_toggle = 1; // sound on by default
 unsigned char screen_toggle = 1; // screen large by default
 unsigned char frame_toggle = 1; // frame half by default
 
+char game_name[8];
+
 
 unsigned int NVMUnlock(unsigned int nvmop)
 {
@@ -250,13 +252,21 @@ void write_cart_ram_file(char save_file_name[16], uint8_t *dest,
 			 const size_t len)
 {
 	
+	char title_file_name[16];
+	
 	for (int i=0; i<16; i++)
 	{
 		if (save_file_name[i] <= 0x20 || save_file_name[i] >= 0x7F)
 		{
 			save_file_name[i] = 0;
 		}
+		
+		title_file_name[i] = save_file_name[i];
 	}
+	
+	title_file_name[8] = 'T';
+	title_file_name[9] = 'X';
+	title_file_name[10] = 'T';
 	
 	// Global variables
 	FIL file; // File handle for the file we open
@@ -299,6 +309,38 @@ void write_cart_ram_file(char save_file_name[16], uint8_t *dest,
 		
 		SendString("Could not write cart ram to file\n\r\\");
 	}
+	
+	// Wait for the disk to initialise
+    while(disk_initialize(0));
+    // Mount the disk
+    f_mount(&fso, "", 0);
+    // Change dir to the root directory
+    f_chdir("/");
+    // Open the directory
+    f_opendir(&dir, ".");
+	
+	result = f_open(&file, title_file_name, FA_CREATE_ALWAYS | FA_WRITE);
+	if (result == 0)
+	{	
+		for (unsigned int i=0; i<8; i++)
+		{
+			buffer[0] = game_name[i];
+			
+			while (f_write(&file, buffer, 1, &bytes) != 0) { }
+		}
+		
+		while (f_sync(&file) != 0) { }
+		while (f_close(&file) != 0) { }
+		
+		SendString("Wrote cart name to file\n\r\\");
+	}
+	else
+	{
+		SendHex(result);
+		
+		SendString("Could not write cart name to file\n\r\\");
+	}
+	
 	
 	return;
 }
@@ -654,32 +696,26 @@ int PeanutGB()
 	save_file_name[9] = 'A';
 	save_file_name[10] = 'V';
 	
-	// This is commented out because I want to make only
-	// one single save file, overwrite it as need be.
-	/*
 	
-	for (int i=0; i<13; i++) save_file_name[i] = 0;
+	int pos = 0;
 	
-	save_file_name[0] = '/';
-	
-	int pos = 1;
+	for (int i=0; i<8; i++) game_name[i] = 0;
 	
 	for (int i=0; i<16; i++)
 	{
 		if (cart_rom[0x0134+i] > 0x40 && cart_rom[0x0134+i] < 0x5B) // only the first 8 capital letters
 		{
-			save_file_name[pos] = cart_rom[0x0134+i];
+			game_name[pos] = cart_rom[0x0134+i];
 			pos++;
 			
 			if (pos >= 9) break;
 		}
 	}
 	
-	save_file_name[pos] = '.';
-	save_file_name[pos+1] = 'S';
-	save_file_name[pos+2] = 'A';
-	save_file_name[pos+3] = 'V';
-	*/
+	for (int i=pos; i<8; i++)
+	{
+		game_name[i] = ' ';
+	}
 	
 	
 	/* TODO: Sanity check input GB file. */
@@ -1151,6 +1187,100 @@ int PeanutGB()
 				display_string(menu_x, menu_y+32,	" File C             \\");
 				display_string(menu_x, menu_y+40,	" File D             \\");
 
+				
+				// Wait for the disk to initialise
+				while(disk_initialize(0));
+				// Mount the disk
+				f_mount(&fso, "", 0);
+				// Change dir to the root directory
+				f_chdir("/");
+				// Open the directory
+				f_opendir(&dir, ".");
+				
+				// game names
+				result = f_open(&file, "/GAME-A.TXT", FA_READ);
+				if (result == 0)
+				{	
+					for (unsigned int i=0; i<8; i++)
+					{
+						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
+
+						display_character(menu_x+96+i*8, menu_y+16, buffer[0]);
+					}
+
+					while (f_sync(&file) != 0) { }
+					while (f_close(&file) != 0) { }
+				}
+				
+				// Wait for the disk to initialise
+				while(disk_initialize(0));
+				// Mount the disk
+				f_mount(&fso, "", 0);
+				// Change dir to the root directory
+				f_chdir("/");
+				// Open the directory
+				f_opendir(&dir, ".");
+				
+				result = f_open(&file, "/GAME-B.TXT", FA_READ);
+				if (result == 0)
+				{	
+					for (unsigned int i=0; i<8; i++)
+					{
+						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
+
+						display_character(menu_x+96+i*8, menu_y+24, buffer[0]);
+					}
+
+					while (f_sync(&file) != 0) { }
+					while (f_close(&file) != 0) { }
+				}
+				
+				// Wait for the disk to initialise
+				while(disk_initialize(0));
+				// Mount the disk
+				f_mount(&fso, "", 0);
+				// Change dir to the root directory
+				f_chdir("/");
+				// Open the directory
+				f_opendir(&dir, ".");
+				
+				result = f_open(&file, "/GAME-C.TXT", FA_READ);
+				if (result == 0)
+				{	
+					for (unsigned int i=0; i<8; i++)
+					{
+						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
+
+						display_character(menu_x+96+i*8, menu_y+32, buffer[0]);
+					}
+
+					while (f_sync(&file) != 0) { }
+					while (f_close(&file) != 0) { }
+				}
+				
+				// Wait for the disk to initialise
+				while(disk_initialize(0));
+				// Mount the disk
+				f_mount(&fso, "", 0);
+				// Change dir to the root directory
+				f_chdir("/");
+				// Open the directory
+				f_opendir(&dir, ".");
+				
+				result = f_open(&file, "/GAME-D.TXT", FA_READ);
+				if (result == 0)
+				{	
+					for (unsigned int i=0; i<8; i++)
+					{
+						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
+
+						display_character(menu_x+96+i*8, menu_y+40, buffer[0]);
+					}
+
+					while (f_sync(&file) != 0) { }
+					while (f_close(&file) != 0) { }
+				}
+				
 				choice = 0;
 
 				while (choice == 0)
@@ -1196,6 +1326,100 @@ int PeanutGB()
 				display_string(menu_x, menu_y+32,	" File C             \\");
 				display_string(menu_x, menu_y+40,	" File D             \\");
 
+				// Wait for the disk to initialise
+				while(disk_initialize(0));
+				// Mount the disk
+				f_mount(&fso, "", 0);
+				// Change dir to the root directory
+				f_chdir("/");
+				// Open the directory
+				f_opendir(&dir, ".");
+				
+				// game names
+				result = f_open(&file, "/GAME-A.TXT", FA_READ);
+				if (result == 0)
+				{	
+					for (unsigned int i=0; i<8; i++)
+					{
+						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
+
+						display_character(menu_x+96+i*8, menu_y+16, buffer[0]);
+					}
+
+					while (f_sync(&file) != 0) { }
+					while (f_close(&file) != 0) { }
+				}
+				
+				// Wait for the disk to initialise
+				while(disk_initialize(0));
+				// Mount the disk
+				f_mount(&fso, "", 0);
+				// Change dir to the root directory
+				f_chdir("/");
+				// Open the directory
+				f_opendir(&dir, ".");
+				
+				result = f_open(&file, "/GAME-B.TXT", FA_READ);
+				if (result == 0)
+				{	
+					for (unsigned int i=0; i<8; i++)
+					{
+						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
+
+						display_character(menu_x+96+i*8, menu_y+24, buffer[0]);
+					}
+
+					while (f_sync(&file) != 0) { }
+					while (f_close(&file) != 0) { }
+				}
+				
+				// Wait for the disk to initialise
+				while(disk_initialize(0));
+				// Mount the disk
+				f_mount(&fso, "", 0);
+				// Change dir to the root directory
+				f_chdir("/");
+				// Open the directory
+				f_opendir(&dir, ".");
+				
+				result = f_open(&file, "/GAME-C.TXT", FA_READ);
+				if (result == 0)
+				{	
+					for (unsigned int i=0; i<8; i++)
+					{
+						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
+
+						display_character(menu_x+96+i*8, menu_y+32, buffer[0]);
+					}
+
+					while (f_sync(&file) != 0) { }
+					while (f_close(&file) != 0) { }
+				}
+				
+				// Wait for the disk to initialise
+				while(disk_initialize(0));
+				// Mount the disk
+				f_mount(&fso, "", 0);
+				// Change dir to the root directory
+				f_chdir("/");
+				// Open the directory
+				f_opendir(&dir, ".");
+				
+				result = f_open(&file, "/GAME-D.TXT", FA_READ);
+				if (result == 0)
+				{	
+					for (unsigned int i=0; i<8; i++)
+					{
+						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
+
+						display_character(menu_x+96+i*8, menu_y+40, buffer[0]);
+					}
+
+					while (f_sync(&file) != 0) { }
+					while (f_close(&file) != 0) { }
+				}
+				
+				
 				choice = 0;
 
 				while (choice == 0)
@@ -1210,7 +1434,7 @@ int PeanutGB()
 
 					save_file_name[6] = (char)('A' + cart_bank);
 
-					/* Record save file. */
+					// Record save file.
 					write_cart_ram_file(save_file_name, (uint8_t *)&cart_ram, gb_get_save_size(&gb));
 
 					DelayMS(1000);
