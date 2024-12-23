@@ -852,6 +852,11 @@ int PeanutGB()
 		}
 	}
 	
+	for (unsigned int i=0; i<2; i++)
+	{
+		for (unsigned int j=0; j<8192; j++) audio_buffer[i][j] = 0x00;
+	}
+	
 	while (1)
 	{
 		USBHostTasks();

@@ -182,8 +182,62 @@ static void update_sweep(struct chan *c)
 	}
 }
 
-static void update_square(int8_t* samples, const bool ch2)
+static void update_square_one(int8_t* samples)
 {
+	bool ch2 = false;
+	
+	uint32_t freq;
+	struct chan* c = chans + ch2;
+
+	if (!c->powered || !c->enabled)
+		return;
+
+	freq = DMG_CLOCK_FREQ_U / ((2048 - c->freq) << 5);
+	set_note_freq(c, freq);
+	c->freq_inc *= 8;
+	
+	uint32_t pos = 0;
+	uint32_t prev_pos = 0;
+	int32_t sample = 0;
+
+	for (uint_fast16_t i = 0; i < AUDIO_NSAMPLES; i++) {
+		update_len(c);
+
+		if (!c->enabled)
+			continue;
+
+		update_env(c);
+		if (!ch2)
+			update_sweep(c);
+
+		pos = 0;
+		prev_pos = 0;
+		sample = 0;
+
+		while (update_freq(c, &pos)) {
+			c->square.duty_counter = (c->square.duty_counter + 1) & 7;
+			sample += ((pos - prev_pos) / c->freq_inc) * c->val;
+			c->val = (c->square.duty & (1 << c->square.duty_counter)) ?
+				VOL_INIT_MAX / MAX_CHAN_VOLUME :
+				VOL_INIT_MIN / MAX_CHAN_VOLUME;
+			prev_pos = pos;
+		}
+
+		if (c->muted)
+			continue;
+
+		sample += c->val;
+		sample *= c->volume;
+		sample /= 4;
+
+		samples[i] = ((sample * (c->on_left * vol_l + c->on_right * vol_r)) >> 10);
+	}
+}
+
+static void update_square_two(int8_t* samples)
+{
+	bool ch2 = true;
+	
 	uint32_t freq;
 	struct chan* c = chans + ch2;
 
@@ -380,19 +434,19 @@ void audio_callback(void *userdata, uint8_t *stream, int len)
 	(void)userdata;
 
 
-	if (len * 2 >= 8192)
-	{
-		memset(stream, 0, 8192);
-	}
-	else
-	{
-		memset(stream, 0, len * 2); /// way over-compensating, up to 8192 total
-	}
+	//if (len * 2 >= 8192)
+	//{
+	//	memset(stream, 0, 8192);
+	//}
+	//else
+	//{
+	//	memset(stream, 0, len * 2); /// way over-compensating, up to 8192 total
+	//}
 
-	//memset(stream, 0, 8192);
+	for (unsigned int i=len; i<len*2; i++) stream[i] = 0; // clear used area anyways?
 	
-	update_square(samples, 0);
-	update_square(samples, 1);
+	update_square_one(samples);
+	update_square_two(samples);
 	update_wave(samples);
 	update_noise(samples);
 }
