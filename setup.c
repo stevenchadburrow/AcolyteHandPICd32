@@ -187,10 +187,20 @@ void Setup()
 	DCH0CONbits.CHAED = 1; // get next DMA ready for quick transition???
 	DCH0CONbits.CHPRI = 0x3; // highest priority
 	DCH0SSA = VirtToPhys(screen_zero); // transfer source physical address
+	
+#ifdef SCREEN_HI_COLOR
+	//DCH0DSA = VirtToPhys(((unsigned char*)&PORTE + 1)); // transfer destination physical address
+	DCH0DSA = VirtToPhys(&PORTE); // transfer destination physical address
+	DCH0SSIZ = 2; // source size
+	DCH0DSIZ = 2; // dst size 
+	DCH0CSIZ = 2; // 2 byte per event
+#else
+	//DCH0DSA = VirtToPhys(((unsigned char*)&PORTE + 1)); // transfer destination physical address
 	DCH0DSA = VirtToPhys(&PORTE); // transfer destination physical address
 	DCH0SSIZ = 1; // source size
 	DCH0DSIZ = 1; // dst size 
 	DCH0CSIZ = 1; // 1 byte per event
+#endif
 
 	DCH1CONbits.CHEN = 0; // disable channel
 	DCH1ECONbits.CHSIRQ = 14; // start on Timer 3 interrupt
@@ -202,10 +212,20 @@ void Setup()
 	DCH1CONbits.CHCHNS = 0; // chain from higher channel
 	DCH1CONbits.CHAED = 1; // get next DMA ready for quick transition???
 	DCH1CONbits.CHPRI = 0x3; // highest priority
+	
+#ifdef SCREEN_HI_COLOR
+	//DCH0DSA = VirtToPhys(((unsigned char*)&PORTE + 1)); // transfer destination physical address
+	DCH1DSA = VirtToPhys(&PORTE); // transfer destination physical address
+	DCH1SSIZ = SCREEN_X*2; // source size
+	DCH1DSIZ = 2; // dst size 
+	DCH1CSIZ = SCREEN_X*2; // X byte per event
+#else
+	//DCH0DSA = VirtToPhys(((unsigned char*)&PORTE + 1)); // transfer destination physical address
 	DCH1DSA = VirtToPhys(&PORTE); // transfer destination physical address
 	DCH1SSIZ = SCREEN_X; // source size
 	DCH1DSIZ = 1; // dst size 
-	DCH1CSIZ = SCREEN_X; // 1 byte per event
+	DCH1CSIZ = SCREEN_X; // X byte per event
+#endif
 	
 	
 	DCH2CONbits.CHEN = 0; // disable channel
@@ -219,10 +239,20 @@ void Setup()
 	DCH2CONbits.CHAED = 1; // get next DMA ready for quick transition???
 	DCH2CONbits.CHPRI = 0x3; // highest priority
 	DCH2SSA = VirtToPhys(screen_zero); // transfer source physical address
+
+#ifdef SCREEN_HI_COLOR
+	//DCH0DSA = VirtToPhys(((unsigned char*)&PORTE + 1)); // transfer destination physical address
+	DCH2DSA = VirtToPhys(&PORTE); // transfer destination physical address
+	DCH2SSIZ = 2; // source size
+	DCH2DSIZ = 2; // dst size 
+	DCH2CSIZ = 2; // 1 byte per event
+#else
+	//DCH0DSA = VirtToPhys(((unsigned char*)&PORTE + 1)); // transfer destination physical address
 	DCH2DSA = VirtToPhys(&PORTE); // transfer destination physical address
 	DCH2SSIZ = 1; // source size
 	DCH2DSIZ = 1; // dst size 
 	DCH2CSIZ = 1; // 1 byte per event
+#endif
  
 	
 	// set up PS/2 Keyboard and Mouse on PORTD (RD9-RD10,RD12-RD13)
@@ -316,9 +346,27 @@ void Setup()
 	PORTDbits.RD11 = 1;
 	
 	// set black scanline
-	for (unsigned int x=0; x<SCREEN_X; x++) screen_blank[x] = 0x00;
+	for (unsigned int x=0; x<SCREEN_X*2; x++) screen_blank[x] = 0x00;
 
-	
+
+#ifdef SCREEN_HI_COLOR
+	// set display buffer
+	for (unsigned int y=0; y<(SCREEN_Y>>1); y++)
+	{
+		for (unsigned int x=0; x<SCREEN_X; x++)
+		{
+#ifdef SPLASH
+			screen_buffer[y*SCREEN_X*2+(x<<1)] = (unsigned char)((splash_default[y * SCREEN_X + x] & 0x00FF));
+			screen_buffer[y*SCREEN_X*2+(x<<1)+1] = (unsigned char)((splash_default[y * SCREEN_X + x] & 0xFF00) >> 8);
+#else
+			screen_buffer[y*SCREEN_X*2+x] = 0x25; // blue-grey
+			//screen_buffer[y*SCREEN_X+x] = (unsigned char)((x + y) % 256); // test pattern
+			//if (x % 2 == 0) screen_buffer[y*SCREEN_X+x] = 0xFF; // white
+			//else screen_buffer[y*SCREEN_X+x] = 0x1F; // cyan
+#endif
+		}
+	}
+#else	
 	// set display buffer
 	for (unsigned int y=0; y<SCREEN_Y; y++)
 	{
@@ -334,6 +382,7 @@ void Setup()
 #endif
 		}
 	}
+#endif
 	
 	for (unsigned int i=0; i<2; i++)
 	{

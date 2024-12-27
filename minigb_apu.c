@@ -443,7 +443,7 @@ void audio_callback(void *userdata, uint8_t *stream, int len)
 	//	memset(stream, 0, len * 2); /// way over-compensating, up to 8192 total
 	//}
 
-	for (unsigned int i=len; i<len*2; i++) stream[i] = 0; // clear used area anyways?
+	for (unsigned int i=0; i<len*4; i++) stream[i] = 0; // clear used area anyways?
 	
 	update_square_one(samples);
 	update_square_two(samples);

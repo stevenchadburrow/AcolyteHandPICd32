@@ -48,10 +48,16 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 		DCH1CONbits.CHEN = 1; // enable channel
 	}
 	else if (screen_scanline < 540)
-	{		
+	{
+#if	SCREEN_MODE
+		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+		DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*2*((screen_scanline-60)>>1)); // transfer source physical address
+		DCH1CONbits.CHEN = 1; // enable channel
+#else
 		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
 		DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*(screen_scanline-60)); // transfer source physical address
 		DCH1CONbits.CHEN = 1; // enable channel
+#endif
 	}
 	else if (screen_scanline == 665)
 	{

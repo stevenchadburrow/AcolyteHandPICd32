@@ -21,11 +21,13 @@ unsigned char Menu()
 	menu_down = 0;
 	menu_loop = 1;
 	
+	unsigned char exit = 0;
+	
 	char test = 0;
 	
 	unsigned char gamepad_flag = 0;
 
-	display_character(menu_x, menu_y, '>');
+	display_character(menu_x, menu_y+8*menu_pos, '>');
 
 	while (menu_loop > 0)
 	{
@@ -82,9 +84,17 @@ unsigned char Menu()
 		{
 			if (menu_key == 0x0D || menu_key == 0x20) // enter or space
 			{
-				menu_loop = 0;
+				//menu_loop = 0;
+				exit = 1;
+				
+				DelayMS(100);
 			}
-			else if (menu_key == 0x11) // up
+			else
+			{
+				if (exit == 1) exit = 255;
+			}
+			
+			if (menu_key == 0x11) // up
 			{
 				menu_up = 1;
 			}
@@ -124,7 +134,14 @@ unsigned char Menu()
 		
 		if (PORTJbits.RJ4 == 0 || PORTJbits.RJ5 == 0) // either button
 		{
-			menu_loop = 0;
+			//menu_loop = 0;
+			exit = 2;
+			
+			DelayMS(100);
+		}
+		else
+		{
+			if (exit == 2) exit = 255;
 		}
 		
 		if (gamepad_flag == 0)
@@ -157,7 +174,14 @@ unsigned char Menu()
 
 		if (PORTJbits.RJ13 == 0 || PORTJbits.RJ14 == 0) // either button
 		{
-			menu_loop = 0;
+			//menu_loop = 0;
+			exit = 3;
+			
+			DelayMS(100);
+		}
+		else
+		{
+			if (exit == 3) exit = 255;
 		}
 		
 		if (usb_mode == 0x02) // xbox controller
@@ -174,14 +198,17 @@ unsigned char Menu()
 					menu_down = 1;
 				}
 				
-				if ((usb_buttons[usb_readpos] & 0x0010) == 0x0010) // A
+				if ((usb_buttons[usb_readpos] & 0x0010) == 0x0010 ||
+					(usb_buttons[usb_readpos] & 0x0020) == 0x0020) // A
 				{
-					menu_loop = 0;
+					//menu_loop = 0;
+					exit = 4;
+					
+					DelayMS(100);
 				}
-				
-				if ((usb_buttons[usb_readpos] & 0x0020) == 0x0020) // B
+				else
 				{
-					menu_loop = 0;
+					if (exit == 4) exit = 255;
 				}
 				
 				usb_readpos++;
@@ -212,7 +239,14 @@ unsigned char Menu()
 			
 			if (menu_mouse[0] != 0x0000)
 			{
-				menu_loop = 0;
+				//menu_loop = 0;
+				exit = 5;
+				
+				DelayMS(100);
+			}
+			else
+			{
+				if (exit == 5) exit = 255;
 			}
 		}
 		
@@ -227,11 +261,13 @@ unsigned char Menu()
 			PORTJbits.RJ15 = 0;
 			TRISJbits.TRISJ15 = 0; // ground joy-select for next frame
 		}
+		
+		if (exit == 255) menu_loop = 0;
 	}
 	
 	TRISJbits.TRISJ15 = 1; // float joy-select (pulled high)
 
-	music_note(1047, 500, 0);
+	//music_note(1047, 500, 0);
 	
 	display_character(menu_x, menu_y + menu_pos * 8, ' ');
 

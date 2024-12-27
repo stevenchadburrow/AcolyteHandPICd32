@@ -247,6 +247,7 @@ void SendLongHex(unsigned long value)
 
 #define SCREEN_X 640
 #define SCREEN_Y 480
+//#define SCREEN_HI_COLOR // leave commented!
 
 // most important arrays
 volatile unsigned char __attribute__((coherent,address(0x80029000))) screen_buffer[SCREEN_Y*SCREEN_X]; // visible portion of screen
@@ -275,9 +276,9 @@ volatile unsigned char __attribute__((coherent)) usb_writepos = 0x00;
 volatile unsigned char __attribute__((coherent)) usb_readpos = 0x00;
 
 // additional variables
-volatile unsigned char __attribute__((coherent)) screen_blank[SCREEN_X]; // black scanline
+volatile unsigned char __attribute__((coherent)) screen_blank[SCREEN_X*2]; // black scanline
 volatile unsigned int screen_scanline = 637; // start of vertical sync
-volatile unsigned char screen_zero[1] = { 0x00 }; // zero value for black
+volatile unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 
 // PS/2 keyboard variables
 volatile unsigned char ps2_counter[2] = { 0x00, 0x00 };
@@ -432,7 +433,11 @@ void ps2_command(unsigned char command, unsigned char port)
 
 
 #ifdef SPLASH
+#ifdef SCREEN_HI_COLOR
+#include "splash_default_hicolor.c"
+#else
 #include "splash_default.c"
+#endif
 #endif
 
 #include "tables.c"
@@ -800,6 +805,8 @@ int main()
 	
 	DelayMS(1000); // settling delay, avoid garbage characters
 	
+	
+	
 	menu_x = 24;
 	menu_y = 400;
 	menu_pos = 0;
@@ -822,79 +829,6 @@ int main()
 	else if (dummy == 3) PeanutGB();
 	else if (dummy == 4) BurnROM();
 	else if (dummy == 5) { }
-
-	
-	
-	/*
-	// sox OriginalBadApple.wav -c 1 -b 32 -r 56476 -e signed-integer Test.wav
-	// sudo fdisk -l
-	// *** Make sure it is /dev/sdc you want, change according to what 'fdisk' told you! ***
-	// sudo dd if=Test.wav of=/dev/sdc bs=100M conv=fsync
-	
-	sdcard_initialize();
-	
-	int test = 0;
-	int prev = 0;
-
-	for (int i=0; i<5; i++)
-	{
-		test = sdcard_initialize();
-
-		if (test == 1) break;
-	}
-
-	if (test > 0)
-	{
-		TRISH = 0x0000;
-		PORTH = 0x0000;
-		
-		unsigned char temp_value = 0x00;
-
-		sdcard_disable();
-		sdcard_pump();
-		sdcard_longdelay(); // this is probably not needed
-		sdcard_enable();
-		sdcard_sendbyte(0x52); // CMD18 = 0x40 + 0x12 (18 in hex)
-		sdcard_sendbyte((0x0000&0x00FF));
-		sdcard_sendbyte(((0x0000&0xFF00) >> 8));
-		sdcard_sendbyte((0x0000&0x00FE)); // only blocks of 512 bytes
-		sdcard_sendbyte(0x00);
-		sdcard_sendbyte(0x01); // CRC (general)
-		temp_value = sdcard_waitresult(); // command response
-		if (temp_value == 0xFF) { return 0; }
-		else if (temp_value != 0x00) { return 0; } // expecting 0x00
-		temp_value = sdcard_waitresult(); // data packet starts with 0xFE
-		if (temp_value == 0xFF) { return 0; }
-		else if (temp_value != 0xFE) { return 0; }
-		
-		while (1)
-		{
-			if (screen_scanline != prev)
-			{
-				prev = screen_scanline;
-				
-				// 32-bit signed 1-channel
-				sdcard_receivebyte();
-				sdcard_receivebyte();
-				sdcard_receivebyte();
-	 			// Should add 0x08 before shifting in case of rounding???
-				PORTH = (((sdcard_receivebyte() >> 4) + 0x08) & 0x0F); 
-				
-				// 16-bit signed 2-channel
-				//sdcard_receivebyte();
-				//PORTH = (((sdcard_receivebyte() >> 4) + 0x08) & 0x0F);
-				//sdcard_receivebyte();
-				//sdcard_receivebyte();
-				
-				// 8-bit unsigned 2-channel
-				//temp_value = sdcard_receivebyte();
-				//PORTH = ((((unsigned int)(temp_value + sdcard_receivebyte()) >> 5) + 0x0000) & 0x000F);
-			}
-		}	
-	}
-	*/
-	
-	
 	
 	
 	
