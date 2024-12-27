@@ -1434,7 +1434,7 @@ int PeanutGB()
 				menu_x = 256;
 				menu_y = 240;
 				menu_pos = 0;
-				menu_max = 6;
+				menu_max = 14;
 
 				display_string(menu_x, menu_y,		" *** Load and Reset?\\");
 				display_string(menu_x, menu_y+8,	" No                 \\");
@@ -1442,99 +1442,61 @@ int PeanutGB()
 				display_string(menu_x, menu_y+24,	" File B             \\");
 				display_string(menu_x, menu_y+32,	" File C             \\");
 				display_string(menu_x, menu_y+40,	" File D             \\");
-
+				display_string(menu_x, menu_y+48,	" File E             \\");
+				display_string(menu_x, menu_y+56,	" File F             \\");
+				display_string(menu_x, menu_y+64,	" File G             \\");
+				display_string(menu_x, menu_y+72,	" File H             \\");
+				display_string(menu_x, menu_y+80,	" File I             \\");
+				display_string(menu_x, menu_y+88,	" File J             \\");
+				display_string(menu_x, menu_y+96,	" File K             \\");
+				display_string(menu_x, menu_y+104,	" File L             \\");
 				
-				// Wait for the disk to initialise
-				while(disk_initialize(0));
-				// Mount the disk
-				f_mount(&fso, "", 0);
-				// Change dir to the root directory
-				f_chdir("/");
-				// Open the directory
-				f_opendir(&dir, ".");
+				char temp_filename[16];
 				
-				// game names
-				result = f_open(&file, "/GAME-A.NAM", FA_READ);
-				if (result == 0)
-				{	
-					for (unsigned int i=0; i<8; i++)
-					{
-						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
+				temp_filename[0] = '/';
+				temp_filename[1] = 'G';
+				temp_filename[2] = 'A';
+				temp_filename[3] = 'M';
+				temp_filename[4] = 'E';
+				temp_filename[5] = '-';
+				temp_filename[6] = 'A';
+				temp_filename[7] = '.';
+				temp_filename[8] = 'N';
+				temp_filename[9] = 'A';
+				temp_filename[10] = 'M';
+				temp_filename[11] = 0;
+				temp_filename[12] = 0;
+				temp_filename[13] = 0;
+				temp_filename[14] = 0;
+				temp_filename[15] = 0;
+				
+				for (unsigned int n=0; n<12; n++)
+				{
+					// Wait for the disk to initialise
+					while(disk_initialize(0));
+					// Mount the disk
+					f_mount(&fso, "", 0);
+					// Change dir to the root directory
+					f_chdir("/");
+					// Open the directory
+					f_opendir(&dir, ".");
 
-						display_character(menu_x+96+i*8, menu_y+16, buffer[0]);
+					// game names
+					result = f_open(&file, temp_filename, FA_READ);
+					if (result == 0)
+					{	
+						for (unsigned int i=0; i<8; i++)
+						{
+							while (f_read(&file, &buffer, 1, &bytes) != 0) { }
+
+							display_character(menu_x+96+i*8, menu_y+16+n*8, buffer[0]);
+						}
+
+						while (f_sync(&file) != 0) { }
+						while (f_close(&file) != 0) { }
 					}
-
-					while (f_sync(&file) != 0) { }
-					while (f_close(&file) != 0) { }
-				}
-				
-				// Wait for the disk to initialise
-				while(disk_initialize(0));
-				// Mount the disk
-				f_mount(&fso, "", 0);
-				// Change dir to the root directory
-				f_chdir("/");
-				// Open the directory
-				f_opendir(&dir, ".");
-				
-				result = f_open(&file, "/GAME-B.NAM", FA_READ);
-				if (result == 0)
-				{	
-					for (unsigned int i=0; i<8; i++)
-					{
-						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
-
-						display_character(menu_x+96+i*8, menu_y+24, buffer[0]);
-					}
-
-					while (f_sync(&file) != 0) { }
-					while (f_close(&file) != 0) { }
-				}
-				
-				// Wait for the disk to initialise
-				while(disk_initialize(0));
-				// Mount the disk
-				f_mount(&fso, "", 0);
-				// Change dir to the root directory
-				f_chdir("/");
-				// Open the directory
-				f_opendir(&dir, ".");
-				
-				result = f_open(&file, "/GAME-C.NAM", FA_READ);
-				if (result == 0)
-				{	
-					for (unsigned int i=0; i<8; i++)
-					{
-						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
-
-						display_character(menu_x+96+i*8, menu_y+32, buffer[0]);
-					}
-
-					while (f_sync(&file) != 0) { }
-					while (f_close(&file) != 0) { }
-				}
-				
-				// Wait for the disk to initialise
-				while(disk_initialize(0));
-				// Mount the disk
-				f_mount(&fso, "", 0);
-				// Change dir to the root directory
-				f_chdir("/");
-				// Open the directory
-				f_opendir(&dir, ".");
-				
-				result = f_open(&file, "/GAME-D.NAM", FA_READ);
-				if (result == 0)
-				{	
-					for (unsigned int i=0; i<8; i++)
-					{
-						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
-
-						display_character(menu_x+96+i*8, menu_y+40, buffer[0]);
-					}
-
-					while (f_sync(&file) != 0) { }
-					while (f_close(&file) != 0) { }
+					
+					temp_filename[6] += 1;
 				}
 				
 				choice = 0;
@@ -1573,7 +1535,7 @@ int PeanutGB()
 				menu_x = 256;
 				menu_y = 240;
 				menu_pos = 0;
-				menu_max = 6;
+				menu_max = 14;
 
 				display_string(menu_x, menu_y,		" *** Overwrite Save?\\");
 				display_string(menu_x, menu_y+8,	" No                 \\");
@@ -1581,100 +1543,62 @@ int PeanutGB()
 				display_string(menu_x, menu_y+24,	" File B             \\");
 				display_string(menu_x, menu_y+32,	" File C             \\");
 				display_string(menu_x, menu_y+40,	" File D             \\");
+				display_string(menu_x, menu_y+48,	" File E             \\");
+				display_string(menu_x, menu_y+56,	" File F             \\");
+				display_string(menu_x, menu_y+64,	" File G             \\");
+				display_string(menu_x, menu_y+72,	" File H             \\");
+				display_string(menu_x, menu_y+80,	" File I             \\");
+				display_string(menu_x, menu_y+88,	" File J             \\");
+				display_string(menu_x, menu_y+96,	" File K             \\");
+				display_string(menu_x, menu_y+104,	" File L             \\");
 
-				// Wait for the disk to initialise
-				while(disk_initialize(0));
-				// Mount the disk
-				f_mount(&fso, "", 0);
-				// Change dir to the root directory
-				f_chdir("/");
-				// Open the directory
-				f_opendir(&dir, ".");
+				char temp_filename[16];
 				
-				// game names
-				result = f_open(&file, "/GAME-A.NAM", FA_READ);
-				if (result == 0)
-				{	
-					for (unsigned int i=0; i<8; i++)
-					{
-						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
+				temp_filename[0] = '/';
+				temp_filename[1] = 'G';
+				temp_filename[2] = 'A';
+				temp_filename[3] = 'M';
+				temp_filename[4] = 'E';
+				temp_filename[5] = '-';
+				temp_filename[6] = 'A';
+				temp_filename[7] = '.';
+				temp_filename[8] = 'N';
+				temp_filename[9] = 'A';
+				temp_filename[10] = 'M';
+				temp_filename[11] = 0;
+				temp_filename[12] = 0;
+				temp_filename[13] = 0;
+				temp_filename[14] = 0;
+				temp_filename[15] = 0;
+				
+				for (unsigned int n=0; n<12; n++)
+				{
+					// Wait for the disk to initialise
+					while(disk_initialize(0));
+					// Mount the disk
+					f_mount(&fso, "", 0);
+					// Change dir to the root directory
+					f_chdir("/");
+					// Open the directory
+					f_opendir(&dir, ".");
 
-						display_character(menu_x+96+i*8, menu_y+16, buffer[0]);
+					// game names
+					result = f_open(&file, temp_filename, FA_READ);
+					if (result == 0)
+					{	
+						for (unsigned int i=0; i<8; i++)
+						{
+							while (f_read(&file, &buffer, 1, &bytes) != 0) { }
+
+							display_character(menu_x+96+i*8, menu_y+16+n*8, buffer[0]);
+						}
+
+						while (f_sync(&file) != 0) { }
+						while (f_close(&file) != 0) { }
 					}
-
-					while (f_sync(&file) != 0) { }
-					while (f_close(&file) != 0) { }
+					
+					temp_filename[6] += 1;
 				}
-				
-				// Wait for the disk to initialise
-				while(disk_initialize(0));
-				// Mount the disk
-				f_mount(&fso, "", 0);
-				// Change dir to the root directory
-				f_chdir("/");
-				// Open the directory
-				f_opendir(&dir, ".");
-				
-				result = f_open(&file, "/GAME-B.NAM", FA_READ);
-				if (result == 0)
-				{	
-					for (unsigned int i=0; i<8; i++)
-					{
-						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
-
-						display_character(menu_x+96+i*8, menu_y+24, buffer[0]);
-					}
-
-					while (f_sync(&file) != 0) { }
-					while (f_close(&file) != 0) { }
-				}
-				
-				// Wait for the disk to initialise
-				while(disk_initialize(0));
-				// Mount the disk
-				f_mount(&fso, "", 0);
-				// Change dir to the root directory
-				f_chdir("/");
-				// Open the directory
-				f_opendir(&dir, ".");
-				
-				result = f_open(&file, "/GAME-C.NAM", FA_READ);
-				if (result == 0)
-				{	
-					for (unsigned int i=0; i<8; i++)
-					{
-						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
-
-						display_character(menu_x+96+i*8, menu_y+32, buffer[0]);
-					}
-
-					while (f_sync(&file) != 0) { }
-					while (f_close(&file) != 0) { }
-				}
-				
-				// Wait for the disk to initialise
-				while(disk_initialize(0));
-				// Mount the disk
-				f_mount(&fso, "", 0);
-				// Change dir to the root directory
-				f_chdir("/");
-				// Open the directory
-				f_opendir(&dir, ".");
-				
-				result = f_open(&file, "/GAME-D.NAM", FA_READ);
-				if (result == 0)
-				{	
-					for (unsigned int i=0; i<8; i++)
-					{
-						while (f_read(&file, &buffer, 1, &bytes) != 0) { }
-
-						display_character(menu_x+96+i*8, menu_y+40, buffer[0]);
-					}
-
-					while (f_sync(&file) != 0) { }
-					while (f_close(&file) != 0) { }
-				}
-				
 				
 				choice = 0;
 
