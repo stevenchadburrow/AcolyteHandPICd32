@@ -62,7 +62,7 @@ Mahyar Koshkouei's <a href="https://github.com/deltabeard/Peanut-GB">Peanut-GB (
 <br>
 Added support for GBC default color palettes, custom palettes, game file save/load, and screen size and refresh rate adjustments
 <br>
-Tested with many games, including: Tetris, Dr. Mario, Balloon Kid, Zelda: Link's Awakening, Pokemon Red, Tobu Tobu Girl, and Pokemon Kanto Expasion Pak
+Tested with many games, including: Tetris, Dr. Mario, Balloon Kid, Zelda: Link's Awakening, Pokemon Red, Tobu Tobu Girl, and Pokemon Kanto Expansion Pak
 
 <b>Links</b>
 
