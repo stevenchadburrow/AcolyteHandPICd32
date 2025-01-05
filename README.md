@@ -70,8 +70,6 @@ Tested with many games, including: Tetris, Dr. Mario, Balloon Kid, Zelda: Link's
 <a href="http://elm-chan.org/">http://elm-chan.org/</a> for a bunch of projects, including MMC (aka SDcard) and FatFs.<br>
 <a href="https://github.com/deltabeard/">https://github.com/deltabeard/</a> for a bunch of projects, including Peanut-GB and MiniGB-APU projects.<br>
 
-*** Board Edits: Removed the 74HC273 entirely and directly connected latch inputs to outputs.  Also added 6-bit audio DAC to PORTH pins. ***
-
 <b>Older picture of PCB with 74HC273 installed and without audio DAC installed.</b>
 <br>
 <img src="BOARD-PICTURE.jpg">
