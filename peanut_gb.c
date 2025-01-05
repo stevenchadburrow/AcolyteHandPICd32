@@ -92,7 +92,7 @@ unsigned int NVMWriteQuadWord(unsigned long address,
 
 unsigned int NVMBurnROM(char *filename)
 {
-	for (unsigned long i=0x1D100000; i<0x1D200000; i+=0x00001000) // not sure if pages are 0x1000 or 0x2000
+	for (unsigned long i=0x1D100000; i<0x1D200000; i+=0x00001000) // pages are 0x1000
 	{
 		NVMErasePage(i);
 	}
