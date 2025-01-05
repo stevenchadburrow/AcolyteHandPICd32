@@ -96,5 +96,5 @@ Tested with many games, including: Tetris, Dr. Mario, Balloon Kid, Zelda: Link's
 
 <b>Video playback seems to run without lag.</b>
 <br>
-<img src="AV-SKYRIM.gif">&nbsp;&nbsp;&nbsp;&nbsp;<img src="AV-BADAPPLE.gif">
+<img src="AV-BADAPPLE.gif">&nbsp;&nbsp;&nbsp;&nbsp;<img src="AV-YOGURTING.gif">&nbsp;&nbsp;&nbsp;&nbsp;<img src="AV-SKYRIM.gif">
 
