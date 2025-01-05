@@ -90,11 +90,11 @@ Tested with many games, including: Tetris, Dr. Mario, Balloon Kid, Zelda: Link's
 <br>
 <img src="SCRATCH-PAD.jpg">
 
-<b>Can now play any Gameboy game!</b>
+<b>It can now play any Gameboy game!</b>
 <br>
 <img src="ZELDA-GB.jpg">
 
-<b>Video playback seems to run without lag.</b>
+<b>Audio/Video playback running at 65K colors and dual 8-bit audio.</b>
 <br>
 <img src="AV-BADAPPLE.gif">&nbsp;&nbsp;&nbsp;&nbsp;<img src="AV-YOGURTING.gif">&nbsp;&nbsp;&nbsp;&nbsp;<img src="AV-SKYRIM.gif">
 
