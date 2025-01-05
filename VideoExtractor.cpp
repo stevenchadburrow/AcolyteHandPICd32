@@ -27,10 +27,10 @@ The 'oflag' and 'seek' portions put it at a specific address.  Remove if you wan
 #include <stdlib.h>
 #include <string.h>
 
-// Video is at 60 FPS at 240x192 resolution, color (but will be mono).
+// Video is at 60 FPS at 240x192 resolution, color
 
 unsigned long min_frames = 0; // should be 0
-unsigned long max_frames = 0; // means changed by arguments, should be 13138 for Bad Apple, change as need be for debug
+unsigned long max_frames = 0; // means changed by arguments, should be 13138 for Bad Apple, now changed with arguments
 unsigned long single = 0; // should be 0 unless testing
 
 int main(const int argc, const char **argv)
@@ -57,7 +57,7 @@ int main(const int argc, const char **argv)
 	system(command);
 
 	for (int i=0; i<512; i++) command[i] = 0;
-	sprintf(command, "sox Temp1.wav -r 11520 -c 1 -b 32 -e signed-integer Temp2.wav");
+	sprintf(command, "sox Temp1.wav -r 46080 -c 2 -b 32 -e signed-integer Temp2.wav");
 	system(command);
 
 	int bytes = 1;
@@ -75,13 +75,15 @@ int main(const int argc, const char **argv)
 
 	fclose(output);
 
-	unsigned char picture[49152];
+	unsigned short picture[49152];
 
 	unsigned char red, green, blue;
 
-	unsigned char color;
+	unsigned short color;
 
 	unsigned char shift;
+
+	unsigned short pos;
 
 	FILE *video = NULL, *audio = NULL;
 
@@ -95,7 +97,7 @@ int main(const int argc, const char **argv)
 
 	for (int i=0; i<44; i++) fscanf(audio, "%c", &buffer); // header
 
-	for (unsigned long frame=(single==0?min_frames:max_frames-1); frame<max_frames; frame+=1000) // change to 13138 frames in the video
+	for (unsigned long frame=(single==0?min_frames:max_frames-1); frame<max_frames; frame+=1000) // actual frame count
 	{
 		for (int i=0; i<512; i++) command[i] = 0;
 		sprintf(command, "ffmpeg -y -i Temp1.mp4 -hide_banner -loglevel error -vf select='between(n\\,%lu\\,%lu),setpts=PTS-STARTPTS' Temp2.mp4", frame, frame+999);
@@ -105,7 +107,7 @@ int main(const int argc, const char **argv)
 
 		system("rm Temp2.bin");
 
-		for (unsigned long block=0; block<(frame+1000>=max_frames?max_frames-frame:1000); block+=4)
+		for (unsigned long block=0; block<(frame+1000>=max_frames?max_frames-frame:1000); block+=4) // sub-frame count
 		{
 			sprintf(command, "ffmpeg -i Temp2.mp4 -y -hide_banner -loglevel error -vf 'select=eq(n\\,%lu)' -vframes 1 Temp.bmp;", block);
 			system(command);
@@ -132,7 +134,12 @@ int main(const int argc, const char **argv)
 				{
 					fscanf(video, "%c%c%c", &blue, &green, &red);
 
-					color = (red & 0xE0) + ((green & 0xE0) >> 3) + ((blue & 0xC0) >> 6);
+					// 256 colors
+					//color = (red & 0xE0) + ((green & 0xE0) >> 3) + ((blue & 0xC0) >> 6);
+
+					// 65K colors
+					color = ((red >> 5) << 13) + ((green >> 5) << 10) + ((blue >> 6) << 8) + 
+						(((red >> 3) & 0x03) << 6) + (((green >> 2) & 0x07) << 3) + (((blue >> 3) & 0x07)); 
 
 					picture[i * 240 + j] = color;
 				}
@@ -154,24 +161,39 @@ int main(const int argc, const char **argv)
 
 			for (int i=192-1; i>=0; i--) // invert y-values
 			{
-				for (int j=0; j<4; j++)
+				pos = 0;
+
+				for (int j=0; j<16; j++)
 				{
-					for (int k=j*60; k<(j+1)*60; k++)
+					for (int k=0; k<15; k++)
 					{
-						shift = 0x00;
+						if (k == 14 && j == 15 && i == 0)
+						{
+							fprintf(output, "%c%c", 0x00, 0x00); // keep it going
+						}
+						else
+						{
+							shift = (unsigned char)((picture[i * 240 + pos] & 0x00FF));
 
-						shift = picture[i * 240 + k];
+							fprintf(output, "%c", shift);
 
-						fprintf(output, "%c", shift);
+							shift = (unsigned char)((picture[i * 240 + pos] & 0xFF00) >> 8);
+
+							fprintf(output, "%c", shift);
+
+							pos++;
+						}
 					}
 
 					fscanf(audio, "%c", &buffer);
-					if (buffer == 0x00) buffer = 0x01; // when zero, marks end of video
-					fprintf(output, "%c", buffer);
+					fscanf(audio, "%c", &buffer);
+					fscanf(audio, "%c", &buffer);
 					fscanf(audio, "%c", &buffer);
 					fprintf(output, "%c", buffer);
+
 					fscanf(audio, "%c", &buffer);
-					fprintf(output, "%c", buffer);
+					fscanf(audio, "%c", &buffer);
+					fscanf(audio, "%c", &buffer);
 					fscanf(audio, "%c", &buffer);
 					fprintf(output, "%c", buffer);
 				}
@@ -197,9 +219,12 @@ int main(const int argc, const char **argv)
 		return 0;
 	}
 
-	for (int i=0; i<512; i++)
+	for (int i=0; i<192; i++)
 	{
-		fprintf(output, "%c", 0x00); // final block has all zeros, end of video
+		for (int j=0; j<512; j++)
+		{
+			fprintf(output, "%c", 0xFF); // last frame has all zeros, end of video
+		}
 	}
 
 	fclose(output);

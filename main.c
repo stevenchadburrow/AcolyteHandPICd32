@@ -46,14 +46,7 @@ Increment line number and change addresses on separate interrupt!
 
 /*
 // Video Color Signals
-Pin5,RE7,RED-A
-Pin4,RE6,RED-B
-Pin3,RE5,RED-C
-Pin144,RE4,GREEN-A
-Pin143,RE3,GREEN-B
-Pin142,RE2,GREEN-C
-Pin138,RE1,BLUE-A
-Pin135,RE0,BLUE-B
+PORTH
 
 // Video Clock Signals
 Pin104,RD0,PIXEL-CLOCK
@@ -62,44 +55,44 @@ Pin110,RD2,H-SYNC
 Pin111,RD3,V-SYNC
 
 // Audio
-Pin23,RE8,AUDIO-A
-Pin24,RE9,AUDIO-B
+PORTJ
 
-// SPI SDcard Adapter
+// SDcard
 Pin120,RD6,MISO
 Pin121,RD7,MOSI
 Pin109,RD1,SCK1
 Pin118,RD4,CS
 
 // PS/2 Keyboard/Mouse
-Pin97,RD9,KEY-CLK
-Pin98,RD10,KEY-DAT
+Pin98,RD10,KEY-CLK
+Pin99,RD11,KEY-DAT
 Pin112,RD12,MOUSE-CLK
 Pin113,RD13,MOUSE-DAT
 
 // Joysticks
-Pin114,RJ0,JOY-A-UP
-Pin115,RJ1,JOY-A-DOWN
-Pin116,RJ2,JOY-A-LEFT
-Pin117,RJ3,JOY-A-RIGHT
-Pin131,RJ4,JOY-A-BUTTON1
-Pin132,RJ5,JOY-A-BUTTON2
-Pin133,RJ6,JOY-B-UP
-Pin134,RJ7,JOY-B-DOWN
-Pin10,RJ10,JOY-B-LEFT
-Pin9,RJ12,JOY-B-RIGHT
-Pin28,RJ13,JOY-B-BUTTON1
-Pin29,RJ14,JOY-B-BUTTON2
-Pin30,RJ15,JOY-SELECT
+Pin19,RK0,JOY-A-UP
+Pin51,RK1,JOY-A-DOWN
+Pin52,RK2,JOY-A-LEFT
+Pin53,RK3,JOY-A-RIGHT
+Pin92,RK4,JOY-A-BUTTON1
+Pin93,RK5,JOY-A-BUTTON2
+Pin124,RF0,JOY-B-UP
+Pin125,RF1,JOY-B-DOWN
+Pin79,RF2,JOY-B-LEFT
+Pin90,RF4,JOY-B-RIGHT
+Pin91,RF5,JOY-B-BUTTON1
+Pin80,RF8,JOY-B-BUTTON2
+Pin94,RK6,JOY-SELECT
 
 // Programmer
 Pin20,MCLR
 Pin36,RB0,PGED1
 Pin35,RB1,PGEC1
 
-// USB0xFF, 0xFF, 0xFF, 0xFF,
+// USB
+Pin78,USBID
 Pin77,D+
-Pin76,D-Pin29,RJ14,JOY
+Pin76,D-
 
 // Oscillator
 Pin71,RC12,OSC1/CLKI
@@ -110,10 +103,10 @@ Pin69,RD14,U3TX
 Pin70,RD15,U3RX
 
 // LED
-Pin99,RD11,LED
+Pin97,RD9,LED
 
 // Button
-Pin27,RJ11,BUTTON
+Pin126,RK7,EXT-BUTTON
 */
 
 
@@ -185,7 +178,7 @@ Pin27,RJ11,BUTTON
 
 #include <xc.h>
 
-
+// keeps program code from being written here, reserved for Gameboy
 #pragma region name="gb_rom" origin=0x9D100000 size=0x00100000
 
 
@@ -245,13 +238,22 @@ void SendLongHex(unsigned long value)
 	SendHex((unsigned char)(value));
 }
 
-#define SCREEN_X 640
-#define SCREEN_Y 480
-//#define SCREEN_HI_COLOR // leave commented!
+#define SCREEN_X 720
+#define SCREEN_Y 512
 
-// most important arrays
-volatile unsigned char __attribute__((coherent,address(0x80029000))) screen_buffer[SCREEN_Y*SCREEN_X]; // visible portion of screen
+#define HI_SCREEN_X 480
+#define HI_SCREEN_Y 384
 
+// video
+volatile unsigned char __attribute__((coherent,address(0x8001A000))) screen_buffer[HI_SCREEN_X*HI_SCREEN_Y*2]; // visible portion of screen
+
+// additional variables
+volatile unsigned char __attribute__((coherent)) screen_blank[HI_SCREEN_X*2]; // black scanline
+volatile unsigned int screen_scanline = 637; // start of vertical sync
+volatile unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
+volatile unsigned char screen_mode = 0; // start in 256-color mode
+
+// audio
 volatile unsigned char __attribute__((coherent,address(0x80074000))) audio_buffer[2][8192];
 volatile unsigned int audio_position = 0;
 volatile unsigned int audio_bank = 0;
@@ -274,11 +276,6 @@ volatile unsigned int __attribute__((coherent)) usb_buttons[256];
 volatile unsigned char __attribute__((coherent)) usb_mode = 0x00;
 volatile unsigned char __attribute__((coherent)) usb_writepos = 0x00;
 volatile unsigned char __attribute__((coherent)) usb_readpos = 0x00;
-
-// additional variables
-volatile unsigned char __attribute__((coherent)) screen_blank[SCREEN_X*2]; // black scanline
-volatile unsigned int screen_scanline = 637; // start of vertical sync
-volatile unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 
 // PS/2 keyboard variables
 volatile unsigned char ps2_counter[2] = { 0x00, 0x00 };
@@ -433,11 +430,7 @@ void ps2_command(unsigned char command, unsigned char port)
 
 
 #ifdef SPLASH
-#ifdef SCREEN_HI_COLOR
-#include "splash_default_hicolor.c"
-#else
 #include "splash_default.c"
-#endif
 #endif
 
 #include "tables.c"
@@ -450,83 +443,6 @@ void ps2_command(unsigned char command, unsigned char port)
 #include "ff.c"
 #include "diskio.h"
 #include "diskio.c"
-
-
-
-// just an example of how to read and write from files
-void EchoFile()
-{
-	// #The SDcard must have been formatted
-	// #Check which drive it is, here /dev/sdc
-	// sudo fdisk -l
-	// sudo umount /dev/sdc
-	// sudo mkfs.vfat /dev/sdc
-	
-	// Global variables
-	FIL file; // File handle for the file we open
-	DIR dir; // Directory information for the current directory
-	FATFS fso; // File System Object for the file system we are reading from
-	
-	// Wait for the disk to initialise
-    while(disk_initialize(0));
-    // Mount the disk
-    f_mount(&fso, "", 0);
-    // Change dir to the root directory
-    f_chdir("/");
-    // Open the directory
-    f_opendir(&dir, ".");
- 
-	char buffer[16];
-	unsigned int bytes;
-	unsigned int result;
-	
-	for (unsigned int i=0; i<16; i++)
-	{
-		buffer[i] = ' ';
-	};
-	
-	SendString("\n\r\\");
-	
-	// read in some text
-	result = f_open(&file, "/INPUT.TXT", FA_READ);
-	if (result == 0)
-	{
-		SendString("Found INPUT.TXT, copying now\n\r\\");
-		
-		while (f_read(&file, buffer, 16, &bytes) != 0) { }
-		while (f_close(&file) != 0) { }
-	}
-	else
-	{
-		SendString("Could not find INPUT.TXT\n\r\\");
-	}
-	
-	// write the same text back
-	result = f_open(&file, "/OUTPUT.TXT", FA_WRITE);
-	if (result != 0)
-	{
-		result = f_open(&file, "/OUTPUT.TXT", FA_CREATE_NEW);
-		if (result == 0)
-		{
-			while (f_close(&file) != 0) { }
-			result = f_open(&file, "/OUTPUT.TXT", FA_WRITE);
-		}
-	}
-	if (result == 0)
-	{	
-		while (f_write(&file, buffer, 16, &bytes) != 0) { }
-		while (f_close(&file) != 0) { }
-		
-		SendString("Copied to OUTPUT.TXT\n\r\\");
-	}
-	else
-	{
-		SendString("Could not copy to OUTPUT.TXT\n\r\\");
-	}
-};
-
-
-
 
 
 
@@ -544,14 +460,14 @@ void music_note(unsigned int frequency, unsigned int duration, unsigned char cha
 	{
 		for (unsigned int j=0; j<period; j++)
 		{
-			audio_buffer[0][i+j] = 0x00;
-			audio_buffer[1][i+j] = 0x00;
+			audio_buffer[0][i+j] = 0x10; // 0x00
+			audio_buffer[1][i+j] = 0x10;
 		}
 		
 		for (unsigned int j=0; j<period; j++)
 		{
-			audio_buffer[0][i+j+period] = 0x80;
-			audio_buffer[1][i+j+period] = 0x80;
+			audio_buffer[0][i+j+period] = 0xF0; // 0x80
+			audio_buffer[1][i+j+period] = 0xF0;
 		}
 		
 		position += 2 * period;
@@ -799,16 +715,14 @@ int main()
 	
 	DelayMS(1000); // wait some time
 	
-	SendChar('*'); // just a 'hello world' over the UART
+	SendChar('$'); // just a 'hello world' over the UART
 	
 	USBHostSetup();
 	
 	DelayMS(1000); // settling delay, avoid garbage characters
 	
-	
-	
 	menu_x = 24;
-	menu_y = 400;
+	menu_y = 432;
 	menu_pos = 0;
 	menu_max = 6; // number of menu items, change accordingly
 	
@@ -828,9 +742,10 @@ int main()
 	else if (dummy == 2) AudioVideoDemo();
 	else if (dummy == 3) PeanutGB();
 	else if (dummy == 4) BurnROM();
-	else if (dummy == 5) { }
+	else if (dummy == 5) { }	
 	
 	
+	SendString("BlinkTest\r\n\\");
 	
 	while (1)
 	{
@@ -852,6 +767,37 @@ int main()
 }
 
 // Unused code below
+
+
+	
+/*
+	// NES controller hack
+	PORTJbits.RJ4 = 0;
+	PORTJbits.RJ5 = 0;
+	TRISJbits.TRISJ4 = 0;
+	TRISJbits.TRISJ5 = 0;
+	TRISJbits.TRISJ15 = 1;
+	
+	while (1)
+	{
+		PORTJbits.RJ4 = 1;
+		DelayMS(10);
+		PORTJbits.RJ4 = 0;
+		DelayMS(10);
+		
+		for (unsigned char i=0; i<8; i++)
+		{
+			if (PORTJbits.RJ15 == 0) display_character(i*8, 0, '0');
+			else display_character(i*8, 0, '1');
+			
+			PORTJbits.RJ5 = 1;
+			DelayMS(10);
+			PORTJbits.RJ5 = 0;
+			DelayMS(10);
+		}
+	}
+*/
+
 /*
    char dummy = 0x00;
 

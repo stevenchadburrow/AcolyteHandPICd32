@@ -30,7 +30,7 @@ uint8_t __attribute__((coherent)) boot_rom[256];
 uint8_t selected_palette[3][4];
 uint8_t custom_palette[3][4];
 
-uint8_t cart_bank = 0; // up to 4 banks (for now)
+uint8_t cart_bank = 0; // up to 12 banks (for now)
 
 volatile unsigned char sound_toggle = 1; // sound on by default
 volatile unsigned char screen_toggle = 2; // screen large by default
@@ -192,7 +192,7 @@ uint8_t gb_boot_rom_read(struct gb_s *gb, const uint_fast16_t addr)
 void read_cart_ram_file(char save_file_name[16], uint8_t *dest,
 			const size_t len)
 {
-	display_string(8, 464, "Reading Cart RAM from File\\");
+	display_string(8, 480, "Reading Cart RAM from File\\");
 	
 	char title_file_name[16];
 	
@@ -298,7 +298,7 @@ void read_cart_ram_file(char save_file_name[16], uint8_t *dest,
 void write_cart_ram_file(char save_file_name[16], uint8_t *dest,
 			 const size_t len)
 {
-	display_string(8, 464, "Writing Cart RAM to File\\");
+	display_string(8, 480, "Writing Cart RAM to File\\");
 	
 	char title_file_name[16];
 	
@@ -531,7 +531,7 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160],
 		{
 			for(unsigned int x = 0; x < LCD_WIDTH; x++)
 			{
-				screen_buffer[((line)+168) * SCREEN_X + x + 248] = 
+				screen_buffer[((line)+184) * SCREEN_X + x + 280] = 
 						selected_palette[(pixels[(x)] & LCD_PALETTE_ALL) >> 4]
 							[pixels[(x)] & 3];
 			}
@@ -540,10 +540,10 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160],
 		{
 			for(unsigned int x = 0; x < LCD_WIDTH*2; x++)
 			{
-				screen_buffer[((line<<1)+80) * SCREEN_X + x + 160] = 
+				screen_buffer[((line<<1)+112) * SCREEN_X + x + 200] = 
 						selected_palette[(pixels[(x>>1)] & LCD_PALETTE_ALL) >> 4]
 							[pixels[(x>>1)] & 3];
-				screen_buffer[((line<<1)+81) * SCREEN_X + x + 160] = 
+				screen_buffer[((line<<1)+113) * SCREEN_X + x + 200] = 
 						selected_palette[(pixels[(x>>1)] & LCD_PALETTE_ALL) >> 4]
 							[pixels[(x>>1)] & 3];
 			}
@@ -554,13 +554,13 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160],
 			{
 				for (unsigned int p = 0; p < 3; p++)
 				{
-					screen_buffer[((line*3) + 16) * SCREEN_X + x * 3 + 80 + p] = 
+					screen_buffer[((line*3) + 40) * SCREEN_X + x * 3 + 120 + p] = 
 							selected_palette[(pixels[(x)] & LCD_PALETTE_ALL) >> 4]
 								[pixels[(x)] & 3];
-					screen_buffer[((line*3) + 17) * SCREEN_X + x * 3 + 80 + p] = 
+					screen_buffer[((line*3) + 41) * SCREEN_X + x * 3 + 120 + p] = 
 							selected_palette[(pixels[(x)] & LCD_PALETTE_ALL) >> 4]
 								[pixels[(x)] & 3];
-					screen_buffer[((line*3) + 18) * SCREEN_X + x * 3 + 80 + p] = 
+					screen_buffer[((line*3) + 42) * SCREEN_X + x * 3 + 120 + p] = 
 							selected_palette[(pixels[(x)] & LCD_PALETTE_ALL) >> 4]
 								[pixels[(x)] & 3];
 				}
@@ -588,7 +588,7 @@ int BurnROM()
 	// Open the directory
 	f_opendir(&dir, ".");
 	
-	menu_x = 484;
+	menu_x = 544;
 	menu_y = 16;
 	menu_pos = 0;
 	menu_max = 51;
@@ -938,7 +938,7 @@ int PeanutGB()
 
 	auto_assign_palette(gb_colour_hash(&gb)); // default
 	
-	while (PORTJbits.RJ11 == 0) { }
+	while (PORTKbits.RK7 == 0) { }
 	
 	DelayMS(1000);
 	
@@ -1095,43 +1095,43 @@ int PeanutGB()
 					gb.direct.joypad |= JOYPAD_A;
 					gb.direct.joypad |= JOYPAD_SELECT;
 
-					if (PORTJbits.RJ0 == 0) gb.direct.joypad &= ~JOYPAD_UP;
-					if (PORTJbits.RJ1 == 0) gb.direct.joypad &= ~JOYPAD_DOWN;
-					if (PORTJbits.RJ2 == 0) gb.direct.joypad &= ~JOYPAD_LEFT;
-					if (PORTJbits.RJ3 == 0) gb.direct.joypad &= ~JOYPAD_RIGHT;
-					if (PORTJbits.RJ4 == 0) gb.direct.joypad &= ~JOYPAD_A;
-					if (PORTJbits.RJ5 == 0) gb.direct.joypad &= ~JOYPAD_SELECT;
+					if (PORTKbits.RK0 == 0) gb.direct.joypad &= ~JOYPAD_UP;
+					if (PORTKbits.RK1 == 0) gb.direct.joypad &= ~JOYPAD_DOWN;
+					if (PORTKbits.RK2 == 0) gb.direct.joypad &= ~JOYPAD_LEFT;
+					if (PORTKbits.RK3 == 0) gb.direct.joypad &= ~JOYPAD_RIGHT;
+					if (PORTKbits.RK4 == 0) gb.direct.joypad &= ~JOYPAD_A;
+					if (PORTKbits.RK5 == 0) gb.direct.joypad &= ~JOYPAD_SELECT;
 
-					if (PORTJbits.RJ6 == 0) gb.direct.joypad &= ~JOYPAD_UP;
-					if (PORTJbits.RJ7 == 0) gb.direct.joypad &= ~JOYPAD_DOWN;
-					if (PORTJbits.RJ10 == 0) gb.direct.joypad &= ~JOYPAD_LEFT;
-					if (PORTJbits.RJ12 == 0) gb.direct.joypad &= ~JOYPAD_RIGHT;
-					if (PORTJbits.RJ13 == 0) gb.direct.joypad &= ~JOYPAD_A;
-					if (PORTJbits.RJ14 == 0) gb.direct.joypad &= ~JOYPAD_SELECT;
+					if (PORTFbits.RF0 == 0) gb.direct.joypad &= ~JOYPAD_UP;
+					if (PORTFbits.RF1 == 0) gb.direct.joypad &= ~JOYPAD_DOWN;
+					if (PORTFbits.RF2 == 0) gb.direct.joypad &= ~JOYPAD_LEFT;
+					if (PORTFbits.RF4 == 0) gb.direct.joypad &= ~JOYPAD_RIGHT;
+					if (PORTFbits.RF5 == 0) gb.direct.joypad &= ~JOYPAD_A;
+					if (PORTFbits.RF8 == 0) gb.direct.joypad &= ~JOYPAD_SELECT;
 
-					PORTJbits.RJ15 = 0;
-					TRISJbits.TRISJ15 = 0; // ground joy-select for next frame
+					PORTKbits.RK6 = 0;
+					TRISKbits.TRISK6 = 0; // ground joy-select for next frame
 				}
 				else if (frame_count % 2 == 1)
 				{
 					gb.direct.joypad |= JOYPAD_B;
 					gb.direct.joypad |= JOYPAD_START;
 
-					if (PORTJbits.RJ4 == 0) gb.direct.joypad &= ~JOYPAD_B;
-					if (PORTJbits.RJ5 == 0) gb.direct.joypad &= ~JOYPAD_START;
+					if (PORTKbits.RK4 == 0) gb.direct.joypad &= ~JOYPAD_B;
+					if (PORTKbits.RK5 == 0) gb.direct.joypad &= ~JOYPAD_START;
 
-					if (PORTJbits.RJ13 == 0) gb.direct.joypad &= ~JOYPAD_B;
-					if (PORTJbits.RJ14 == 0) gb.direct.joypad &= ~JOYPAD_START;
+					if (PORTFbits.RF5 == 0) gb.direct.joypad &= ~JOYPAD_B;
+					if (PORTFbits.RF8 == 0) gb.direct.joypad &= ~JOYPAD_START;
 
-					TRISJbits.TRISJ15 = 1; // float joy-select (pulled high) for next frame
+					TRISKbits.TRISK6 = 1; // float joy-select (pulled high) for next frame
 				}
 			}
 		}
 
 		// special button on board saves the game cart ram
-		if (PORTJbits.RJ11 == 0)
+		if (PORTKbits.RK7 == 0)
 		{
-			while (PORTJbits.RJ11 == 0) { }
+			while (PORTKbits.RK7 == 0) { }
 
 			DelayMS(1000);
 
@@ -1148,7 +1148,7 @@ int PeanutGB()
 				}
 			}
 
-			menu_x = 256;
+			menu_x = 296;
 			menu_y = 240;
 			menu_pos = 0;
 			menu_max = 8;
@@ -1181,7 +1181,7 @@ int PeanutGB()
 					}
 				}
 
-				menu_x = 256;
+				menu_x = 296;
 				menu_y = 240;
 				menu_pos = 0;
 				menu_max = 19;
@@ -1257,7 +1257,7 @@ int PeanutGB()
 					unsigned char select = 0;
 					unsigned char value = 0;
 
-					menu_x = 256;
+					menu_x = 296;
 					menu_y = 240;
 					menu_pos = 0;
 					menu_max = 12;
@@ -1431,7 +1431,7 @@ int PeanutGB()
 					}
 				}
 
-				menu_x = 256;
+				menu_x = 296;
 				menu_y = 240;
 				menu_pos = 0;
 				menu_max = 14;
@@ -1532,7 +1532,7 @@ int PeanutGB()
 					}
 				}
 
-				menu_x = 256;
+				menu_x = 296;
 				menu_y = 240;
 				menu_pos = 0;
 				menu_max = 14;

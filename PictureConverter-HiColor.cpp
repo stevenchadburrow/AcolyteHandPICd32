@@ -1,4 +1,4 @@
-// Converts a 720x512 .bmp file into raw hex data
+// Converts a 640x480 .bmp file into raw hex data (hi color makes resolution 640x240 instead)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,17 +34,17 @@ int main(const int argc, const char **argv)
 		return 0;
 	}
 
-	fprintf(output, "const unsigned char %s[720*512] = {\n", argv[2]);
+	fprintf(output, "const unsigned short %s[640*400] = {\n", argv[2]);
 
 	unsigned char buffer;
 
-	unsigned char value;
+	unsigned int value;
 
 	unsigned char red, green, blue;
 
-	unsigned char full[720*512];
+	unsigned int full[640*480];
 
-	for (unsigned long i=0; i<720*512; i++)
+	for (unsigned long i=0; i<640*480; i++)
 	{
 		full[i] = 0;
 	}
@@ -53,17 +53,18 @@ int main(const int argc, const char **argv)
 
 	for (int i=0; i<54; i++) fscanf(input, "%c", &buffer); // header
 
-	for (int i=0; i<512; i++)
+	for (int i=0; i<480; i++)
 	{
-		for (int j=0; j<720; j++)
+		for (int j=0; j<640; j++)
 		{
 			value = 0x00;
 
 			fscanf(input, "%c%c%c", &blue, &green, &red);
 
-			value = ((red / 32) << 5) + ((green / 32) << 2) + (blue / 64); 
+			value = ((red >> 5) << 13) + ((green >> 5) << 10) + ((blue >> 6) << 8) + 
+				(((red >> 3) & 0x03) << 6) + (((green >> 2) & 0x07) << 3) + (((blue >> 3) & 0x07)); 
 			
-			full[i * 720 + j] = value;
+			full[i * 640 + j] = value;
 
 			total++;
 		}
@@ -71,13 +72,13 @@ int main(const int argc, const char **argv)
 		
 	}
 
-	for (int i=512-1; i>=0; i--) // inverting the y-values, because... we need to?
+	for (int i=440-1; i>=40; i--) // inverting the y-values, because... we need to?
 	{
 		fprintf(output, "\t");
 
-		for (int j=0; j<720; j++)
+		for (int j=0; j<640; j++)
 		{
-			fprintf(output, "0x%02X,", full[i * 720 + j]);
+			fprintf(output, "0x%04X,", full[(i) * 640 + j]);
 
 			total++;
 		}

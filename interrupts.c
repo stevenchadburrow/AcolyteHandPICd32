@@ -5,7 +5,7 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 {		
     IFS0bits.OC3IF = 0;  // clear interrupt flag
 	
-	PORTE = 0;
+	PORTH = 0;
 	
 	usbhost_device_delay = usbhost_device_delay + 1;
 	
@@ -17,8 +17,9 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 	
 	if (audio_switch > 0)
 	{
-		// 6-bit unsigned audio from 8-bit signed audio, this seems to help
-		PORTH = (unsigned char)((((audio_buffer[audio_bank][audio_position]) + 0x80) >> 2) & 0x3F);
+		// 8-bit signed audio, this seems to help
+		PORTJ = (unsigned short)(((audio_buffer[audio_bank][audio_position]) + 0x80) + 
+			(((audio_buffer[audio_bank][audio_position]) + 0x80) << 8));
 		audio_position++;
 		if (audio_position >= audio_length)
 		{
@@ -37,31 +38,51 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 		screen_scanline = 0;
 	}
 	
-	if (screen_scanline < 59)
+	if (screen_mode == 0) // 256-color mode
 	{
-		// do nothing
+		if (screen_scanline < 43)
+		{
+			// do nothing
+		}
+		else if (screen_scanline < 44)
+		{
+			DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+			DCH1SSA = VirtToPhys(screen_blank); // transfer source physical address
+			DCH1CONbits.CHEN = 1; // enable channel
+		}
+		else if (screen_scanline < 556)
+		{
+			DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+			DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*(screen_scanline-44)); // transfer source physical address
+			DCH1CONbits.CHEN = 1; // enable channel
+		}
+		else if (screen_scanline == 665)
+		{
+			// do nothing
+		}
 	}
-	else if (screen_scanline < 60)
+	else if (screen_mode == 1) // 65K-color mode
 	{
-		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-		DCH1SSA = VirtToPhys(screen_blank); // transfer source physical address
-		DCH1CONbits.CHEN = 1; // enable channel
-	}
-	else if (screen_scanline < 540)
-	{
-#if	SCREEN_MODE
-		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-		DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*2*((screen_scanline-60)>>1)); // transfer source physical address
-		DCH1CONbits.CHEN = 1; // enable channel
-#else
-		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-		DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*(screen_scanline-60)); // transfer source physical address
-		DCH1CONbits.CHEN = 1; // enable channel
-#endif
-	}
-	else if (screen_scanline == 665)
-	{
-		// do nothing
+		if (screen_scanline < 59)
+		{
+			// do nothing
+		}
+		else if (screen_scanline < 108)
+		{
+			DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+			DCH1SSA = VirtToPhys(screen_blank); // transfer source physical address
+			DCH1CONbits.CHEN = 1; // enable channel
+		}
+		else if (screen_scanline < 492)
+		{
+			DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+			DCH1SSA = VirtToPhys(screen_buffer + HI_SCREEN_X*2*(screen_scanline-108)); // transfer source physical address
+			DCH1CONbits.CHEN = 1; // enable channel
+		}
+		else if (screen_scanline == 665)
+		{
+			// do nothing
+		}
 	}
 	
 	return;
@@ -266,7 +287,7 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl4srs))) cnd_ha
 						else
 						{
 							ps2_cursor_x[p][ps2_writepos[p]] = 
-								ps2_cursor_x[p][(unsigned char)(ps2_writepos[p]-1)] + (signed char)(ps2_buffer[p]);
+							ps2_cursor_x[p][(unsigned char)(ps2_writepos[p]-1)] + (signed char)(ps2_buffer[p]);
 						}
 					}
 					else if ((signed char)(ps2_buffer[p]) >= 0)

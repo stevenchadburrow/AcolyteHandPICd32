@@ -263,7 +263,7 @@ struct tetra_struct_vars tetra_vars;
 
 void Tetra()
 {	
-	TRISJbits.TRISJ15 = 1; // float joy-select (pulled high)
+	TRISKbits.TRISK6 = 1; // float joy-select (pulled high)
 	
 	display_foreground_color = 0xFF; // change color of text!
 	display_background_color = 0x00; 
@@ -674,17 +674,17 @@ void Tetra()
 		{
 			if (joy_toggle == 1)
 			{	
-				if (PORTJbits.RJ0 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0x7F);
-				if (PORTJbits.RJ1 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xBF);
-				if (PORTJbits.RJ2 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xDF);
-				if (PORTJbits.RJ3 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xEF);
-				if (PORTJbits.RJ4 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xF7);
-				if (PORTJbits.RJ5 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xFB);
+				if (PORTKbits.RK0 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0x7F);
+				if (PORTKbits.RK1 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xBF);
+				if (PORTKbits.RK2 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xDF);
+				if (PORTKbits.RK3 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xEF);
+				if (PORTKbits.RK4 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xF7);
+				if (PORTKbits.RK5 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xFB);
 			}
 			else
 			{
-				if (PORTJbits.RJ4 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xFD);
-				if (PORTJbits.RJ5 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xFE);
+				if (PORTKbits.RK4 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xFD);
+				if (PORTKbits.RK5 == 0) tetra_vars.joy_curr[0] = (tetra_vars.joy_curr[0] & 0xFE);
 			}
 		}
 		else pause[0]--;
@@ -706,17 +706,17 @@ void Tetra()
 			{
 				if (joy_toggle == 1)
 				{
-					if (PORTJbits.RJ6 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0x7F);
-					if (PORTJbits.RJ7 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xBF);
-					if (PORTJbits.RJ10 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xDF);
-					if (PORTJbits.RJ12 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xEF);
-					if (PORTJbits.RJ13 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xF7);
-					if (PORTJbits.RJ14 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xFB);
+					if (PORTFbits.RF0 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0x7F);
+					if (PORTFbits.RF1 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xBF);
+					if (PORTFbits.RF2 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xDF);
+					if (PORTFbits.RF4 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xEF);
+					if (PORTFbits.RF5 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xF7);
+					if (PORTFbits.RF8 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xFB);
 				}
 				else
 				{
-					if (PORTJbits.RJ13 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xFD);
-					if (PORTJbits.RJ14 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xFE);
+					if (PORTFbits.RF5 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xFD);
+					if (PORTFbits.RF8 == 0) tetra_vars.joy_curr[1] = (tetra_vars.joy_curr[1] & 0xFE);
 				}
 			}
 			else pause[1]--;
@@ -797,12 +797,12 @@ void Tetra()
 		
 		if (joy_toggle == 1)
 		{
-			TRISJbits.TRISJ15 = 1; // float joy-select (pulled high)
+			TRISKbits.TRISK6 = 1; // float joy-select (pulled high)
 		}
 		else
 		{
-			PORTJbits.RJ15 = 0;
-			TRISJbits.TRISJ15 = 0; // ground joy-select
+			PORTKbits.RK6 = 0;
+			TRISKbits.TRISK6 = 0; // ground joy-select
 		}
 		
 		// DELAY HERE!!!
@@ -1278,7 +1278,7 @@ void Tetra()
 		}
 		
 		vert = 0x02;
-		horz = 0x44;
+		horz = 0x4E;
 		
 		for (unsigned int i=0; i<(tetra_size_y-1)*16; i++)
 		{

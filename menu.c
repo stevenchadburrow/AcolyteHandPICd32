@@ -106,7 +106,7 @@ unsigned char Menu()
 		
 		if (gamepad_flag == 0)
 		{
-			if (PORTJbits.RJ0 == 0) // up
+			if (PORTKbits.RK0 == 0) // up
 			{
 				if ((menu_joy & 0x0001) == 0x0000)
 				{
@@ -120,7 +120,7 @@ unsigned char Menu()
 			
 		if (gamepad_flag == 0)
 		{
-			if (PORTJbits.RJ1 == 0) // down
+			if (PORTKbits.RK1 == 0) // down
 			{
 				if ((menu_joy & 0x0002) == 0x0000)
 				{
@@ -132,7 +132,7 @@ unsigned char Menu()
 			else menu_joy = (menu_joy & 0xFFFD);
 		}
 		
-		if (PORTJbits.RJ4 == 0 || PORTJbits.RJ5 == 0) // either button
+		if (PORTKbits.RK4 == 0 || PORTKbits.RK5 == 0) // either button
 		{
 			//menu_loop = 0;
 			exit = 2;
@@ -146,7 +146,7 @@ unsigned char Menu()
 		
 		if (gamepad_flag == 0)
 		{
-			if (PORTJbits.RJ6 == 0) // up
+			if (PORTFbits.RF0 == 0) // up
 			{
 				if ((menu_joy & 0x0040) == 0x0000)
 				{
@@ -160,7 +160,7 @@ unsigned char Menu()
 
 		if (gamepad_flag == 0)
 		{
-			if (PORTJbits.RJ7 == 0 && gamepad_flag == 0) // down
+			if (PORTFbits.RF1 == 0 && gamepad_flag == 0) // down
 			{
 				if ((menu_joy & 0x0080) == 0x0000)
 				{
@@ -172,7 +172,7 @@ unsigned char Menu()
 			else menu_joy = (menu_joy & 0xFF7F);
 		}
 
-		if (PORTJbits.RJ13 == 0 || PORTJbits.RJ14 == 0) // either button
+		if (PORTFbits.RF5 == 0 || PORTFbits.RF8 == 0) // either button
 		{
 			//menu_loop = 0;
 			exit = 3;
@@ -254,18 +254,18 @@ unsigned char Menu()
 
 		if (gamepad_flag == 0)
 		{
-			TRISJbits.TRISJ15 = 1; // float joy-select (pulled high) for next frame
+			TRISKbits.TRISK6 = 1; // float joy-select (pulled high) for next frame
 		}
 		else
 		{
-			PORTJbits.RJ15 = 0;
-			TRISJbits.TRISJ15 = 0; // ground joy-select for next frame
+			PORTKbits.RK6 = 0;
+			TRISKbits.TRISK6 = 0; // ground joy-select for next frame
 		}
 		
 		if (exit == 255) menu_loop = 0;
 	}
 	
-	TRISJbits.TRISJ15 = 1; // float joy-select (pulled high)
+	TRISKbits.TRISK6 = 1; // float joy-select (pulled high)
 
 	//music_note(1047, 500, 0);
 	

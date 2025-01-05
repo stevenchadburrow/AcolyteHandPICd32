@@ -1,10 +1,12 @@
 
+#define CHARS_WIDE 90
+#define CHARS_HIGH 64
 
-volatile char __attribute__((coherent)) scratchpad_buffer[80][60];
+volatile char __attribute__((coherent)) scratchpad_buffer[CHARS_WIDE][CHARS_HIGH];
 
 void Scratchpad()
 {
-	TRISJbits.TRISJ15 = 1; // float joy-select (pulled high)
+	TRISKbits.TRISK6 = 1; // float joy-select (pulled high)
 	
 	display_foreground_color = 0xFF; // change color of text!
 	display_background_color = 0x25; 
@@ -35,9 +37,9 @@ void Scratchpad()
 		}
 	}
 	
-	for (unsigned int y=0; y<60; y++)
+	for (unsigned int y=0; y<CHARS_HIGH; y++)
 	{
-		for (unsigned int x=0; x<80; x++)
+		for (unsigned int x=0; x<CHARS_WIDE; x++)
 		{
 			scratchpad_buffer[x][y] = ' ';
 		}
@@ -68,19 +70,19 @@ void Scratchpad()
 		{
 			joy_curr[0] = joy_curr[0] | 0xFC; 
 
-			if (PORTJbits.RJ0 == 0) joy_curr[0] = (joy_curr[0] & 0x7F);
-			if (PORTJbits.RJ1 == 0) joy_curr[0] = (joy_curr[0] & 0xBF);
-			if (PORTJbits.RJ2 == 0) joy_curr[0] = (joy_curr[0] & 0xDF);
-			if (PORTJbits.RJ3 == 0) joy_curr[0] = (joy_curr[0] & 0xEF);
-			if (PORTJbits.RJ4 == 0) joy_curr[0] = (joy_curr[0] & 0xF7);
-			if (PORTJbits.RJ5 == 0) joy_curr[0] = (joy_curr[0] & 0xFB);
+			if (PORTKbits.RK0 == 0) joy_curr[0] = (joy_curr[0] & 0x7F);
+			if (PORTKbits.RK1 == 0) joy_curr[0] = (joy_curr[0] & 0xBF);
+			if (PORTKbits.RK2 == 0) joy_curr[0] = (joy_curr[0] & 0xDF);
+			if (PORTKbits.RK3 == 0) joy_curr[0] = (joy_curr[0] & 0xEF);
+			if (PORTKbits.RK4 == 0) joy_curr[0] = (joy_curr[0] & 0xF7);
+			if (PORTKbits.RK5 == 0) joy_curr[0] = (joy_curr[0] & 0xFB);
 		}
 		else
 		{
 			joy_curr[0] = joy_curr[0] | 0x03; 
 
-			if (PORTJbits.RJ4 == 0) joy_curr[0] = (joy_curr[0] & 0xFD);
-			if (PORTJbits.RJ5 == 0) joy_curr[0] = (joy_curr[0] & 0xFE);
+			if (PORTKbits.RK4 == 0) joy_curr[0] = (joy_curr[0] & 0xFD);
+			if (PORTKbits.RK5 == 0) joy_curr[0] = (joy_curr[0] & 0xFE);
 		}
 		
 		if (usb_mode != 0x02) // xbox-type controller
@@ -89,19 +91,19 @@ void Scratchpad()
 			{
 				joy_curr[1] = joy_curr[1] | 0xFC; 
 
-				if (PORTJbits.RJ6 == 0) joy_curr[1] = (joy_curr[1] & 0x7F);
-				if (PORTJbits.RJ7 == 0) joy_curr[1] = (joy_curr[1] & 0xBF);
-				if (PORTJbits.RJ10 == 0) joy_curr[1] = (joy_curr[1] & 0xDF);
-				if (PORTJbits.RJ12 == 0) joy_curr[1] = (joy_curr[1] & 0xEF);
-				if (PORTJbits.RJ13 == 0) joy_curr[1] = (joy_curr[1] & 0xF7);
-				if (PORTJbits.RJ14 == 0) joy_curr[1] = (joy_curr[1] & 0xFB);
+				if (PORTFbits.RF0 == 0) joy_curr[1] = (joy_curr[1] & 0x7F);
+				if (PORTFbits.RF1 == 0) joy_curr[1] = (joy_curr[1] & 0xBF);
+				if (PORTFbits.RF2 == 0) joy_curr[1] = (joy_curr[1] & 0xDF);
+				if (PORTFbits.RF4 == 0) joy_curr[1] = (joy_curr[1] & 0xEF);
+				if (PORTFbits.RF5 == 0) joy_curr[1] = (joy_curr[1] & 0xF7);
+				if (PORTFbits.RF8 == 0) joy_curr[1] = (joy_curr[1] & 0xFB);
 			}
 			else
 			{
 				joy_curr[1] = joy_curr[1] | 0x03; 
 
-				if (PORTJbits.RJ13 == 0) joy_curr[1] = (joy_curr[1] & 0xFD);
-				if (PORTJbits.RJ14 == 0) joy_curr[1] = (joy_curr[1] & 0xFE);
+				if (PORTFbits.RF5 == 0) joy_curr[1] = (joy_curr[1] & 0xFD);
+				if (PORTFbits.RF8 == 0) joy_curr[1] = (joy_curr[1] & 0xFE);
 			}
 		}
 		else
@@ -172,12 +174,12 @@ void Scratchpad()
 		
 		if (joy_toggle == 1)
 		{
-			TRISJbits.TRISJ15 = 1; // float joy-select (pulled high)
+			TRISKbits.TRISK6 = 1; // float joy-select (pulled high)
 		}
 		else
 		{
-			PORTJbits.RJ15 = 0;
-			TRISJbits.TRISJ15 = 0; // ground joy-select
+			PORTKbits.RK6 = 0;
+			TRISKbits.TRISK6 = 0; // ground joy-select
 		}
 		
 		if (key_value == 0x00)
@@ -241,9 +243,9 @@ void Scratchpad()
 					}
 				}
 
-				for (unsigned int y=0; y<48; y++)
+				for (unsigned int y=0; y<CHARS_HIGH; y++)
 				{
-					for (unsigned int x=0; x<64; x++)
+					for (unsigned int x=0; x<CHARS_WIDE; x++)
 					{
 						scratchpad_buffer[x][y] = ' ';
 					}
@@ -276,17 +278,17 @@ void Scratchpad()
 						}
 					}
 					
-					for (unsigned int y=0; y<59; y++)
+					for (unsigned int y=0; y<CHARS_HIGH-1; y++)
 					{
-						for (unsigned int x=0; x<80; x++)
+						for (unsigned int x=0; x<CHARS_WIDE; x++)
 						{
 							scratchpad_buffer[x][y] = scratchpad_buffer[x][y+1];
 						}
 					}
 					
-					for (unsigned int x=0; x<80; x++)
+					for (unsigned int x=0; x<CHARS_WIDE; x++)
 					{
-						scratchpad_buffer[x][59] = ' ';
+						scratchpad_buffer[x][CHARS_HIGH-1] = ' ';
 					}
 					
 					pos_y -= 8;
