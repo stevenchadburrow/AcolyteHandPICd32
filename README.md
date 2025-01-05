@@ -22,11 +22,11 @@ Internal memory of 512KB of RAM and 2MB of Flash ROM
 
 <b>Video</b>
 
-VGA 800x600 max resolution (640x480 typical resolution) at 72 Hz with 256 colors
+VGA 800x600 max resolution (720x512 typical resolution) at 72 Hz with 256 colors or 65K colors
 
 <b>Audio</b>
 
-Single 6-bit audio channel, adding more bits and channels in the future
+Dual 8-bit audio channels
 
 <b>HID</b>
 
@@ -54,7 +54,7 @@ Tetra - Tetris clone recopied from my previous PIC-related projects
 <br>
 Scratchpad - Proof-of-concept 'text editor' without save/load features
 <br>
-AV Demo - Audio/Video playback of modified video files with a resolution 240x192 at 30 Hz with 256 colors and up to 32-bit mono audio
+AV Demo - Audio/Video playback of modified video files with a resolution 240x192 at 15 FPS with 65K colors and dual 8-bit audio
 
 <b>Gameboy Emulator</b>
 
@@ -62,7 +62,7 @@ Mahyar Koshkouei's <a href="https://github.com/deltabeard/Peanut-GB">Peanut-GB (
 <br>
 Added support for GBC default color palettes, custom palettes, game file save/load, and screen size and refresh rate adjustments
 <br>
-Tested with many games, including: Tetris, Balloon Kid, Zelda: Link's Awakening, and Pokemon Red
+Tested with many games, including: Tetris, Dr. Mario, Balloon Kid, Zelda: Link's Awakening, Pokemon Red, Tobu Tobu Girl, and Pokemon Kanto Expasion Pak
 
 <b>Links</b>
 
