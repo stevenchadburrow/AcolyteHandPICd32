@@ -70,11 +70,11 @@ Tested with many games, including: Tetris, Dr. Mario, Balloon Kid, Zelda: Link's
 <a href="http://elm-chan.org/">http://elm-chan.org/</a> for a bunch of projects, including MMC (aka SDcard) and FatFs.<br>
 <a href="https://github.com/deltabeard/">https://github.com/deltabeard/</a> for a bunch of projects, including Peanut-GB and MiniGB-APU projects.<br>
 
-<b>Older picture of PCB with 74HC273 installed and without audio DAC installed.</b>
+<b>Look Ma, no bodges! (showing Version 2 board)</b>
 <br>
 <img src="BOARD-PICTURE.jpg">
 
-<b>3D printed case fits perfectly!</b>
+<b>3D printed case fits perfectly! (showing Version 1 board)</b>
 <br>
 <img src="PRINTED-CASE.jpg">
 
@@ -86,11 +86,7 @@ Tested with many games, including: Tetris, Dr. Mario, Balloon Kid, Zelda: Link's
 <br>
 <img src="MIKU-TETRA.jpg">
 
-<b>Every system must attempt Bad Apple it seems.</b>
-<br>
-<img src="BAD-APPLE.jpg">
-
-<b>Fuzzy picture of the Scratchpad.</b>
+<b>Scratchpad works with all peripherals.</b>
 <br>
 <img src="SCRATCH-PAD.jpg">
 
