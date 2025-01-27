@@ -84,14 +84,14 @@ unsigned char Menu()
 		{
 			if (menu_key == 0x0D || menu_key == 0x20) // enter or space
 			{
-				//menu_loop = 0;
-				exit = 1;
+				menu_loop = 0;
+				//exit = 1;
 				
 				DelayMS(100);
 			}
 			else
 			{
-				if (exit == 1) exit = 255;
+				//if (exit == 1) exit = 255;
 			}
 			
 			if (menu_key == 0x11) // up

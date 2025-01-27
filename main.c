@@ -245,7 +245,7 @@ void SendLongHex(unsigned long value)
 #define HI_SCREEN_Y 384
 
 // video
-volatile unsigned char __attribute__((coherent,address(0x8001A000))) screen_buffer[HI_SCREEN_X*HI_SCREEN_Y*2]; // visible portion of screen
+volatile unsigned char __attribute__((coherent,address(0x8001A000))) screen_buffer[SCREEN_X*SCREEN_Y]; // visible portion of screen
 
 // additional variables
 volatile unsigned char __attribute__((coherent)) screen_blank[HI_SCREEN_X*2]; // black scanline
@@ -254,7 +254,7 @@ volatile unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 volatile unsigned char screen_mode = 0; // start in 256-color mode
 
 // audio
-volatile unsigned char __attribute__((coherent,address(0x80074000))) audio_buffer[2][8192];
+volatile unsigned char __attribute__((address(0x80074000))) audio_buffer[2][8192];
 volatile unsigned int audio_position = 0;
 volatile unsigned int audio_bank = 0;
 volatile unsigned int audio_length = 0;

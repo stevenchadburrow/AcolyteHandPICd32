@@ -219,9 +219,9 @@ void AudioVideoDemo()
 						}
 
 						// fine tune delay here
-						count = (unsigned long)(8);
-						_CP0_SET_COUNT(0);
-						while (count > _CP0_GET_COUNT());
+						//count = (unsigned long)(2);
+						//_CP0_SET_COUNT(0);
+						//while (count > _CP0_GET_COUNT());
 					}
 				}
 				
