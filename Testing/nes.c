@@ -12,11 +12,12 @@
 
 int main()
 {
-	nes_load("MARIO.NES");
-	
-	while (1)
-	{ 
-		nes_loop(0); // change value to skip frames 
+	if (nes_load("MARIO.NES")) // change to NES rom filename
+	{
+		while (1)
+		{ 
+			nes_loop(0); // change value to skip frames and go faster
+		}
 	}
 	
 	return 0;
@@ -36,10 +37,12 @@ volatile unsigned char __attribute__((address(0x80064800))) oam_ram[256]; // spe
 
 volatile unsigned char cart_header[16];
 
-volatile unsigned char nes_init_flag = 0, nes_draw_flag = 0;
+volatile unsigned char nes_init_flag = 0;
 volatile unsigned long nes_pixel_location = 0;
 
-volatile unsigned long cpu_total_cycles = 0;
+volatile unsigned long cpu_current_cycles = 0, ppu_video_cycles = 0, apu_audio_cycles = 0;
+
+volatile unsigned char ppu_enable_flag = 0, apu_enable_flag = 0;
 
 volatile unsigned short cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
 volatile unsigned short cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
@@ -61,11 +64,51 @@ volatile unsigned short ctl_flag_s = 0x0000;
 volatile unsigned short ctl_value_1 = 0x0000, ctl_value_2 = 0x0000;
 volatile unsigned short ctl_latch_1 = 0x0000, ctl_latch_2 = 0x0000;
 
+volatile unsigned short apu_pulse_1_d = 0x0000, apu_pulse_2_d = 0x0000;
+volatile unsigned short apu_pulse_1_i = 0x0000, apu_pulse_2_i = 0x0000;
+volatile unsigned short apu_pulse_1_c = 0x0000, apu_pulse_2_c = 0x0000;
+volatile unsigned short apu_pulse_1_v = 0x0000, apu_pulse_2_v = 0x0000;
+volatile unsigned short apu_pulse_1_m = 0x0000, apu_pulse_2_m = 0x0000;
+volatile unsigned short apu_pulse_1_r = 0x0000, apu_pulse_2_r = 0x0000;
+volatile unsigned short apu_pulse_1_h = 0x0000, apu_pulse_2_h = 0x0000;
+volatile unsigned short apu_pulse_1_q = 0x0000, apu_pulse_2_q = 0x0000;
+volatile unsigned short apu_pulse_1_s = 0x0000, apu_pulse_2_s = 0x0000;
+volatile unsigned short apu_pulse_1_n = 0x0000, apu_pulse_2_n = 0x0000;
+volatile unsigned short apu_pulse_1_p = 0x0000, apu_pulse_2_p = 0x0000;
+volatile unsigned short apu_pulse_1_w = 0x0000, apu_pulse_2_w = 0x0000;
+volatile unsigned short apu_pulse_1_e = 0x0000, apu_pulse_2_e = 0x0000;
+volatile unsigned short apu_pulse_1_t = 0x0000, apu_pulse_2_t = 0x0000;
+volatile unsigned short apu_pulse_1_k = 0x0000, apu_pulse_2_k = 0x0000;
+volatile unsigned short apu_pulse_1_l = 0x0000, apu_pulse_2_l = 0x0000;
+volatile unsigned short apu_pulse_1_o = 0x0000, apu_pulse_2_o = 0x0000;
+
+volatile unsigned short apu_triangle_c = 0x0000;
+volatile unsigned short apu_triangle_r = 0x0000;
+volatile unsigned short apu_triangle_h = 0x0000;
+volatile unsigned short apu_triangle_q = 0x0000;
+volatile unsigned short apu_triangle_t = 0x0000;
+volatile unsigned short apu_triangle_k = 0x0000;
+volatile unsigned short apu_triangle_l = 0x0000;
+volatile unsigned short apu_triangle_p = 0x0000;
+volatile unsigned short apu_triangle_d = 0x0000;
+volatile unsigned short apu_triangle_o = 0x0000;
+
+volatile unsigned short apu_noise_o = 0x0000;
+
+volatile unsigned short apu_counter_q = 0x0000;
+volatile unsigned short apu_counter_h = 0x0000;
+volatile unsigned short apu_mixer_output = 0x0000;
+
 volatile unsigned char ppu_palette[64] = {
 	0x6D,0x03,0x02,0x46,0x82,0xA0,0xA0,0x80,0x44,0x0C,0x0C,0x08,0x09,0x00,0x00,0x00,
 	0xB6,0x0F,0x0B,0x6B,0xC3,0xE1,0xE4,0xE8,0xAC,0x14,0x14,0x15,0x12,0x00,0x00,0x00,
 	0xFF,0x37,0x73,0x8F,0xEF,0xEA,0xED,0xF5,0xF4,0xBC,0x59,0x5E,0x1F,0x6D,0x00,0x00,
 	0xFF,0xBF,0xB7,0xD7,0xF7,0xF7,0xFA,0xFE,0xF9,0xDD,0xBE,0xBF,0x1F,0xFB,0x00,0x00
+};
+
+volatile unsigned char apu_length[32] = {
+	  0, 254,  20,   2,  40,   4,  80,   6, 160,   8,  60,  10,  14,  12,  26,  14,
+	 12,  16,  24,  18,  48,  20,  96,  22, 192,  24,  72,  26,  16,  28,  32,  30
 };
 
 // change for platform
@@ -151,6 +194,12 @@ void nes_pixel(unsigned short pos_x, unsigned short pos_y, unsigned char color)
 void nes_flip()
 {
 	screen_frame = 1 - screen_frame;
+}
+
+// change for platform
+void nes_sound(unsigned char sample)
+{
+	PORTJ = (sample & 0x00FF);
 }
 	
 // change for platform
@@ -429,10 +478,150 @@ void cpu_write(unsigned short addr, unsigned char val)
 	{
 		switch ((addr&0x00FF))
 		{
+			case 0x00: // pulse 1 volume
+			{
+				apu_pulse_1_c = ((val & 0x10) >> 4);
+				
+				if (apu_pulse_1_c > 0)
+				{
+					apu_pulse_1_v = (val & 0x0F);
+				}
+				else
+				{
+					apu_pulse_1_v = 0x0F;
+				}
+				
+				apu_pulse_1_m = (val & 0x0F);
+				
+				apu_pulse_1_r = apu_pulse_1_m + 1;
+				
+				apu_pulse_1_i = ((val & 0x20) >> 5);
+				
+				apu_pulse_1_d = ((val & 0xC0) >> 6);
+				
+				break;
+			}
+			case 0x01: // pulse 1 sweep
+			{
+				apu_pulse_1_s = (val & 0x07);
+				
+				apu_pulse_1_n = ((val & 0x08) >> 3);
+				
+				apu_pulse_1_p = ((val & 0x70) >> 4);
+				
+				apu_pulse_2_w = apu_pulse_2_p + 1;
+				
+				apu_pulse_1_e = ((val & 0x80) >> 7);
+				
+				break;
+			}
+			case 0x02: // pulse 1 timer
+			{
+				apu_pulse_1_t = ((apu_pulse_1_t & 0x0700) | val);
+				
+				apu_pulse_1_k = apu_pulse_1_t;
+				
+				break;
+			}
+			case 0x03: // pulse 1 length
+			{
+				apu_pulse_1_t = ((apu_pulse_1_t & 0x00FF) | ((val & 0x07) << 8));
+				
+				apu_pulse_1_l = apu_length[(val>>3)];
+				
+				apu_pulse_1_k = apu_pulse_1_t;
+				
+				break;
+			}
+			case 0x04: // pulse 2 volume
+			{
+				apu_pulse_2_c = ((val & 0x10) >> 4);
+				
+				if (apu_pulse_2_c > 0)
+				{
+					apu_pulse_2_v = (val & 0x0F);
+				}
+				else
+				{
+					apu_pulse_2_v = 0x0F;
+				}
+				
+				apu_pulse_2_m = (val & 0x0F);
+				
+				apu_pulse_2_r = apu_pulse_2_m + 1;
+				
+				apu_pulse_2_i = ((val & 0x20) >> 5);
+				
+				apu_pulse_2_d = ((val & 0xC0) >> 6);
+				
+				break;
+			}
+			case 0x05: // pulse 2 sweep
+			{
+				apu_pulse_2_s = (val & 0x07);
+				
+				apu_pulse_2_n = ((val & 0x08) >> 3);
+				
+				apu_pulse_2_p = ((val & 0x70) >> 4);
+				
+				apu_pulse_2_w = apu_pulse_2_p + 1;
+				
+				apu_pulse_2_e = ((val & 0x80) >> 7);
+				
+				break;
+			}
+			case 0x06: // pulse 2 timer
+			{
+				apu_pulse_2_t = ((apu_pulse_2_t & 0x0700) | val);
+				
+				apu_pulse_2_k = apu_pulse_2_t;
+				
+				break;
+			}
+			case 0x07: // pulse 2 length
+			{
+				apu_pulse_2_t = ((apu_pulse_2_t & 0x00FF) | ((val & 0x07) << 8));
+				
+				apu_pulse_2_l = apu_length[(val>>3)];
+				
+				apu_pulse_2_k = apu_pulse_2_t;
+				
+				break;
+			}
+			case 0x08: // triangle linear
+			{
+				apu_triangle_r = (val & 0x7F);
+				
+				apu_triangle_c = ((val & 0x80) >> 7);
+				
+				break;
+			}
+			case 0x09: // triangle unused
+			{
+				break;
+			}
+			case 0x0A: // triangle timer
+			{
+				apu_triangle_t = ((apu_triangle_t & 0x0700) | val);
+				
+				apu_triangle_k = apu_triangle_t;
+				
+				break;
+			}
+			case 0x0B: // triangle length
+			{
+				apu_triangle_t = ((apu_triangle_t & 0x00FF) | ((val & 0x07) << 8));
+				
+				apu_triangle_l = apu_length[(val>>3)];
+				
+				apu_triangle_k = apu_triangle_t;
+				
+				break;
+			}
 			case 0x14: // oam dma
 			{
-				if ((cpu_total_cycles&0x00000002) == 0x00000000) cpu_total_cycles += 1026; // 513 cycles on even
-				else cpu_total_cycles += 1028; // 514 cycles on odd
+				if ((cpu_current_cycles&0x00000002) == 0x00000000) cpu_current_cycles += 513; // 513 cycles on even
+				else cpu_current_cycles += 514; // 514 cycles on odd
 				
 				for (unsigned short loop=0; loop<256; loop++)
 				{
@@ -471,7 +660,7 @@ void cpu_write(unsigned short addr, unsigned char val)
 	}
 }
 
-// cpu_temp_addressessing modes
+// cpu addressing modes
 #define CPU_IMM { \
 	cpu_temp_cycles = 0x0002; \
 	cpu_temp_memory = cpu_read(cpu_reg_pc++); }
@@ -1253,7 +1442,7 @@ unsigned short cpu_run()
 	return cpu_temp_cycles;
 }
 
-void nes_frame()
+void nes_video()
 {
 	unsigned short pixel_pos = 0, pixel_lookup = 0;
 	unsigned char pixel_high = 0, pixel_low = 0, pixel_table = 0, pixel_color = 0;
@@ -1299,7 +1488,7 @@ void nes_frame()
 						if (sprite_flip_horz == 0x00) pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
 						else pixel_color = ((pixel_high<<1)&0x02)|(pixel_low&0x01);
 
-						if (pixel_color != 0x00) nes_pixel(sprite_x+i, sprite_y+j, ppu_palette[ppu_ram[0x3F10+((sprite_attr&0x03)<<2)+pixel_color]]);
+						if (pixel_color != 0x00) nes_pixel(sprite_x+i, sprite_y+j+1, ppu_palette[ppu_ram[0x3F10+((sprite_attr&0x03)<<2)+pixel_color]]);
 
 						if (sprite_flip_horz == 0x00)
 						{
@@ -1373,7 +1562,7 @@ void nes_frame()
 						if (sprite_flip_horz == 0x00) pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
 						else pixel_color = ((pixel_high<<1)&0x02)|(pixel_low&0x01);
 
-						if (pixel_color != 0x00) nes_pixel(sprite_x+i, sprite_y+j, ppu_palette[ppu_ram[0x3F10+((sprite_attr&0x03)<<2)+pixel_color]]);
+						if (pixel_color != 0x00) nes_pixel(sprite_x+i, sprite_y+j+1, ppu_palette[ppu_ram[0x3F10+((sprite_attr&0x03)<<2)+pixel_color]]);
 
 						if (sprite_flip_horz == 0x00)
 						{
@@ -1392,6 +1581,194 @@ void nes_frame()
 	}
 }
 
+void nes_audio()
+{
+	apu_counter_q += (apu_audio_cycles);
+	
+	while (apu_counter_q >= 7456) // quarter of a frame
+	{
+		apu_counter_q -= 7456;
+	
+		if (apu_pulse_1_r > 0 && apu_pulse_1_c == 0)
+		{
+			apu_pulse_1_r--;
+		}
+		else
+		{
+			apu_pulse_1_r = apu_pulse_1_m + 1;
+			
+			if (apu_pulse_1_v > 0)
+			{
+				apu_pulse_1_v--;
+			}
+			else
+			{
+				if (apu_pulse_1_i > 0) apu_pulse_1_v = 0x0F;
+			}
+		}
+		
+		if (apu_pulse_2_r > 0 && apu_pulse_2_c == 0)
+		{
+			apu_pulse_2_r--;
+		}
+		else
+		{
+			apu_pulse_2_r = apu_pulse_2_m + 1;
+			
+			if (apu_pulse_2_v > 0)
+			{
+				apu_pulse_2_v--;
+			}
+			else
+			{
+				if (apu_pulse_2_i > 0) apu_pulse_2_v = 0x0F;
+			}
+		}
+		
+		if (apu_triangle_r > 0 && apu_triangle_c == 0)
+		{
+			apu_triangle_r--;
+		}
+	}
+	
+	apu_counter_h += (apu_audio_cycles);
+	
+	while (apu_pulse_1_h >= 14912) // half of a frame
+	{
+		apu_pulse_1_h -= 14912;
+		
+		if (apu_pulse_1_l > 0 && apu_pulse_1_i == 0x0000)
+		{
+			apu_pulse_1_l--;
+		}
+		
+		if (apu_pulse_2_l > 0 && apu_pulse_2_i == 0x0000)
+		{
+			apu_pulse_2_l--;
+		}
+		
+		if (apu_triangle_l > 0 && apu_triangle_c == 0x0000)
+		{
+			apu_triangle_l--;
+		}
+	}
+	
+	if (apu_pulse_1_l > 0 && apu_pulse_1_t > 8)
+	{
+		apu_pulse_1_k += (apu_audio_cycles);
+
+		while (apu_pulse_1_k >= (apu_pulse_1_t<<2) && apu_pulse_1_t > 8)
+		{
+			apu_pulse_1_k -= (apu_pulse_1_t<<2);
+			
+			if (apu_pulse_1_e > 0x0000)
+			{
+				if (apu_pulse_1_w > 0)
+				{
+					apu_pulse_1_w--;
+				}
+				else
+				{
+					apu_pulse_1_w = apu_pulse_1_p + 1;
+
+					if (apu_pulse_1_n > 0x0000) apu_pulse_1_t = (apu_pulse_1_t >> apu_pulse_1_s);
+					else apu_pulse_1_t = ((apu_pulse_1_t << apu_pulse_1_s) & 0x07FF);
+				}
+			}
+			
+			if (apu_pulse_1_o > 0x0000) apu_pulse_1_o = 0x0000;
+			else apu_pulse_1_o = (apu_pulse_1_v << 4);
+		}
+	}
+	else apu_pulse_1_o = 0x0000;
+	
+	if (apu_pulse_2_l > 0 && apu_pulse_2_t > 8)
+	{
+		apu_pulse_2_k += (apu_audio_cycles);
+
+		while (apu_pulse_2_k >= (apu_pulse_2_t<<2) && apu_pulse_2_t > 8)
+		{
+			apu_pulse_2_k -= (apu_pulse_2_t<<2);
+		
+			if (apu_pulse_2_e > 0x0000)
+			{
+				if (apu_pulse_2_w > 0)
+				{
+					apu_pulse_2_w--;
+				}
+				else
+				{
+					apu_pulse_2_w = apu_pulse_2_p + 1;
+
+					if (apu_pulse_2_n > 0x0000) apu_pulse_2_t = (apu_pulse_2_t >> apu_pulse_2_s);
+					else apu_pulse_2_t = ((apu_pulse_2_t << apu_pulse_2_s) & 0x07FF);
+				}
+			}
+			
+			if (apu_pulse_2_o > 0x0000) apu_pulse_2_o = 0x0000;
+			else apu_pulse_2_o = (apu_pulse_2_v << 4);
+		}
+	}
+	else apu_pulse_2_o = 0x0000;
+	
+	if (apu_triangle_l > 0 && apu_triangle_r > 0 && apu_triangle_t > 8)
+	{
+		apu_triangle_k += (apu_audio_cycles);
+
+		while (apu_triangle_k >= (apu_triangle_t>>3))
+		{
+			apu_triangle_k -= (apu_triangle_t>>3);
+		
+			if (apu_triangle_o > 0x0000) apu_triangle_o = 0x0000;
+			else apu_triangle_o = apu_triangle_p;
+			
+			if (apu_triangle_d == 0)
+			{
+				if (apu_triangle_p > 0x00)
+				{
+					apu_triangle_p -= 0x11;
+				}
+				else
+				{
+					apu_triangle_d = 1;
+					
+					apu_triangle_p = 0x11;
+				}
+			}
+			else
+			{
+				if (apu_triangle_p < 0xFF)
+				{
+					apu_triangle_p += 0x11;
+				}
+				else
+				{
+					apu_triangle_d = 0;
+					
+					apu_triangle_p = 0xEE;
+				}
+			}
+		}
+	}
+	else apu_triangle_o = 0x0000;
+	
+	apu_audio_cycles = 0x0000;
+	
+	apu_mixer_output = 0x0000;
+		
+	apu_mixer_output += apu_pulse_1_o;
+		
+	apu_mixer_output += apu_pulse_2_o;
+		
+	apu_mixer_output += apu_triangle_o;
+	
+	apu_mixer_output += apu_noise_o;
+		
+	apu_mixer_output = (apu_mixer_output>>2); // divide by 4
+		
+	nes_sound(apu_mixer_output);
+}
+
 void nes_loop(unsigned char loop_count)
 {	  
 	if (nes_init_flag == 0)
@@ -1402,22 +1779,22 @@ void nes_loop(unsigned char loop_count)
 		cpu_reg_pc = prg_rom[0x7FFC] + (prg_rom[0x7FFD] << 8);
 	}
 	
-	unsigned long cycles;
+	cpu_current_cycles = 0;
 
-	cycles = cpu_run();
+	cpu_current_cycles += cpu_run();
 
-	if (cycles == 0)
+	if (cpu_current_cycles == 0)
 	{
 		nes_error(0x00);
 
 		while (1) { }
 	}
+	
+	ppu_video_cycles += (cpu_current_cycles<<1);
 
-	cpu_total_cycles += (cycles<<1);
-
-	if (cpu_total_cycles >= 59565) // 29780.5 cycles per frame
+	if (ppu_video_cycles >= 59565) // 29780.5 cycles per frame
 	{
-		cpu_total_cycles -= 59565;
+		ppu_video_cycles -= 59565;
 
 		// v-sync
 		ppu_flag_v = 0x0001;
@@ -1436,15 +1813,15 @@ void nes_loop(unsigned char loop_count)
 			cpu_reg_pc += (cpu_read(0xFFFB)<<8);
 		}
 
-		nes_draw_flag++;
+		ppu_enable_flag++;
 	}
-	else if (cpu_total_cycles >= 4546+(oam_ram[0]*227+oam_ram[3])) // very rough math
+	else if (ppu_video_cycles >= 4546+(oam_ram[0]*227+oam_ram[3])) // very rough math
 	{
 		if (ppu_status_0 == 0) ppu_flag_0 = 1;
 		
 		ppu_status_0 = 1;
 	}
-	else if (cpu_total_cycles >= 4546) // 2273 cycles in v-blank
+	else if (ppu_video_cycles >= 4546) // 2273 cycles in v-blank
 	{
 		ppu_flag_0 = 0;
 		
@@ -1455,15 +1832,22 @@ void nes_loop(unsigned char loop_count)
 		
 	}
 
-	if (nes_draw_flag > loop_count)
+	if (ppu_enable_flag > loop_count)
 	{
-		nes_draw_flag = 0;
+		ppu_enable_flag = 0;
 		
 		nes_buttons();
 		
-		nes_frame();
+		nes_video();
 
 		nes_flip();
+	}
+	
+	apu_audio_cycles += (cpu_current_cycles);
+	
+	if (apu_audio_cycles >= 114) // 114 cycles per scanline
+	{
+		nes_audio();
 	}
 }
 
