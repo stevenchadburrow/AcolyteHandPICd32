@@ -16,7 +16,7 @@ int main()
 	{
 		while (1)
 		{ 
-			nes_loop(0); // change value to skip frames and go faster
+			nes_loop(89348, 114, 59565); // change values to skip and go faster
 		}
 	}
 	
@@ -41,8 +41,8 @@ volatile unsigned char nes_init_flag = 0;
 volatile unsigned long nes_pixel_location = 0;
 
 volatile unsigned long cpu_current_cycles = 0, ppu_video_cycles = 0, apu_audio_cycles = 0;
-
-volatile unsigned char ppu_enable_flag = 0, apu_enable_flag = 0;
+volatile unsigned long ppu_enable_cycles = 0, apu_enable_cycles = 0;
+volatile unsigned long btn_enable_cycles = 0;
 
 volatile unsigned short cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
 volatile unsigned short cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
@@ -191,7 +191,7 @@ void nes_pixel(unsigned short pos_x, unsigned short pos_y, unsigned char color)
 }
 
 // change for platform
-void nes_flip()
+void nes_frame()
 {
 	screen_frame = 1 - screen_frame;
 }
@@ -1581,9 +1581,9 @@ void nes_video()
 	}
 }
 
-void nes_audio()
+void nes_audio(unsigned long cycles)
 {
-	apu_counter_q += (apu_audio_cycles);
+	apu_counter_q += (cycles);
 	
 	while (apu_counter_q >= 7456) // quarter of a frame
 	{
@@ -1631,7 +1631,7 @@ void nes_audio()
 		}
 	}
 	
-	apu_counter_h += (apu_audio_cycles);
+	apu_counter_h += (cycles);
 	
 	while (apu_pulse_1_h >= 14912) // half of a frame
 	{
@@ -1655,7 +1655,7 @@ void nes_audio()
 	
 	if (apu_pulse_1_l > 0 && apu_pulse_1_t > 8)
 	{
-		apu_pulse_1_k += (apu_audio_cycles);
+		apu_pulse_1_k += (cycles);
 
 		while (apu_pulse_1_k >= (apu_pulse_1_t<<2) && apu_pulse_1_t > 8)
 		{
@@ -1684,7 +1684,7 @@ void nes_audio()
 	
 	if (apu_pulse_2_l > 0 && apu_pulse_2_t > 8)
 	{
-		apu_pulse_2_k += (apu_audio_cycles);
+		apu_pulse_2_k += (cycles);
 
 		while (apu_pulse_2_k >= (apu_pulse_2_t<<2) && apu_pulse_2_t > 8)
 		{
@@ -1713,7 +1713,7 @@ void nes_audio()
 	
 	if (apu_triangle_l > 0 && apu_triangle_r > 0 && apu_triangle_t > 8)
 	{
-		apu_triangle_k += (apu_audio_cycles);
+		apu_triangle_k += (cycles);
 
 		while (apu_triangle_k >= (apu_triangle_t>>3))
 		{
@@ -1752,8 +1752,6 @@ void nes_audio()
 	}
 	else apu_triangle_o = 0x0000;
 	
-	apu_audio_cycles = 0x0000;
-	
 	apu_mixer_output = 0x0000;
 		
 	apu_mixer_output += apu_pulse_1_o;
@@ -1769,7 +1767,7 @@ void nes_audio()
 	nes_sound(apu_mixer_output);
 }
 
-void nes_loop(unsigned char loop_count)
+void nes_loop(unsigned long video_loop_count, unsigned long audio_loop_count, unsigned long button_loop_count)
 {	  
 	if (nes_init_flag == 0)
 	{
@@ -1791,7 +1789,7 @@ void nes_loop(unsigned char loop_count)
 	}
 	
 	ppu_video_cycles += (cpu_current_cycles<<1);
-
+	
 	if (ppu_video_cycles >= 59565) // 29780.5 cycles per frame
 	{
 		ppu_video_cycles -= 59565;
@@ -1812,8 +1810,6 @@ void nes_loop(unsigned char loop_count)
 			cpu_reg_pc = cpu_read(0xFFFA);
 			cpu_reg_pc += (cpu_read(0xFFFB)<<8);
 		}
-
-		ppu_enable_flag++;
 	}
 	else if (ppu_video_cycles >= 4546+(oam_ram[0]*227+oam_ram[3])) // very rough math
 	{
@@ -1832,22 +1828,37 @@ void nes_loop(unsigned char loop_count)
 		
 	}
 
-	if (ppu_enable_flag > loop_count)
-	{
-		ppu_enable_flag = 0;
-		
-		nes_buttons();
-		
+	ppu_enable_cycles += (cpu_current_cycles<<1);
+	
+	if (ppu_enable_cycles > (video_loop_count<<1))
+	{	
 		nes_video();
 
-		nes_flip();
+		nes_frame();
+		
+		ppu_enable_cycles -= (video_loop_count<<1);
 	}
 	
 	apu_audio_cycles += (cpu_current_cycles);
 	
-	if (apu_audio_cycles >= 114) // 114 cycles per scanline
+	// interrupts here?
+	
+	apu_enable_cycles += (cpu_current_cycles);
+	
+	if (apu_enable_cycles >= audio_loop_count)
+	{	
+		nes_audio(apu_enable_cycles);
+		
+		apu_enable_cycles -= audio_loop_count;
+	}
+	
+	btn_enable_cycles += (cpu_current_cycles);
+	
+	if (btn_enable_cycles >= button_loop_count)
 	{
-		nes_audio();
+		nes_buttons();
+		
+		btn_enable_cycles -= button_loop_count;
 	}
 }
 
