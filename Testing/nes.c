@@ -16,7 +16,7 @@ int main()
 	{
 		while (1)
 		{ 
-			nes_loop(89348, 114, 59565); // change values to skip and go faster
+			nes_loop(89348, 114, 29780); // change values to skip and go faster
 		}
 	}
 	
@@ -205,48 +205,8 @@ void nes_sound(unsigned char sample)
 // change for platform
 void nes_buttons()
 {
-	if (screen_frame == 0)
-	{
-		ctl_value_1 = (ctl_value_1 & 0x0A);
-		
-		ctl_value_1 = ctl_value_1 | 
-			((!PORTKbits.RK0) << 4) | // up
-			((!PORTKbits.RK1) << 5) | // down
-			((!PORTKbits.RK2) << 6) | // left
-			((!PORTKbits.RK3) << 7) | // right
-			((!PORTKbits.RK4)) | // A
-			((!PORTKbits.RK5) << 2); // select
-		
-		ctl_value_2 = (ctl_value_2 & 0x0A);
-		
-		ctl_value_2 = ctl_value_2 | 
-			((!PORTFbits.RF0) << 4) | // up
-			((!PORTFbits.RF1) << 5) | // down
-			((!PORTFbits.RF2) << 6) | // left
-			((!PORTFbits.RF4) << 7) | // right
-			((!PORTFbits.RF5)) | // A
-			((!PORTFbits.RF8) << 2); // select
-		
-		PORTKbits.RK6 = 0; // ground when not floating
-		TRISKbits.TRISK6 = 0;
-	}
-	else
-	{
-		ctl_value_1 = (ctl_value_1 & 0xF5);
-		
-		ctl_value_1 = ctl_value_1 |
-			((!PORTKbits.RK4) << 1) | // B
-			((!PORTKbits.RK5) << 3); // start
-		
-		ctl_value_2 = (ctl_value_2 & 0xF5);
-		
-		ctl_value_2 = ctl_value_2 |
-			((!PORTFbits.RF5) << 1) | // B
-			((!PORTFbits.RF8) << 3); // start
-		
-		PORTKbits.RK6 = 0;
-		TRISKbits.TRISK6 = 1; // high when floating
-	}
+	ctl_value_1 = controller_status_1;
+	ctl_value_2 = controller_status_2;
 }
 
 // change for platform
@@ -1831,7 +1791,7 @@ void nes_loop(unsigned long video_loop_count, unsigned long audio_loop_count, un
 	ppu_enable_cycles += (cpu_current_cycles<<1);
 	
 	if (ppu_enable_cycles > (video_loop_count<<1))
-	{	
+	{			
 		nes_video();
 
 		nes_frame();
@@ -1852,7 +1812,8 @@ void nes_loop(unsigned long video_loop_count, unsigned long audio_loop_count, un
 		apu_enable_cycles -= audio_loop_count;
 	}
 	
-	btn_enable_cycles += (cpu_current_cycles);
+	
+	btn_enable_cycles += cpu_current_cycles;
 	
 	if (btn_enable_cycles >= button_loop_count)
 	{
