@@ -1901,9 +1901,9 @@ void nes_audio(unsigned long cycles)
 	{
 		apu_pulse_1_k += (cycles);
 
-		while (apu_pulse_1_k >= (apu_pulse_1_t<<2))
+		while (apu_pulse_1_k >= (apu_pulse_1_t<<1))
 		{
-			apu_pulse_1_k -= (apu_pulse_1_t<<2);
+			apu_pulse_1_k -= (apu_pulse_1_t<<1);
 			
 			if (apu_pulse_1_o > 0x0000) apu_pulse_1_o = 0x0000;
 			else apu_pulse_1_o = (apu_pulse_1_v << 4);
@@ -1915,9 +1915,9 @@ void nes_audio(unsigned long cycles)
 	{
 		apu_pulse_2_k += (cycles);
 
-		while (apu_pulse_2_k >= (apu_pulse_2_t<<2))
+		while (apu_pulse_2_k >= (apu_pulse_2_t<<1))
 		{
-			apu_pulse_2_k -= (apu_pulse_2_t<<2);
+			apu_pulse_2_k -= (apu_pulse_2_t<<1);
 			
 			if (apu_pulse_2_o > 0x0000) apu_pulse_2_o = 0x0000;
 			else apu_pulse_2_o = (apu_pulse_2_v << 4);
@@ -1927,7 +1927,7 @@ void nes_audio(unsigned long cycles)
 	
 	if (apu_triangle_l > 0 && apu_triangle_r > 0 && apu_triangle_v > 0 && apu_triangle_t > 0 && apu_flag_t > 0)
 	{
-		apu_triangle_k += (cycles<<3);
+		apu_triangle_k += (cycles);
 
 		while (apu_triangle_k >= (apu_triangle_t))
 		{
@@ -1969,9 +1969,9 @@ void nes_audio(unsigned long cycles)
 	{
 		apu_noise_k += (cycles);
 
-		while (apu_noise_k >= (apu_noise_t<<2))
+		while (apu_noise_k >= (apu_noise_t<<1))
 		{
-			apu_noise_k -= (apu_noise_t<<2);
+			apu_noise_k -= (apu_noise_t<<1);
 			
 			if (apu_noise_d == 0)
 			{
