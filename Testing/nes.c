@@ -70,8 +70,6 @@ volatile unsigned short apu_pulse_1_c = 0x0000, apu_pulse_2_c = 0x0000;
 volatile unsigned short apu_pulse_1_v = 0x0000, apu_pulse_2_v = 0x0000;
 volatile unsigned short apu_pulse_1_m = 0x0000, apu_pulse_2_m = 0x0000;
 volatile unsigned short apu_pulse_1_r = 0x0000, apu_pulse_2_r = 0x0000;
-volatile unsigned short apu_pulse_1_h = 0x0000, apu_pulse_2_h = 0x0000;
-volatile unsigned short apu_pulse_1_q = 0x0000, apu_pulse_2_q = 0x0000;
 volatile unsigned short apu_pulse_1_s = 0x0000, apu_pulse_2_s = 0x0000;
 volatile unsigned short apu_pulse_1_n = 0x0000, apu_pulse_2_n = 0x0000;
 volatile unsigned short apu_pulse_1_p = 0x0000, apu_pulse_2_p = 0x0000;
@@ -95,6 +93,16 @@ volatile unsigned short apu_triangle_p = 0x0000;
 volatile unsigned short apu_triangle_d = 0x0000;
 volatile unsigned short apu_triangle_o = 0x0000;
 
+volatile unsigned short apu_noise_i = 0x0000;
+volatile unsigned short apu_noise_c = 0x0000;
+volatile unsigned short apu_noise_v = 0x0000;
+volatile unsigned short apu_noise_m = 0x0000;
+volatile unsigned short apu_noise_r = 0x0000;
+volatile unsigned short apu_noise_s = 0xABCD; // random?
+volatile unsigned short apu_noise_d = 0x0000;
+volatile unsigned short apu_noise_t = 0x0000;
+volatile unsigned short apu_noise_k = 0x0000;
+volatile unsigned short apu_noise_l = 0x0000;
 volatile unsigned short apu_noise_o = 0x0000;
 
 volatile unsigned short apu_dmc_i = 0x0000;
@@ -136,6 +144,10 @@ volatile unsigned char apu_length[32] = {
 
 volatile unsigned short apu_rate[16] = {
 	428, 380, 340, 320, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54
+};
+
+volatile unsigned short apu_period[16] = {
+	4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
 };
 
 // change for platform
@@ -517,7 +529,7 @@ void cpu_write(unsigned short addr, unsigned char val)
 				
 				apu_pulse_1_p = ((val & 0x70) >> 4);
 				
-				apu_pulse_2_w = apu_pulse_2_p + 1;
+				apu_pulse_1_w = apu_pulse_1_p + 1;
 				
 				apu_pulse_1_e = ((val & 0x80) >> 7);
 				
@@ -632,6 +644,22 @@ void cpu_write(unsigned short addr, unsigned char val)
 			}
 			case 0x0C: // noise volume
 			{
+				apu_noise_c = ((val & 0x10) >> 4);
+				
+				if (apu_noise_c > 0)
+				{
+					apu_noise_v = (val & 0x0F);
+				}
+				else
+				{
+					apu_noise_v = 0x0F;
+				}
+				
+				apu_noise_m = (val & 0x0F);
+				
+				apu_noise_r = apu_noise_m + 1;
+				
+				apu_noise_i = ((val & 0x20) >> 5);
 				
 				break;
 			}
@@ -640,13 +668,19 @@ void cpu_write(unsigned short addr, unsigned char val)
 				
 				break;
 			}
-			case 0x0E: // noise timer
+			case 0x0E: // noise period
 			{
+				apu_noise_d = ((val & 0x80) >> 7);
+				
+				apu_noise_t = apu_period[(val & 0x0F)];
+				
+				apu_noise_k = apu_noise_t;
 				
 				break;
 			}
 			case 0x0F: // noise length
 			{
+				apu_noise_l = apu_length[(val>>3)];
 				
 				break;
 			}
@@ -1730,6 +1764,27 @@ void nes_audio(unsigned long cycles)
 			{
 				apu_triangle_v = apu_triangle_r;
 			}
+			
+			if (apu_noise_c == 0)
+			{
+				if (apu_noise_r > 0)
+				{
+					apu_noise_r--;
+				}
+				else
+				{
+					apu_noise_r = apu_noise_m + 1;
+
+					if (apu_noise_v > 0)
+					{
+						apu_noise_v--;
+					}
+					else
+					{
+						if (apu_noise_i > 0) apu_noise_v = 0x0F;
+					}
+				}
+			}
 		}
 		
 		if (apu_counter_s == 2 || 
@@ -1742,7 +1797,6 @@ void nes_audio(unsigned long cycles)
 					apu_pulse_1_l--;
 				}
 			}
-			
 			
 			if (apu_pulse_1_e > 0x0000)
 			{
@@ -1768,7 +1822,6 @@ void nes_audio(unsigned long cycles)
 					else apu_pulse_1_t = ((apu_pulse_1_t + apu_pulse_1_s) & 0x07FF);
 				}
 			}
-			
 
 			if (apu_pulse_2_i == 0x0000)
 			{
@@ -1812,6 +1865,14 @@ void nes_audio(unsigned long cycles)
 				
 				apu_triangle_f = 0;
 			}
+			
+			if (apu_noise_i == 0x0000)
+			{
+				if (apu_noise_l > 0)
+				{
+					apu_noise_l--;
+				}
+			}
 		}
 		
 		if (apu_counter_s == 4 && apu_flag_m == 0 && apu_flag_b == 0) // irq
@@ -1832,7 +1893,7 @@ void nes_audio(unsigned long cycles)
 		if ((apu_counter_s == 4 && apu_flag_m == 0) ||
 			(apu_counter_s == 5 && apu_flag_m == 1))
 		{
-			apu_counter_s = 0; // commenting this out makes pulse wave sound better?
+			apu_counter_s = 0;
 		}
 	}
 	
@@ -1840,7 +1901,7 @@ void nes_audio(unsigned long cycles)
 	{
 		apu_pulse_1_k += (cycles);
 
-		while (apu_pulse_1_k >= (apu_pulse_1_t<<2) && apu_pulse_1_t >= 8)
+		while (apu_pulse_1_k >= (apu_pulse_1_t<<2))
 		{
 			apu_pulse_1_k -= (apu_pulse_1_t<<2);
 			
@@ -1854,7 +1915,7 @@ void nes_audio(unsigned long cycles)
 	{
 		apu_pulse_2_k += (cycles);
 
-		while (apu_pulse_2_k >= (apu_pulse_2_t<<2) && apu_pulse_2_t >= 8)
+		while (apu_pulse_2_k >= (apu_pulse_2_t<<2))
 		{
 			apu_pulse_2_k -= (apu_pulse_2_t<<2);
 			
@@ -1903,6 +1964,33 @@ void nes_audio(unsigned long cycles)
 		}
 	}
 	else apu_triangle_o = 0x0000;
+	
+	if (apu_noise_l > 0 && apu_flag_n > 0)
+	{
+		apu_noise_k += (cycles);
+
+		while (apu_noise_k >= (apu_noise_t<<2))
+		{
+			apu_noise_k -= (apu_noise_t<<2);
+			
+			if (apu_noise_d == 0)
+			{
+				apu_noise_s = (apu_noise_s & 0x7FFF) ^ (apu_noise_s & 0x0003);
+			}
+			else
+			{
+				apu_noise_s = (apu_noise_s & 0x7FFF) ^ (apu_noise_s & 0x0041);
+			}
+			
+			apu_noise_s = (apu_noise_s & 0x7FFF) | ((apu_noise_s & 0x0001) << 15);
+				
+			apu_noise_s = (apu_noise_s >> 1);
+			
+			if ((apu_noise_s & 0x0001) == 0x0001) apu_noise_o = 0x0000;
+			else apu_noise_o = (apu_noise_v << 4);
+		}
+	}
+	else apu_noise_o = 0x0000;
 	
 	if (apu_flag_d > 0)
 	{	
