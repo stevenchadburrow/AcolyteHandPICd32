@@ -65,6 +65,7 @@ volatile unsigned short ctl_value_1 = 0x0000, ctl_value_2 = 0x0000;
 volatile unsigned short ctl_latch_1 = 0x0000, ctl_latch_2 = 0x0000;
 
 volatile unsigned short apu_pulse_1_d = 0x0000, apu_pulse_2_d = 0x0000;
+volatile unsigned short apu_pulse_1_u = 0x0000, apu_pulse_2_u = 0x0000;
 volatile unsigned short apu_pulse_1_i = 0x0000, apu_pulse_2_i = 0x0000;
 volatile unsigned short apu_pulse_1_c = 0x0000, apu_pulse_2_c = 0x0000;
 volatile unsigned short apu_pulse_1_v = 0x0000, apu_pulse_2_v = 0x0000;
@@ -140,6 +141,13 @@ volatile unsigned char ppu_palette[64] = {
 volatile unsigned char apu_length[32] = {
 	  0, 254,  20,   2,  40,   4,  80,   6, 160,   8,  60,  10,  14,  12,  26,  14,
 	 12,  16,  24,  18,  48,  20,  96,  22, 192,  24,  72,  26,  16,  28,  32,  30
+};
+
+volatile unsigned short apu_duty[32] = {
+	0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00,
+	0xFF, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
 volatile unsigned short apu_rate[16] = {
@@ -1905,8 +1913,11 @@ void nes_audio(unsigned long cycles)
 		{
 			apu_pulse_1_k -= (apu_pulse_1_t<<1);
 			
-			if (apu_pulse_1_o > 0x0000) apu_pulse_1_o = 0x0000;
-			else apu_pulse_1_o = (apu_pulse_1_v << 4);
+			apu_pulse_1_o = (apu_duty[(apu_pulse_1_d<<3)+apu_pulse_1_u] & (apu_pulse_1_v << 4));
+			
+			apu_pulse_1_u++;
+			
+			if (apu_pulse_1_u >= 8) apu_pulse_1_u = 0;
 		}
 	}
 	else apu_pulse_1_o = 0x0000;
@@ -1919,8 +1930,11 @@ void nes_audio(unsigned long cycles)
 		{
 			apu_pulse_2_k -= (apu_pulse_2_t<<1);
 			
-			if (apu_pulse_2_o > 0x0000) apu_pulse_2_o = 0x0000;
-			else apu_pulse_2_o = (apu_pulse_2_v << 4);
+			apu_pulse_2_o = (apu_duty[(apu_pulse_2_d<<3)+apu_pulse_2_u] & (apu_pulse_2_v << 4));
+			
+			apu_pulse_2_u++;
+			
+			if (apu_pulse_2_u >= 8) apu_pulse_2_u = 0;
 		}
 	}
 	else apu_pulse_2_o = 0x0000;
