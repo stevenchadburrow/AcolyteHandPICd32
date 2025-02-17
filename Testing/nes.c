@@ -2250,10 +2250,13 @@ void nes_loop(unsigned long loop_count)
 		ppu_flag_0 = 0;
 		
 		ppu_status_0 = 0;
+		
+		cpu_scanline_count = 0;
+		cpu_scanline_cycles = 0;
 	}
 	else if (cpu_frame_cycles < 59565) // 29780.5 cycles per frame
 	{
-		if (cpu_scanline_count >= (oam_ram[0]+8) && cpu_scanline_cycles >= (oam_ram[3])) // very rough math
+		if (cpu_scanline_count >= (oam_ram[0]+7) && cpu_scanline_cycles >= (oam_ram[3])) // very rough math
 		{
 			if (ppu_status_0 == 0) ppu_flag_0 = 1;
 
