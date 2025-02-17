@@ -12,11 +12,11 @@
 
 int main()
 {
-	if (nes_load("MARIO.NES")) // change to NES rom filename
+	if (nes_load("MARIO.NES")) // NES rom filename
 	{
 		while (1)
 		{ 
-			nes_loop(89348, 114, 29780); // change values to skip and go faster
+			nes_loop(3); // frame rate divider
 		}
 	}
 	
@@ -40,9 +40,8 @@ volatile unsigned char cart_header[16];
 volatile unsigned char nes_init_flag = 0;
 volatile unsigned long nes_pixel_location = 0;
 
-volatile unsigned long cpu_current_cycles = 0, cpu_total_cycles = 0;
-volatile unsigned long ppu_enable_cycles = 0, apu_enable_cycles = 0;
-volatile unsigned long btn_enable_cycles = 0;
+volatile unsigned long cpu_current_cycles = 0, cpu_scanline_cycles = 0, cpu_frame_cycles = 0;
+volatile unsigned long cpu_scanline_count = 0, cpu_frame_count = 0;
 
 volatile unsigned short cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
 volatile unsigned short cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
@@ -52,13 +51,19 @@ volatile unsigned short cpu_reg_pc = 0xFFFC;
 volatile unsigned short cpu_temp_opcode = 0x0000, cpu_temp_memory = 0x0000, cpu_temp_address = 0x0000; 
 volatile unsigned short cpu_temp_result = 0x0000, cpu_temp_cycles = 0x0000;
 
-volatile unsigned short ppu_reg_v = 0x0000, ppu_reg_t = 0x0000, ppu_reg_x = 0x0000, ppu_reg_w = 0x0000;
+volatile unsigned short ppu_reg_v = 0x0000, ppu_reg_t = 0x0000, ppu_reg_w = 0x0000;
 volatile unsigned short ppu_reg_a = 0x0000, ppu_reg_b = 0x0000;
+
+volatile unsigned short ppu_reg_x = 0x0000, ppu_reg_y = 0x0000;
+
 volatile unsigned short ppu_flag_e = 0x0001, ppu_flag_p = 0x0000, ppu_flag_h = 0x0000, ppu_flag_b = 0x0000;
 volatile unsigned short ppu_flag_s = 0x0000, ppu_flag_i = 0x0000, ppu_flag_n = 0x0000;
 volatile unsigned short ppu_flag_v = 0x0001, ppu_flag_0 = 0x0000, ppu_flag_o = 0x0000;
 
-volatile unsigned short ppu_status_0 = 0x0000;
+volatile unsigned short ppu_flag_g = 0x0000, ppu_flag_lb = 0x0000, ppu_flag_ls = 0x0000;
+volatile unsigned short ppu_flag_eb = 0x0000, ppu_flag_es = 0x0000;
+
+volatile unsigned short ppu_status_0 = 0x0000, ppu_status_m = 0xFFFF;
 
 volatile unsigned short ctl_flag_s = 0x0000;
 volatile unsigned short ctl_value_1 = 0x0000, ctl_value_2 = 0x0000;
@@ -269,6 +274,8 @@ void nes_error(unsigned char code)
 	if (code == 0x00)
 	{
 		SendString("Unknown Opcode \\");
+		SendLongHex(cpu_reg_pc);
+		SendChar(':');
 		SendHex(cpu_temp_opcode);
 		SendString("\n\r\\");
 	}
@@ -333,7 +340,18 @@ unsigned char cpu_read(unsigned short addr)
 			{	
 				unsigned char val = ppu_reg_b;
 				
-				ppu_reg_b = ppu_ram[ppu_reg_t];
+				if (ppu_reg_t >= 0x2000 && ppu_reg_t < 0x3000)
+				{
+					ppu_reg_b = ppu_ram[(ppu_reg_t&ppu_status_m)];
+				}
+				else if (ppu_reg_t >= 0x3F00 && ppu_reg_t < 0x4000)
+				{
+					ppu_reg_b = ppu_ram[0x3F00+(ppu_reg_t&0x001F)];
+				}
+				else
+				{
+					ppu_reg_b = ppu_ram[ppu_reg_t];
+				}
 				 
 				if (ppu_flag_i == 0x0000)
 				{
@@ -447,6 +465,12 @@ void cpu_write(unsigned short addr, unsigned char val)
 			}
 			case 0x01: // ppumask
 			{	
+				ppu_flag_g = (val & 0x01);
+				ppu_flag_lb = ((val & 0x02) >> 1);
+				ppu_flag_ls = ((val & 0x04) >> 2);
+				ppu_flag_eb = ((val & 0x08) >> 3);
+				ppu_flag_es = ((val & 0x10) >> 4);
+				
 				break;
 			}
 			case 0x02: // ppustatus
@@ -468,6 +492,17 @@ void cpu_write(unsigned short addr, unsigned char val)
 			}
 			case 0x05: // ppuscroll
 			{
+				if (ppu_reg_w == 0x0000)
+				{
+					ppu_reg_x = val;
+					ppu_reg_w = 0x0001;
+				}
+				else
+				{
+					ppu_reg_y = val;
+					ppu_reg_w = 0x0000;
+				}
+				
 				break;
 			}
 			case 0x06: // ppuaddr
@@ -487,8 +522,19 @@ void cpu_write(unsigned short addr, unsigned char val)
 			}
 			case 0x07: // ppudata
 			{
-				ppu_ram[ppu_reg_t] = val;
-				
+				if (ppu_reg_t >= 0x2000 && ppu_reg_t < 0x3000)
+				{
+					ppu_ram[(ppu_reg_t&ppu_status_m)] = val;
+				}
+				else if (ppu_reg_t >= 0x3F00 && ppu_reg_t < 0x4000)
+				{
+					ppu_ram[0x3F00+(ppu_reg_t&0x001F)] = val;
+				}
+				else
+				{
+					ppu_ram[ppu_reg_t] = val;
+				}
+					
 				if (ppu_flag_i == 0x0000)
 				{
 					ppu_reg_t += 0x0001;
@@ -1107,6 +1153,8 @@ unsigned short cpu_run()
 		// BRK
 		case 0x00:
 		{
+			//SendString("Break\n\r\\");
+			
 			cpu_temp_cycles = 0x0007;
 			cpu_temp_memory = ((cpu_reg_pc+1)>>8);
 			CPU_PUSH;
@@ -1567,137 +1615,214 @@ unsigned short cpu_run()
 	return cpu_temp_cycles;
 }
 
-void nes_video()
+void nes_border()
 {
-	unsigned short pixel_pos = 0, pixel_lookup = 0;
-	unsigned char pixel_high = 0, pixel_low = 0, pixel_table = 0, pixel_color = 0;
-	
-	unsigned char sprite_x = 0, sprite_y = 0, sprite_attr = 0, sprite_tile = 0;
-	unsigned char sprite_flip_horz = 0, sprite_flip_vert = 0;
-		
-	pixel_pos = 0;
+	unsigned char pixel_color = 0;
 
+	if (ppu_reg_v >= 0x3F00 && ppu_reg_v < 0x4000)
+	{
+		pixel_color = ppu_palette[ppu_ram[0x3F00+(ppu_reg_v&0x001F)]];
+	}
+	else
+	{
+		pixel_color = ppu_palette[ppu_ram[0x3F00]];
+	}
+	
 	for (unsigned short y=0; y<240; y++)
 	{
 		for (unsigned short x=0; x<256; x++)
 		{
-			nes_pixel(x, y, ppu_palette[ppu_ram[0x3F00]]); // background color
+			nes_pixel(x, y, pixel_color); // background color
 		}
 	}	
+}
 
-	for (signed char s=63; s>=0; s--) // must be signed!
-	{
-		sprite_attr = oam_ram[(s<<2)+2];
-
-		if ((sprite_attr&0x20) == 0x20) // background
-		{
-			sprite_x = oam_ram[(s<<2)+3];
-			sprite_y = oam_ram[(s<<2)+0];
-			
-			if (sprite_x < 0xF9 && sprite_y < 0xEF)
-			{
-				sprite_flip_horz = ((sprite_attr>>6)&0x01);
-				sprite_flip_vert = (sprite_attr>>7);
-
-				sprite_tile = oam_ram[(s<<2)+1];
-
-				for (unsigned char j=0; j<8; j++)
-				{
-					pixel_lookup = sprite_tile*16+0x1000*ppu_flag_s+(sprite_flip_vert==0x00?j:7-j);
-
-					pixel_low = ppu_ram[pixel_lookup];
-					pixel_high = ppu_ram[pixel_lookup+8];
-
-					for (unsigned char i=0; i<8; i++)
-					{
-						if (sprite_flip_horz == 0x00) pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
-						else pixel_color = ((pixel_high<<1)&0x02)|(pixel_low&0x01);
-
-						if (pixel_color != 0x00) nes_pixel(sprite_x+i, sprite_y+j+1, ppu_palette[ppu_ram[0x3F10+((sprite_attr&0x03)<<2)+pixel_color]]);
-
-						if (sprite_flip_horz == 0x00)
-						{
-							pixel_high = pixel_high << 1;
-							pixel_low = pixel_low << 1;
-						}
-						else
-						{
-							pixel_high = pixel_high >> 1;
-							pixel_low = pixel_low >> 1;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	for (unsigned char h=0; h<30; h++)
+void nes_background(unsigned short line)
+{
+	unsigned short scroll_x = 0, scroll_y = 0, scroll_n = 0;
+	
+	unsigned short pixel_lookup = 0, pixel_table = 0;
+	unsigned short pixel_x = 0, pixel_y = 0;
+	unsigned char pixel_high = 0, pixel_low = 0, pixel_color = 0;
+	
+	if (ppu_flag_eb > 0)
 	{
 		for (unsigned char w=0; w<32; w++)
 		{	
-			if ((w&0x01) == 0x00) pixel_table = (ppu_ram[0x23C0+0x0400*ppu_flag_n+(h>>2)*8+(w>>2)]>>(((h&0x02)|((w>>1)&0x01))<<1));
+			scroll_x = w + ((ppu_reg_x & 0xF8) >> 3);
+			scroll_y = (line>>3) + ((ppu_reg_y & 0xF8) >> 3);
+			scroll_n = ppu_flag_n;
 
-			for (unsigned char j=0; j<8; j++)
+			switch (ppu_flag_n)
 			{
-				pixel_lookup = ppu_ram[0x2000+0x0400*ppu_flag_n+pixel_pos]*16+0x1000*ppu_flag_b+j;
-
-				pixel_low = ppu_ram[pixel_lookup];
-				pixel_high = ppu_ram[pixel_lookup+8];
-
-				for (unsigned char i=0; i<8; i++)
+				case (0x00):
 				{
-					pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
+					if (scroll_x >= 32)
+					{
+						scroll_n += 1;
+						scroll_x -= 32;
+					}
+					
+					if (scroll_y >= 30)
+					{
+						scroll_n += 2;
+						scroll_y -= 30;
+					}
+					
+					break;
+				}
+				case (0x01):
+				{
+					if (scroll_x >= 32)
+					{
+						scroll_n -= 1;
+						scroll_x -= 32;
+					}
 
-					if (pixel_color != 0x00) nes_pixel(w*8+i, h*8+j, ppu_palette[ppu_ram[0x3F00+((pixel_table&0x03)<<2)+pixel_color]]);
+					if (scroll_y >= 30)
+					{
+						scroll_n += 2;
+						scroll_y -= 30;
+					}
+					
+					break;
+				}
+				case (0x02):
+				{
+					if (scroll_x >= 32)
+					{
+						scroll_n += 1;
+						scroll_x -= 32;
+					}
 
-					pixel_high = pixel_high << 1;
-					pixel_low = pixel_low << 1;
+					if (scroll_y >= 30)
+					{
+						scroll_n -= 2;
+						scroll_y -= 30;
+					}
+					
+					break;
+				}
+				case (0x03):
+				{
+					if (scroll_x >= 32)
+					{
+						scroll_n -= 1;
+						scroll_x -= 32;
+					}
+
+					if (scroll_y >= 30)
+					{
+						scroll_n -= 2;
+						scroll_y -= 30;
+					}
+					
+					break;
 				}
 			}
 
-			pixel_pos++;
+			pixel_table = (ppu_ram[((0x23C0+(scroll_n<<10)+((scroll_y&0xFC)<<1)+((scroll_x&0xFC)>>2))&ppu_status_m)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+
+			pixel_lookup = (ppu_ram[((0x2000+(scroll_n<<10)+(scroll_y<<5)+(scroll_x))&ppu_status_m)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+
+			pixel_low = ppu_ram[pixel_lookup];
+			pixel_high = ppu_ram[pixel_lookup+8];
+
+			for (unsigned char i=0; i<8; i++)
+			{
+				pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
+
+				if (pixel_color != 0x00)
+				{
+					pixel_x = w * 8 + i - (ppu_reg_x & 0x07);
+					pixel_y = line - (ppu_reg_y & 0x07);
+
+					if (pixel_x >= 0 && pixel_x < 256 && pixel_y >= 0 && pixel_y < 240)
+					{
+						if (ppu_flag_lb > 0 || w*8+i >= 8) 
+						{
+							if (ppu_flag_g > 0)
+							{
+								nes_pixel(pixel_x, pixel_y, ppu_palette[(ppu_ram[0x3F00+((pixel_table&0x03)<<2)+pixel_color]&0x30)]);
+							}
+							else
+							{
+								nes_pixel(pixel_x, pixel_y, ppu_palette[ppu_ram[0x3F00+((pixel_table&0x03)<<2)+pixel_color]]);
+							}
+						}
+					}
+				}
+
+				pixel_high = pixel_high << 1;
+				pixel_low = pixel_low << 1;
+			}
 		}
 	}
-
-	for (signed char s=63; s>=0; s--) // must be signed!
+}
+	
+void nes_sprites(unsigned char ground)
+{
+	unsigned char sprite_x = 0, sprite_y = 0, sprite_attr = 0, sprite_tile = 0;
+	unsigned char sprite_flip_horz = 0, sprite_flip_vert = 0;
+	
+	unsigned short pixel_lookup = 0, pixel_table = 0;
+	unsigned char pixel_high = 0, pixel_low = 0, pixel_color = 0;
+	
+	if (ppu_flag_es > 0)
 	{
-		sprite_attr = oam_ram[(s<<2)+2];
-
-		if ((sprite_attr&0x20) == 0x00) // foreground
+		for (signed char s=63; s>=0; s--) // must be signed!
 		{
-			sprite_x = oam_ram[(s<<2)+3];
-			sprite_y = oam_ram[(s<<2)+0];
-			
-			if (sprite_x < 0xF9 && sprite_y < 0xEF)
+			sprite_attr = oam_ram[(s<<2)+2];
+
+			if (((sprite_attr&0x20)>>5) == ground) // foreground/background
 			{
-				sprite_flip_horz = ((sprite_attr>>6)&0x01);
-				sprite_flip_vert = (sprite_attr>>7);
+				sprite_x = oam_ram[(s<<2)+3];
+				sprite_y = oam_ram[(s<<2)+0];
 
-				sprite_tile = oam_ram[(s<<2)+1];
-
-				for (unsigned char j=0; j<8; j++)
+				if (sprite_x < 0xF9 && sprite_y < 0xEF)
 				{
-					pixel_lookup = sprite_tile*16+0x1000*ppu_flag_s+(sprite_flip_vert==0x00?j:7-j);
+					sprite_flip_horz = ((sprite_attr>>6)&0x01);
+					sprite_flip_vert = (sprite_attr>>7);
 
-					pixel_low = ppu_ram[pixel_lookup];
-					pixel_high = ppu_ram[pixel_lookup+8];
+					sprite_tile = oam_ram[(s<<2)+1];
 
-					for (unsigned char i=0; i<8; i++)
+					for (unsigned char j=0; j<8; j++)
 					{
-						if (sprite_flip_horz == 0x00) pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
-						else pixel_color = ((pixel_high<<1)&0x02)|(pixel_low&0x01);
+						pixel_lookup = sprite_tile*16+0x1000*ppu_flag_s+(sprite_flip_vert==0x00?j:7-j);
 
-						if (pixel_color != 0x00) nes_pixel(sprite_x+i, sprite_y+j+1, ppu_palette[ppu_ram[0x3F10+((sprite_attr&0x03)<<2)+pixel_color]]);
+						pixel_low = ppu_ram[pixel_lookup];
+						pixel_high = ppu_ram[pixel_lookup+8];
 
-						if (sprite_flip_horz == 0x00)
+						for (unsigned char i=0; i<8; i++)
 						{
-							pixel_high = pixel_high << 1;
-							pixel_low = pixel_low << 1;
-						}
-						else
-						{
-							pixel_high = pixel_high >> 1;
-							pixel_low = pixel_low >> 1;
+							if (sprite_flip_horz == 0x00) pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
+							else pixel_color = ((pixel_high<<1)&0x02)|(pixel_low&0x01);
+
+							if (pixel_color != 0x00)
+							{
+								if (ppu_flag_ls > 0 || sprite_x+i >= 8) 
+								{
+									if (ppu_flag_g > 0)
+									{
+										nes_pixel(sprite_x+i, sprite_y+j+1, ppu_palette[(ppu_ram[0x3F10+((sprite_attr&0x03)<<2)+pixel_color]&0x30)]);
+									}
+									else
+									{
+										nes_pixel(sprite_x+i, sprite_y+j+1, ppu_palette[ppu_ram[0x3F10+((sprite_attr&0x03)<<2)+pixel_color]]);
+									}
+								}
+							}
+
+							if (sprite_flip_horz == 0x00)
+							{
+								pixel_high = pixel_high << 1;
+								pixel_low = pixel_low << 1;
+							}
+							else
+							{
+								pixel_high = pixel_high >> 1;
+								pixel_low = pixel_low >> 1;
+							}
 						}
 					}
 				}
@@ -1887,6 +2012,8 @@ void nes_audio(unsigned long cycles)
 		{
 			apu_flag_f = 1;
 			
+			//SendString("Frame IRQ\n\r\\");
+			
 			cpu_temp_memory = ((cpu_reg_pc+1)>>8);
 			CPU_PUSH;
 			cpu_temp_memory = ((cpu_reg_pc+1)&0x00FF);
@@ -2022,9 +2149,11 @@ void nes_audio(unsigned long cycles)
 					
 					apu_dmc_s--;
 					
-					if (apu_dmc_s == 0 && apu_dmc_i > 0)
+					if (apu_dmc_s == 0 && apu_dmc_i > 0) // irq
 					{
 						apu_flag_i = 1;
+						
+						//SendString("DMC IRQ\n\r\\");
 						
 						cpu_temp_memory = ((cpu_reg_pc+1)>>8);
 						CPU_PUSH;
@@ -2067,11 +2196,21 @@ void nes_audio(unsigned long cycles)
 	nes_sound(apu_mixer_output);
 }
 
-void nes_loop(unsigned long video_loop_count, unsigned long audio_loop_count, unsigned long button_loop_count)
+void nes_loop(unsigned long loop_count)
 {	  
 	if (nes_init_flag == 0)
 	{
 		nes_init_flag = 1;
+		
+		// scrolling mask
+		if ((cart_header[6]&0x01) == 0x00)
+		{
+			ppu_status_m = 0xFBFF;
+		}
+		else
+		{
+			ppu_status_m = 0xF7FF;
+		}
 		
 		// reset
 		cpu_reg_pc = prg_rom[0x7FFC] + (prg_rom[0x7FFD] << 8);
@@ -2088,11 +2227,45 @@ void nes_loop(unsigned long video_loop_count, unsigned long audio_loop_count, un
 		while (1) { }
 	}
 	
-	cpu_total_cycles += (cpu_current_cycles<<1);
+	cpu_scanline_cycles += (cpu_current_cycles<<1);
 	
-	if (cpu_total_cycles >= 59565) // 29780.5 cycles per frame
+	if (cpu_scanline_cycles >= 227) // very rough math
+	{		
+		cpu_scanline_cycles -= 227;
+		
+		if (cpu_frame_count == loop_count)
+		{	
+			nes_background(cpu_scanline_count);
+		}
+		
+		cpu_scanline_count++;
+		
+		nes_audio(114);
+	}
+	
+	cpu_frame_cycles += (cpu_current_cycles<<1);
+	
+	if (cpu_frame_cycles < 4546) // 2273 cycles in v-blank
 	{
-		cpu_total_cycles -= 59565;
+		ppu_flag_0 = 0;
+		
+		ppu_status_0 = 0;
+	}
+	else if (cpu_frame_cycles < 59565) // 29780.5 cycles per frame
+	{
+		if (cpu_scanline_count >= (oam_ram[0]+8) && cpu_scanline_cycles >= (oam_ram[3])) // very rough math
+		{
+			if (ppu_status_0 == 0) ppu_flag_0 = 1;
+
+			ppu_status_0 = 1;
+		}
+	}
+	else
+	{
+		cpu_frame_cycles -= 59565;
+		
+		cpu_scanline_cycles = 0;
+		cpu_scanline_count = 0;
 
 		// v-sync
 		ppu_flag_v = 0x0001;
@@ -2110,51 +2283,26 @@ void nes_loop(unsigned long video_loop_count, unsigned long audio_loop_count, un
 			cpu_reg_pc = cpu_read(0xFFFA);
 			cpu_reg_pc += (cpu_read(0xFFFB)<<8);
 		}
-	}
-	else if (cpu_total_cycles >= 4546+(oam_ram[0]*227+oam_ram[3])) // very rough math
-	{
-		if (ppu_status_0 == 0) ppu_flag_0 = 1;
 		
-		ppu_status_0 = 1;
-	}
-	else if (cpu_total_cycles >= 4546) // 2273 cycles in v-blank
-	{
-		ppu_flag_0 = 0;
-		
-		ppu_status_0 = 0;
-	}
-	else
-	{
-		
-	}
+		if (cpu_frame_count == loop_count)
+		{
+			cpu_frame_count = 0;
+			
+			nes_sprites(0);
 
-	ppu_enable_cycles += (cpu_current_cycles<<1);
-	
-	if (ppu_enable_cycles > (video_loop_count<<1))
-	{			
-		nes_video();
-
-		nes_frame();
+			nes_frame();
+		}
 		
-		ppu_enable_cycles -= (video_loop_count<<1);
-	}
-	
-	apu_enable_cycles += (cpu_current_cycles);
-	
-	if (apu_enable_cycles >= audio_loop_count)
-	{	
-		nes_audio(apu_enable_cycles);
+		cpu_frame_count++;
 		
-		apu_enable_cycles -= audio_loop_count;
-	}
-	
-	btn_enable_cycles += cpu_current_cycles;
-	
-	if (btn_enable_cycles >= button_loop_count)
-	{
+		if (cpu_frame_count == loop_count)
+		{
+			nes_border();
+		
+			nes_sprites(1);
+		}
+		
 		nes_buttons();
-		
-		btn_enable_cycles -= button_loop_count;
 	}
 }
 
