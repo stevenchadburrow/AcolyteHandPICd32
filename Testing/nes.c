@@ -452,7 +452,7 @@ void cpu_write(unsigned short addr, unsigned char val)
 		switch ((addr&0x0007))
 		{
 			case 0x00: // ppuctrl
-			{				
+			{	
 				ppu_flag_e = (val>>7);
 				ppu_flag_p = ((val>>6)&0x01);
 				ppu_flag_h = ((val>>5)&0x01);
@@ -2196,6 +2196,8 @@ void nes_audio(unsigned long cycles)
 	nes_sound(apu_mixer_output);
 }
 
+//unsigned long temp_cycles = 0;
+
 void nes_loop(unsigned long loop_count)
 {	  
 	if (nes_init_flag == 0)
@@ -2214,6 +2216,7 @@ void nes_loop(unsigned long loop_count)
 		
 		// reset
 		cpu_reg_pc = prg_rom[0x7FFC] + (prg_rom[0x7FFD] << 8);
+		//cpu_reg_pc = 0xC000;
 	}
 	
 	cpu_current_cycles = 0;
@@ -2226,6 +2229,32 @@ void nes_loop(unsigned long loop_count)
 
 		while (1) { }
 	}
+	
+	/*
+	temp_cycles += cpu_current_cycles;
+	
+	SendLongHex(temp_cycles);
+	SendChar('-');
+	SendLongHex(cpu_reg_pc);
+	SendChar(':');
+	SendHex(cpu_temp_opcode);
+	SendChar('.');
+	SendHex(cpu_reg_a);
+	SendChar('.');
+	SendHex(cpu_reg_x);
+	SendChar('.');
+	SendHex(cpu_reg_y);
+	SendChar('.');
+	SendHex(cpu_ram[0x00]);
+	SendChar('.');
+	SendHex(cpu_ram[0x01]);
+	SendChar('.');
+	SendHex(cpu_ram[0x02]);
+	SendChar('.');
+	SendHex(cpu_ram[0x03]);
+	SendChar('\n');
+	SendChar('\r');
+	*/
 	
 	cpu_scanline_cycles += (cpu_current_cycles<<1);
 	
@@ -2256,7 +2285,7 @@ void nes_loop(unsigned long loop_count)
 	}
 	else if (cpu_frame_cycles < 59565) // 29780.5 cycles per frame
 	{
-		if (cpu_scanline_count >= (oam_ram[0]+7) && cpu_scanline_cycles >= (oam_ram[3])) // very rough math
+		if (cpu_scanline_count >= (oam_ram[0]+7)) //&& cpu_scanline_cycles >= (oam_ram[3])) // very rough math
 		{
 			if (ppu_status_0 == 0) ppu_flag_0 = 1;
 
@@ -2275,7 +2304,7 @@ void nes_loop(unsigned long loop_count)
 		
 		// nmi
 		if (ppu_flag_e != 0x0000)
-		{
+		{	
 			cpu_temp_memory = ((cpu_reg_pc)>>8);
 			CPU_PUSH;
 			cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
