@@ -63,7 +63,7 @@ volatile unsigned short ppu_flag_v = 0x0001, ppu_flag_0 = 0x0000, ppu_flag_o = 0
 volatile unsigned short ppu_flag_g = 0x0000, ppu_flag_lb = 0x0000, ppu_flag_ls = 0x0000;
 volatile unsigned short ppu_flag_eb = 0x0000, ppu_flag_es = 0x0000;
 
-volatile unsigned short ppu_status_0 = 0x0000, ppu_status_m = 0xFFFF;
+volatile unsigned short ppu_status_0 = 0x0000, ppu_status_s = 0x0000, ppu_status_m = 0xFFFF;
 
 volatile unsigned short ctl_flag_s = 0x0000;
 volatile unsigned short ctl_value_1 = 0x0000, ctl_value_2 = 0x0000;
@@ -2256,11 +2256,11 @@ void nes_loop(unsigned long loop_count)
 	SendChar('\r');
 	*/
 	
-	cpu_scanline_cycles += (cpu_current_cycles<<1);
+	cpu_scanline_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);
 	
-	if (cpu_scanline_cycles >= 227) // very rough math
+	if (cpu_scanline_cycles >= 341) // 114 cycles per scanline
 	{		
-		cpu_scanline_cycles -= 227;
+		cpu_scanline_cycles -= 341;
 		
 		if (cpu_frame_count == loop_count)
 		{	
@@ -2276,16 +2276,22 @@ void nes_loop(unsigned long loop_count)
 	
 	if (cpu_frame_cycles < 4546) // 2273 cycles in v-blank
 	{
+		// v-sync
+		ppu_flag_v = 0x0001;
+		
+		cpu_scanline_cycles = 0;
+		cpu_scanline_count = 0;
+		
 		ppu_flag_0 = 0;
 		
 		ppu_status_0 = 0;
-		
-		cpu_scanline_count = 0;
-		cpu_scanline_cycles = 0;
 	}
 	else if (cpu_frame_cycles < 59565) // 29780.5 cycles per frame
 	{
-		if (cpu_scanline_count >= (oam_ram[0]+7)) //&& cpu_scanline_cycles >= (oam_ram[3])) // very rough math
+		// v-sync
+		ppu_flag_v = 0x0000;
+		
+		if (cpu_scanline_count >= (oam_ram[0]+ppu_status_s)) //&& cpu_scanline_cycles >= (oam_ram[3])) // very rough math
 		{
 			if (ppu_status_0 == 0) ppu_flag_0 = 1;
 
@@ -2296,11 +2302,11 @@ void nes_loop(unsigned long loop_count)
 	{
 		cpu_frame_cycles -= 59565;
 		
-		cpu_scanline_cycles = 0;
-		cpu_scanline_count = 0;
-
 		// v-sync
 		ppu_flag_v = 0x0001;
+		
+		cpu_scanline_cycles = 0;
+		cpu_scanline_count = 0;
 		
 		// nmi
 		if (ppu_flag_e != 0x0000)
@@ -2316,6 +2322,19 @@ void nes_loop(unsigned long loop_count)
 			cpu_reg_pc += (cpu_read(0xFFFB)<<8);
 		}
 		
+		// sprite 0
+		for (unsigned short i=0; i<8; i++)
+		{
+			if (ppu_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+				ppu_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+			{
+				ppu_status_s = i+1;
+				
+				break;
+			}
+		}
+		
+		// finish frame drawing
 		if (cpu_frame_count == loop_count)
 		{
 			cpu_frame_count = 0;
@@ -2327,6 +2346,7 @@ void nes_loop(unsigned long loop_count)
 		
 		cpu_frame_count++;
 		
+		// start frame drawing
 		if (cpu_frame_count == loop_count)
 		{
 			nes_border();
