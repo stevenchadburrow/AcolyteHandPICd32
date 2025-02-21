@@ -144,7 +144,7 @@ volatile unsigned char ppu_palette[64] = {
 };
 
 volatile unsigned char apu_length[32] = {
-	  0, 254,  20,   2,  40,   4,  80,   6, 160,   8,  60,  10,  14,  12,  26,  14,
+	 10, 254,  20,   2,  40,   4,  80,   6, 160,   8,  60,  10,  14,  12,  26,  14,
 	 12,  16,  24,  18,  48,  20,  96,  22, 192,  24,  72,  26,  16,  28,  32,  30
 };
 
@@ -641,7 +641,7 @@ void cpu_write(unsigned short addr, unsigned char val)
 				apu_pulse_2_w = apu_pulse_2_p + 1;
 				
 				apu_pulse_2_e = ((val & 0x80) >> 7);
-				
+
 				break;
 			}
 			case 0x06: // pulse 2 timer
@@ -688,7 +688,7 @@ void cpu_write(unsigned short addr, unsigned char val)
 			{
 				apu_triangle_t = ((apu_triangle_t & 0x00FF) | ((val & 0x07) << 8));
 				
-				apu_triangle_l = apu_length[(val>>3)];
+				apu_triangle_l = apu_length[(val>>3)] + 1;
 				
 				apu_triangle_k = apu_triangle_t;
 				
@@ -744,19 +744,21 @@ void cpu_write(unsigned short addr, unsigned char val)
 				apu_dmc_l = ((val >> 6) & 0x01);
 				apu_dmc_r = apu_rate[(val & 0x0F)];
 				
+				apu_dmc_k = apu_dmc_r;
+				
 				if (apu_dmc_i == 0) apu_flag_i = 0;
 				
 				break;
 			}
 			case 0x11: // DMC load
-			{
+			{	
 				apu_dmc_d = (val & 0x7F);
 				
 				break;
 			}
 			case 0x12: // DMC address
 			{
-				apu_dmc_a = 0xC000 + (val << 6); 
+				apu_dmc_a = 0xC000 + ((unsigned short)val << 6); 
 				
 				break;
 			}
@@ -2110,9 +2112,9 @@ void nes_audio(unsigned long cycles)
 	{
 		apu_noise_k += (cycles);
 
-		while (apu_noise_k >= (apu_noise_t<<1))
+		while (apu_noise_k >= (apu_noise_t))
 		{
-			apu_noise_k -= (apu_noise_t<<1);
+			apu_noise_k -= (apu_noise_t);
 			
 			if (apu_noise_d == 0)
 			{
@@ -2137,9 +2139,9 @@ void nes_audio(unsigned long cycles)
 	{	
 		apu_dmc_k += (cycles);
 
-		while (apu_dmc_k >= apu_dmc_r)
+		while (apu_dmc_k >= (apu_dmc_r))
 		{
-			apu_dmc_k -= apu_dmc_r;
+			apu_dmc_k -= (apu_dmc_r);
 			
 			if (apu_dmc_s > 0)
 			{
@@ -2182,7 +2184,7 @@ void nes_audio(unsigned long cycles)
 			apu_dmc_o = (apu_dmc_d<<1);
 		}
 	}
-	else apu_dmc_o = 0x0000;
+	else apu_dmc_o = (apu_dmc_d<<1);
 	
 	apu_mixer_output = 0x0000;
 	
