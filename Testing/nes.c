@@ -40,8 +40,10 @@ volatile unsigned char cart_header[16];
 volatile unsigned char nes_init_flag = 0;
 volatile unsigned long nes_pixel_location = 0;
 
-volatile unsigned long cpu_current_cycles = 0, cpu_scanline_cycles = 0, cpu_frame_cycles = 0;
-volatile unsigned long cpu_scanline_count = 0, cpu_frame_count = 0;
+volatile unsigned long cpu_current_cycles = 0, cpu_dma_cycles = 0;
+volatile unsigned long cpu_scanline_cycles = 0, cpu_frame_cycles = 0;
+volatile unsigned long cpu_frame_count = 0;
+volatile signed long cpu_scanline_count = 0; // needs to be signed?
 
 volatile unsigned short cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
 volatile unsigned short cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
@@ -282,7 +284,7 @@ void nes_error(unsigned char code)
 }
 
 unsigned char cpu_read(unsigned short addr)
-{	
+{		
 	if (addr < 0x2000) return cpu_ram[(addr&0x07FF)]; // internal ram (and mirrors)
 	else if (addr < 0x4000) // ppu (and mirrors)
 	{
@@ -301,7 +303,7 @@ unsigned char cpu_read(unsigned short addr)
 				break;
 			}
 			case 0x02: // ppustatus
-			{
+			{				
 				unsigned char val = ((ppu_flag_v << 7) | (ppu_flag_0 << 6) | (ppu_flag_o << 5));
 				
 				ppu_flag_v = 0x0000;
@@ -770,8 +772,8 @@ void cpu_write(unsigned short addr, unsigned char val)
 			}
 			case 0x14: // oam dma
 			{
-				if ((cpu_current_cycles&0x00000002) == 0x00000000) cpu_current_cycles += 513; // 513 cycles on even
-				else cpu_current_cycles += 514; // 514 cycles on odd
+				if ((cpu_current_cycles&0x00000002) == 0x00000000) cpu_dma_cycles = 513; // 513 cycles on even
+				else cpu_dma_cycles = 514; // 514 cycles on odd
 				
 				for (unsigned short loop=0; loop<256; loop++)
 				{
@@ -835,59 +837,46 @@ void cpu_write(unsigned short addr, unsigned char val)
 
 // cpu addressing modes
 #define CPU_IMM { \
-	cpu_temp_cycles = 0x0002; \
 	cpu_temp_memory = cpu_read(cpu_reg_pc++); }
 
 #define CPU_ZPR { \
-	cpu_temp_cycles = 0x0003; \
 	cpu_temp_memory = (unsigned short)(cpu_ram[cpu_read(cpu_reg_pc++)]&0x00FF); }
 
 #define CPU_ZPW { \
-	cpu_temp_cycles = 0x0003; \
 	cpu_temp_address = cpu_read(cpu_reg_pc++); }
 
 #define CPU_ZPM { \
-	cpu_temp_cycles = 0x0005; \
 	cpu_temp_address = cpu_read(cpu_reg_pc++); }
 
 #define CPU_ZPXR { \
-	cpu_temp_cycles = 0x0004; \
 	cpu_temp_memory = (unsigned short)(cpu_ram[((cpu_read(cpu_reg_pc++)+cpu_reg_x)&0x00FF)]&0x00FF); }
 
 #define CPU_ZPXW { \
-	cpu_temp_cycles = 0x0004; \
 	cpu_temp_address = ((cpu_read(cpu_reg_pc++)+cpu_reg_x)&0x00FF); }
 
 #define CPU_ZPXM { \
-	cpu_temp_cycles = 0x0006; \
 	cpu_temp_address = ((cpu_read(cpu_reg_pc++)+cpu_reg_x)&0x00FF); }
 
 #define CPU_ZPYR { \
-	cpu_temp_cycles = 0x0004; \
 	cpu_temp_memory = (unsigned short)(cpu_ram[((cpu_read(cpu_reg_pc++)+cpu_reg_y)&0x00FF)]&0x00FF); }
 
 #define CPU_ZPYW { \
-	cpu_temp_cycles = 0x0004; \
 	cpu_temp_address = ((cpu_read(cpu_reg_pc++)+cpu_reg_y)&0x00FF); }
 
 #define CPU_ABSR { \
-	cpu_temp_cycles = 0x0004; \
 	cpu_temp_address = cpu_read(cpu_reg_pc++); \
 	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); \
 	cpu_temp_memory = cpu_read(cpu_temp_address); }
 
 #define CPU_ABSW { \
-	cpu_temp_cycles = 0x0004; \
 	cpu_temp_address = cpu_read(cpu_reg_pc++); \
 	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); }
 	
 #define CPU_ABSM { \
-	cpu_temp_cycles = 0x0006; \
 	cpu_temp_address = cpu_read(cpu_reg_pc++); \
 	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); }
 
 #define CPU_ABXR { \
-	cpu_temp_cycles = 0x0004; \
 	cpu_temp_address = cpu_read(cpu_reg_pc++); \
 	cpu_temp_cycles += ((cpu_temp_address+cpu_reg_x)>>8); \
 	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); \
@@ -895,20 +884,17 @@ void cpu_write(unsigned short addr, unsigned char val)
 	cpu_temp_memory = cpu_read(cpu_temp_address); }
 
 #define CPU_ABXW { \
-	cpu_temp_cycles = 0x0004; \
 	cpu_temp_address = cpu_read(cpu_reg_pc++); \
 	cpu_temp_cycles += ((cpu_temp_address+cpu_reg_x)>>8); \
 	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); \
 	cpu_temp_address += cpu_reg_x; }
 	
 #define CPU_ABXM { \
-	cpu_temp_cycles = 0x0007; \
 	cpu_temp_address = cpu_read(cpu_reg_pc++); \
 	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); \
 	cpu_temp_address += cpu_reg_x; }
 	
 #define CPU_ABYR { \
-	cpu_temp_cycles = 0x0004; \
 	cpu_temp_address = cpu_read(cpu_reg_pc++); \
 	cpu_temp_cycles += ((cpu_temp_address+cpu_reg_y)>>8); \
 	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); \
@@ -916,25 +902,21 @@ void cpu_write(unsigned short addr, unsigned char val)
 	cpu_temp_memory = cpu_read(cpu_temp_address); }
 
 #define CPU_ABYW { \
-	cpu_temp_cycles = 0x0004; \
 	cpu_temp_address = cpu_read(cpu_reg_pc++); \
 	cpu_temp_cycles += ((cpu_temp_address+cpu_reg_y)>>8); \
 	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); \
 	cpu_temp_address += cpu_reg_y; }
 	
 #define CPU_INDXR { \
-	cpu_temp_cycles = 0x0006; \
 	cpu_temp_memory = cpu_read(cpu_reg_pc++); \
 	cpu_temp_address = cpu_ram[((cpu_temp_memory+cpu_reg_x)&0x00FF)]+(cpu_ram[((cpu_temp_memory+cpu_reg_x+1)&0x00FF)]<<8); \
 	cpu_temp_memory = cpu_read(cpu_temp_address); }
 
 #define CPU_INDXW { \
-	cpu_temp_cycles = 0x0006; \
 	cpu_temp_memory = cpu_read(cpu_reg_pc++); \
 	cpu_temp_address = cpu_ram[((cpu_temp_memory+cpu_reg_x)&0x00FF)]+(cpu_ram[((cpu_temp_memory+cpu_reg_x+1)&0x00FF)]<<8); }
 	
 #define CPU_INDYR { \
-	cpu_temp_cycles = 0x0005; \
 	cpu_temp_memory = cpu_read(cpu_reg_pc++); \
 	cpu_temp_address = cpu_ram[cpu_temp_memory]+(cpu_ram[((cpu_temp_memory+1)&0x00FF)]<<8); \
 	cpu_temp_cycles += (((cpu_temp_address&0x00FF)+cpu_reg_y)>>8); \
@@ -942,7 +924,6 @@ void cpu_write(unsigned short addr, unsigned char val)
 	cpu_temp_memory = cpu_read(cpu_temp_address); }
 
 #define CPU_INDYW { \
-	cpu_temp_cycles = 0x0006; \
 	cpu_temp_memory = cpu_read(cpu_reg_pc++); \
 	cpu_temp_address = cpu_ram[cpu_temp_memory]+(cpu_ram[((cpu_temp_memory+1)&0x00FF)]<<8); \
 	cpu_temp_address += cpu_reg_y; }
@@ -975,12 +956,6 @@ void cpu_write(unsigned short addr, unsigned char val)
 	cpu_flag_n = (cpu_temp_memory>>7); \
 	cpu_temp_memory = (cpu_reg_a&cpu_temp_memory); \
 	cpu_flag_z = (cpu_temp_memory == 0x0000); }
-	
-#define CPU_BRA { \
-	cpu_temp_address = cpu_reg_pc; \
-	cpu_reg_pc = (unsigned short)(cpu_reg_pc+(signed char)cpu_temp_memory); \
-	cpu_temp_cycles = 0x0003; \
-	cpu_temp_cycles += ((cpu_temp_address&0xFF00)!=(cpu_reg_pc&0xFF00)); }
 	
 #define CPU_CMP { \
 	cpu_flag_c = (cpu_reg_a>=cpu_temp_memory); \
@@ -1084,6 +1059,11 @@ void cpu_write(unsigned short addr, unsigned char val)
 	cpu_write(cpu_temp_address, (unsigned char)cpu_reg_y); }
 
 // internal functions
+#define CPU_BRA { \
+	cpu_temp_address = cpu_reg_pc; \
+	cpu_reg_pc = (unsigned short)(cpu_reg_pc+(signed char)cpu_temp_memory); \
+	cpu_temp_cycles += ((cpu_temp_address&0xFF00)!=(cpu_reg_pc&0xFF00)); }
+
 #define CPU_PUSH { \
 	cpu_ram[0x0100+cpu_reg_s]=cpu_temp_memory; \
 	cpu_reg_s=((cpu_reg_s-1)&0x00FF); }
@@ -1100,24 +1080,24 @@ unsigned short cpu_run()
 	switch (cpu_temp_opcode)
 	{
 		// ADC
-		case 0x69: { CPU_IMM; CPU_ADC; break; }
-		case 0x65: { CPU_ZPR; CPU_ADC; break; }
-		case 0x75: { CPU_ZPXR; CPU_ADC; break; }
-		case 0x6D: { CPU_ABSR; CPU_ADC; break; }
-		case 0x7D: { CPU_ABXR; CPU_ADC; break; }
-		case 0x79: { CPU_ABYR; CPU_ADC; break; }
-		case 0x61: { CPU_INDXR; CPU_ADC; break; }
-		case 0x71: { CPU_INDYR; CPU_ADC; break; }
+		case 0x69: { cpu_temp_cycles = 2; CPU_IMM; CPU_ADC; break; }
+		case 0x65: { cpu_temp_cycles = 3; CPU_ZPR; CPU_ADC; break; }
+		case 0x75: { cpu_temp_cycles = 4; CPU_ZPXR; CPU_ADC; break; }
+		case 0x6D: { cpu_temp_cycles = 4; CPU_ABSR; CPU_ADC; break; }
+		case 0x7D: { cpu_temp_cycles = 4; CPU_ABXR; CPU_ADC; break; }
+		case 0x79: { cpu_temp_cycles = 4; CPU_ABYR; CPU_ADC; break; }
+		case 0x61: { cpu_temp_cycles = 6; CPU_INDXR; CPU_ADC; break; }
+		case 0x71: { cpu_temp_cycles = 5; CPU_INDYR; CPU_ADC; break; }
 		
 		// AND
-		case 0x29: { CPU_IMM; CPU_AND; break; }
-		case 0x25: { CPU_ZPR; CPU_AND; break; }
-		case 0x35: { CPU_ZPXR; CPU_AND; break; }
-		case 0x2D: { CPU_ABSR; CPU_AND; break; }
-		case 0x3D: { CPU_ABXR; CPU_AND; break; }
-		case 0x39: { CPU_ABYR; CPU_AND; break; }
-		case 0x21: { CPU_INDXR; CPU_AND; break; }
-		case 0x31: { CPU_INDYR; CPU_AND; break; }
+		case 0x29: { cpu_temp_cycles = 2; CPU_IMM; CPU_AND; break; }
+		case 0x25: { cpu_temp_cycles = 3; CPU_ZPR; CPU_AND; break; }
+		case 0x35: { cpu_temp_cycles = 4; CPU_ZPXR; CPU_AND; break; }
+		case 0x2D: { cpu_temp_cycles = 4; CPU_ABSR; CPU_AND; break; }
+		case 0x3D: { cpu_temp_cycles = 4; CPU_ABXR; CPU_AND; break; }
+		case 0x39: { cpu_temp_cycles = 4; CPU_ABYR; CPU_AND; break; }
+		case 0x21: { cpu_temp_cycles = 6; CPU_INDXR; CPU_AND; break; }
+		case 0x31: { cpu_temp_cycles = 5; CPU_INDYR; CPU_AND; break; }
 		
 		// ASL
 		case 0x0A:
@@ -1129,28 +1109,34 @@ unsigned short cpu_run()
 			cpu_flag_n = (cpu_reg_a>>7);
 			break;
 		}
-		case 0x06: { CPU_ZPM; CPU_ASL; break; }
-		case 0x16: { CPU_ZPXM; CPU_ASL; break; }
-		case 0x0E: { CPU_ABSM; CPU_ASL; break; }
-		case 0x1E: { CPU_ABXM; CPU_ASL; break; }
+		case 0x06: { cpu_temp_cycles = 5; CPU_ZPM; CPU_ASL; break; }
+		case 0x16: { cpu_temp_cycles = 6; CPU_ZPXM; CPU_ASL; break; }
+		case 0x0E: { cpu_temp_cycles = 6; CPU_ABSM; CPU_ASL; break; }
+		case 0x1E: { cpu_temp_cycles = 7; CPU_ABXM; CPU_ASL; break; }
 		
 		// BCC
-		case 0x90: { CPU_IMM; if (cpu_flag_c == 0x0000) CPU_BRA; break; }
+		case 0x90: { cpu_temp_cycles = 2; CPU_IMM; 
+			if (cpu_flag_c == 0x0000) { cpu_temp_cycles = 3; CPU_BRA; } break; }
 		// BCS
-		case 0xB0: { CPU_IMM; if (cpu_flag_c != 0x0000) CPU_BRA; break; }
+		case 0xB0: { cpu_temp_cycles = 2; CPU_IMM; 
+			if (cpu_flag_c != 0x0000) { cpu_temp_cycles = 3; CPU_BRA; } break; }
 		// BEQ
-		case 0xF0: { CPU_IMM; if (cpu_flag_z != 0x0000) CPU_BRA; break; }
+		case 0xF0: { cpu_temp_cycles = 2; CPU_IMM; 
+			if (cpu_flag_z != 0x0000) { cpu_temp_cycles = 3; CPU_BRA; } break; }
 		
 		// BIT
-		case 0x24: { CPU_ZPR; CPU_BIT; break; }
-		case 0x2C: { CPU_ABSR; CPU_BIT; break; }
+		case 0x24: { cpu_temp_cycles = 3; CPU_ZPR; CPU_BIT; break; }
+		case 0x2C: { cpu_temp_cycles = 4; CPU_ABSR; CPU_BIT; break; }
 	
 		// BMI
-		case 0x30: { CPU_IMM; if (cpu_flag_n != 0x0000) CPU_BRA; break; }
+		case 0x30: { cpu_temp_cycles = 2; CPU_IMM; 
+			if (cpu_flag_n != 0x0000) { cpu_temp_cycles = 3; CPU_BRA; } break; }
 		// BNE
-		case 0xD0: { CPU_IMM; if (cpu_flag_z == 0x0000) CPU_BRA; break; }
+		case 0xD0: { cpu_temp_cycles = 2; CPU_IMM; 
+			if (cpu_flag_z == 0x0000) { cpu_temp_cycles = 3; CPU_BRA; } break; }
 		// BPL
-		case 0x10: { CPU_IMM; if (cpu_flag_n == 0x0000) CPU_BRA; break; }
+		case 0x10: { cpu_temp_cycles = 2; CPU_IMM; 
+			if (cpu_flag_n == 0x0000) { cpu_temp_cycles = 3; CPU_BRA; } break; }
 		
 		// BRK
 		case 0x00:
@@ -1175,7 +1161,7 @@ unsigned short cpu_run()
 		{
 			cpu_temp_cycles = 0x0002;
 			cpu_temp_memory = cpu_read(cpu_reg_pc++);
-			if (cpu_flag_v == 0x0000) CPU_BRA;
+			if (cpu_flag_v == 0x0000) { cpu_temp_cycles = 3; CPU_BRA; }
 			break;
 		}
 		
@@ -1184,7 +1170,7 @@ unsigned short cpu_run()
 		{
 			cpu_temp_cycles = 0x0002;
 			cpu_temp_memory = cpu_read(cpu_reg_pc++);
-			if (cpu_flag_v != 0x0000) CPU_BRA;
+			if (cpu_flag_v != 0x0000) { cpu_temp_cycles = 3; CPU_BRA; }
 			break;
 		}
 		
@@ -1221,30 +1207,30 @@ unsigned short cpu_run()
 		}
 		
 		// CMP
-		case 0xC9: { CPU_IMM; CPU_CMP; break; }
-		case 0xC5: { CPU_ZPR; CPU_CMP; break; }
-		case 0xD5: { CPU_ZPXR; CPU_CMP; break; }
-		case 0xCD: { CPU_ABSR; CPU_CMP; break; }
-		case 0xDD: { CPU_ABXR; CPU_CMP; break; }
-		case 0xD9: { CPU_ABYR; CPU_CMP; break; }
-		case 0xC1: { CPU_INDXR; CPU_CMP; break; }
-		case 0xD1: { CPU_INDYR; CPU_CMP; break; }
+		case 0xC9: { cpu_temp_cycles = 2; CPU_IMM; CPU_CMP; break; }
+		case 0xC5: { cpu_temp_cycles = 3; CPU_ZPR; CPU_CMP; break; }
+		case 0xD5: { cpu_temp_cycles = 4; CPU_ZPXR; CPU_CMP; break; }
+		case 0xCD: { cpu_temp_cycles = 4; CPU_ABSR; CPU_CMP; break; }
+		case 0xDD: { cpu_temp_cycles = 4; CPU_ABXR; CPU_CMP; break; }
+		case 0xD9: { cpu_temp_cycles = 4; CPU_ABYR; CPU_CMP; break; }
+		case 0xC1: { cpu_temp_cycles = 6; CPU_INDXR; CPU_CMP; break; }
+		case 0xD1: { cpu_temp_cycles = 5; CPU_INDYR; CPU_CMP; break; }
 		
 		// CPX
-		case 0xE0: { CPU_IMM; CPU_CPX; break; }
-		case 0xE4: { CPU_ZPR; CPU_CPX; break; }
-		case 0xEC: { CPU_ABSR; CPU_CPX; break; }
+		case 0xE0: { cpu_temp_cycles = 2; CPU_IMM; CPU_CPX; break; }
+		case 0xE4: { cpu_temp_cycles = 3; CPU_ZPR; CPU_CPX; break; }
+		case 0xEC: { cpu_temp_cycles = 4; CPU_ABSR; CPU_CPX; break; }
 		
 		// CPY
-		case 0xC0: { CPU_IMM; CPU_CPY; break; }
-		case 0xC4: { CPU_ZPR; CPU_CPY; break; }
-		case 0xCC: { CPU_ABSR; CPU_CPY; break; }
+		case 0xC0: { cpu_temp_cycles = 2; CPU_IMM; CPU_CPY; break; }
+		case 0xC4: { cpu_temp_cycles = 3; CPU_ZPR; CPU_CPY; break; }
+		case 0xCC: { cpu_temp_cycles = 4; CPU_ABSR; CPU_CPY; break; }
 		
 		// DEC
-		case 0xC6: { CPU_ZPM; CPU_DEC; break; }
-		case 0xD6: { CPU_ZPXM; CPU_DEC; break; }
-		case 0xCE: { CPU_ABSM; CPU_DEC; break; }
-		case 0xDE: { CPU_ABXM; CPU_DEC; break; }
+		case 0xC6: { cpu_temp_cycles = 5; CPU_ZPM; CPU_DEC; break; }
+		case 0xD6: { cpu_temp_cycles = 6; CPU_ZPXM; CPU_DEC; break; }
+		case 0xCE: { cpu_temp_cycles = 6; CPU_ABSM; CPU_DEC; break; }
+		case 0xDE: { cpu_temp_cycles = 7; CPU_ABXM; CPU_DEC; break; }
 		
 		// DEX
 		case 0xCA:
@@ -1267,20 +1253,20 @@ unsigned short cpu_run()
 		}
 		
 		// EOR
-		case 0x49: { CPU_IMM; CPU_EOR; break; }
-		case 0x45: { CPU_ZPR; CPU_EOR; break; }
-		case 0x55: { CPU_ZPXR; CPU_EOR; break; }
-		case 0x4D: { CPU_ABSR; CPU_EOR; break; }
-		case 0x5D: { CPU_ABXR; CPU_EOR; break; }
-		case 0x59: { CPU_ABYR; CPU_EOR; break; }
-		case 0x41: { CPU_INDXR; CPU_EOR; break; }
-		case 0x51: { CPU_INDYR; CPU_EOR; break; }
+		case 0x49: { cpu_temp_cycles = 2; CPU_IMM; CPU_EOR; break; }
+		case 0x45: { cpu_temp_cycles = 3; CPU_ZPR; CPU_EOR; break; }
+		case 0x55: { cpu_temp_cycles = 4; CPU_ZPXR; CPU_EOR; break; }
+		case 0x4D: { cpu_temp_cycles = 4; CPU_ABSR; CPU_EOR; break; }
+		case 0x5D: { cpu_temp_cycles = 4; CPU_ABXR; CPU_EOR; break; }
+		case 0x59: { cpu_temp_cycles = 4; CPU_ABYR; CPU_EOR; break; }
+		case 0x41: { cpu_temp_cycles = 6; CPU_INDXR; CPU_EOR; break; }
+		case 0x51: { cpu_temp_cycles = 5; CPU_INDYR; CPU_EOR; break; }
 		
 		// INC
-		case 0xE6: { CPU_ZPM; CPU_INC; break; }
-		case 0xF6: { CPU_ZPXM; CPU_INC; break; }
-		case 0xEE: { CPU_ABSM; CPU_INC; break; }
-		case 0xFE: { CPU_ABXM; CPU_INC; break; }
+		case 0xE6: { cpu_temp_cycles = 5; CPU_ZPM; CPU_INC; break; }
+		case 0xF6: { cpu_temp_cycles = 6; CPU_ZPXM; CPU_INC; break; }
+		case 0xEE: { cpu_temp_cycles = 6; CPU_ABSM; CPU_INC; break; }
+		case 0xFE: { cpu_temp_cycles = 7; CPU_ABXM; CPU_INC; break; }
 		
 		// INX
 		case 0xE8:
@@ -1337,28 +1323,28 @@ unsigned short cpu_run()
 		}
 		
 		// LDA
-		case 0xA9: { CPU_IMM; CPU_LDA; break; }
-		case 0xA5: { CPU_ZPR; CPU_LDA; break; }
-		case 0xB5: { CPU_ZPXR; CPU_LDA; break; }
-		case 0xAD: { CPU_ABSR; CPU_LDA; break; }
-		case 0xBD: { CPU_ABXR; CPU_LDA; break; }
-		case 0xB9: { CPU_ABYR; CPU_LDA; break; }
-		case 0xA1: { CPU_INDXR; CPU_LDA; break; }
-		case 0xB1: { CPU_INDYR; CPU_LDA; break; }
+		case 0xA9: { cpu_temp_cycles = 2; CPU_IMM; CPU_LDA; break; }
+		case 0xA5: { cpu_temp_cycles = 3; CPU_ZPR; CPU_LDA; break; }
+		case 0xB5: { cpu_temp_cycles = 4; CPU_ZPXR; CPU_LDA; break; }
+		case 0xAD: { cpu_temp_cycles = 4; CPU_ABSR; CPU_LDA; break; }
+		case 0xBD: { cpu_temp_cycles = 4; CPU_ABXR; CPU_LDA; break; }
+		case 0xB9: { cpu_temp_cycles = 4; CPU_ABYR; CPU_LDA; break; }
+		case 0xA1: { cpu_temp_cycles = 6; CPU_INDXR; CPU_LDA; break; }
+		case 0xB1: { cpu_temp_cycles = 5; CPU_INDYR; CPU_LDA; break; }
 		
 		// LDX
-		case 0xA2: { CPU_IMM; CPU_LDX; break; }
-		case 0xA6: { CPU_ZPR; CPU_LDX; break; }
-		case 0xB6: { CPU_ZPYR; CPU_LDX; break; }
-		case 0xAE: { CPU_ABSR; CPU_LDX; break; }
-		case 0xBE: { CPU_ABYR; CPU_LDX; break; }
+		case 0xA2: { cpu_temp_cycles = 2; CPU_IMM; CPU_LDX; break; }
+		case 0xA6: { cpu_temp_cycles = 3; CPU_ZPR; CPU_LDX; break; }
+		case 0xB6: { cpu_temp_cycles = 4; CPU_ZPYR; CPU_LDX; break; }
+		case 0xAE: { cpu_temp_cycles = 4; CPU_ABSR; CPU_LDX; break; }
+		case 0xBE: { cpu_temp_cycles = 4; CPU_ABYR; CPU_LDX; break; }
 		
 		// LDY
-		case 0xA0: { CPU_IMM; CPU_LDY; break; }
-		case 0xA4: { CPU_ZPR; CPU_LDY; break; }
-		case 0xB4: { CPU_ZPXR; CPU_LDY; break; }
-		case 0xAC: { CPU_ABSR; CPU_LDY; break; }
-		case 0xBC: { CPU_ABXR; CPU_LDY; break; }
+		case 0xA0: { cpu_temp_cycles = 2; CPU_IMM; CPU_LDY; break; }
+		case 0xA4: { cpu_temp_cycles = 3; CPU_ZPR; CPU_LDY; break; }
+		case 0xB4: { cpu_temp_cycles = 4; CPU_ZPXR; CPU_LDY; break; }
+		case 0xAC: { cpu_temp_cycles = 4; CPU_ABSR; CPU_LDY; break; }
+		case 0xBC: { cpu_temp_cycles = 4; CPU_ABXR; CPU_LDY; break; }
 		
 		// LSR
 		case 0x4A:
@@ -1370,10 +1356,10 @@ unsigned short cpu_run()
 			cpu_flag_n = (cpu_reg_a>>7);
 			break;
 		}
-		case 0x46: { CPU_ZPM; CPU_LSR; break; }
-		case 0x56: { CPU_ZPXM; CPU_LSR; break; }
-		case 0x4E: { CPU_ABSM; CPU_LSR; break; }
-		case 0x5E: { CPU_ABXM; CPU_LSR; break; }
+		case 0x46: { cpu_temp_cycles = 5; CPU_ZPM; CPU_LSR; break; }
+		case 0x56: { cpu_temp_cycles = 6; CPU_ZPXM; CPU_LSR; break; }
+		case 0x4E: { cpu_temp_cycles = 6; CPU_ABSM; CPU_LSR; break; }
+		case 0x5E: { cpu_temp_cycles = 7; CPU_ABXM; CPU_LSR; break; }
 		
 		// NOP
 		case 0xEA:
@@ -1383,14 +1369,14 @@ unsigned short cpu_run()
 		}
 		
 		// ORA
-		case 0x09: { CPU_IMM; CPU_ORA; break; }
-		case 0x05: { CPU_ZPR; CPU_ORA; break; }
-		case 0x15: { CPU_ZPXR; CPU_ORA; break; }
-		case 0x0D: { CPU_ABSR; CPU_ORA; break; }
-		case 0x1D: { CPU_ABXR; CPU_ORA; break; }
-		case 0x19: { CPU_ABYR; CPU_ORA; break; }
-		case 0x01: { CPU_INDXR; CPU_ORA; break; }
-		case 0x11: { CPU_INDYR; CPU_ORA; break; }
+		case 0x09: { cpu_temp_cycles = 2; CPU_IMM; CPU_ORA; break; }
+		case 0x05: { cpu_temp_cycles = 3; CPU_ZPR; CPU_ORA; break; }
+		case 0x15: { cpu_temp_cycles = 4; CPU_ZPXR; CPU_ORA; break; }
+		case 0x0D: { cpu_temp_cycles = 4; CPU_ABSR; CPU_ORA; break; }
+		case 0x1D: { cpu_temp_cycles = 4; CPU_ABXR; CPU_ORA; break; }
+		case 0x19: { cpu_temp_cycles = 4; CPU_ABYR; CPU_ORA; break; }
+		case 0x01: { cpu_temp_cycles = 6; CPU_INDXR; CPU_ORA; break; }
+		case 0x11: { cpu_temp_cycles = 5; CPU_INDYR; CPU_ORA; break; }
 		
 		// PHA
 		case 0x48:
@@ -1417,6 +1403,8 @@ unsigned short cpu_run()
 			cpu_temp_cycles = 0x0004;
 			CPU_PULL;
 			cpu_reg_a = cpu_temp_memory;
+			cpu_flag_z = (cpu_reg_a==0);
+			cpu_flag_n = (cpu_reg_a>>7);
 			break;
 		}
 		
@@ -1445,10 +1433,10 @@ unsigned short cpu_run()
 			cpu_flag_n = (cpu_reg_a>>7);
 			break;
 		}
-		case 0x26: { CPU_ZPM; CPU_ROL; break; }
-		case 0x36: { CPU_ZPXM; CPU_ROL; break; }
-		case 0x2E: { CPU_ABSM; CPU_ROL; break; }
-		case 0x3E: { CPU_ABXM; CPU_ROL; break; }
+		case 0x26: { cpu_temp_cycles = 5; CPU_ZPM; CPU_ROL; break; }
+		case 0x36: { cpu_temp_cycles = 6; CPU_ZPXM; CPU_ROL; break; }
+		case 0x2E: { cpu_temp_cycles = 6; CPU_ABSM; CPU_ROL; break; }
+		case 0x3E: { cpu_temp_cycles = 7; CPU_ABXM; CPU_ROL; break; }
 
 		// ROR
 		case 0x6A:
@@ -1461,10 +1449,10 @@ unsigned short cpu_run()
 			cpu_flag_n = (cpu_reg_a>>7);
 			break;
 		}
-		case 0x66: { CPU_ZPM; CPU_ROR; break; }
-		case 0x76: { CPU_ZPXM; CPU_ROR; break; }
-		case 0x6E: { CPU_ABSM; CPU_ROR; break; }
-		case 0x7E: { CPU_ABXM; CPU_ROR; break; }	
+		case 0x66: { cpu_temp_cycles = 5; CPU_ZPM; CPU_ROR; break; }
+		case 0x76: { cpu_temp_cycles = 6; CPU_ZPXM; CPU_ROR; break; }
+		case 0x6E: { cpu_temp_cycles = 6; CPU_ABSM; CPU_ROR; break; }
+		case 0x7E: { cpu_temp_cycles = 7; CPU_ABXM; CPU_ROR; break; }	
 		
 		// RTI
 		case 0x40:
@@ -1496,14 +1484,14 @@ unsigned short cpu_run()
 		}
 		
 		// SBC
-		case 0xE9: { CPU_IMM; CPU_SBC; break; }
-		case 0xE5: { CPU_ZPR; CPU_SBC; break; }
-		case 0xF5: { CPU_ZPXR; CPU_SBC; break; }
-		case 0xED: { CPU_ABSR; CPU_SBC; break; }
-		case 0xFD: { CPU_ABXR; CPU_SBC; break; }
-		case 0xF9: { CPU_ABYR; CPU_SBC; break; }
-		case 0xE1: { CPU_INDXR; CPU_SBC; break; }
-		case 0xF1: { CPU_INDYR; CPU_SBC; break; }
+		case 0xE9: { cpu_temp_cycles = 2; CPU_IMM; CPU_SBC; break; }
+		case 0xE5: { cpu_temp_cycles = 3; CPU_ZPR; CPU_SBC; break; }
+		case 0xF5: { cpu_temp_cycles = 4; CPU_ZPXR; CPU_SBC; break; }
+		case 0xED: { cpu_temp_cycles = 4; CPU_ABSR; CPU_SBC; break; }
+		case 0xFD: { cpu_temp_cycles = 4; CPU_ABXR; CPU_SBC; break; }
+		case 0xF9: { cpu_temp_cycles = 4; CPU_ABYR; CPU_SBC; break; }
+		case 0xE1: { cpu_temp_cycles = 6; CPU_INDXR; CPU_SBC; break; }
+		case 0xF1: { cpu_temp_cycles = 5; CPU_INDYR; CPU_SBC; break; }
 		
 		// SEC
 		case 0x38:
@@ -1530,23 +1518,23 @@ unsigned short cpu_run()
 		}
 		
 		// STA
-		case 0x85: { CPU_ZPW; CPU_STA; break; }
-		case 0x95: { CPU_ZPXW; CPU_STA; break; }
-		case 0x8D: { CPU_ABSW; CPU_STA; break; }
-		case 0x9D: { CPU_ABXW; CPU_STA; cpu_temp_cycles = 0x0005; break; }
-		case 0x99: { CPU_ABYW; CPU_STA; cpu_temp_cycles = 0x0005; break; }
-		case 0x81: { CPU_INDXW; CPU_STA; break; }
-		case 0x91: { CPU_INDYW; CPU_STA; break; }
+		case 0x85: { CPU_ZPW; CPU_STA; cpu_temp_cycles = 3; break; }
+		case 0x95: { CPU_ZPXW; CPU_STA; cpu_temp_cycles = 4; break; }
+		case 0x8D: { CPU_ABSW; CPU_STA; cpu_temp_cycles = 4; break; }
+		case 0x9D: { CPU_ABXW; CPU_STA; cpu_temp_cycles = 5; break; }
+		case 0x99: { CPU_ABYW; CPU_STA; cpu_temp_cycles = 5; break; }
+		case 0x81: { CPU_INDXW; CPU_STA; cpu_temp_cycles = 6; break; }
+		case 0x91: { CPU_INDYW; CPU_STA; cpu_temp_cycles = 6; break; }
 		
 		// STX
-		case 0x86: { CPU_ZPW; CPU_STX; break; }
-		case 0x96: { CPU_ZPYW; CPU_STX; break; }
-		case 0x8E: { CPU_ABSW; CPU_STX; break; }
+		case 0x86: { CPU_ZPW; CPU_STX; cpu_temp_cycles = 3; break; }
+		case 0x96: { CPU_ZPYW; CPU_STX; cpu_temp_cycles = 4; break; }
+		case 0x8E: { CPU_ABSW; CPU_STX; cpu_temp_cycles = 4; break; }
 		
 		// STY
-		case 0x84: { CPU_ZPW; CPU_STY; break; }
-		case 0x94: { CPU_ZPXW; CPU_STY; break; }
-		case 0x8C: { CPU_ABSW; CPU_STY; break; }
+		case 0x84: { CPU_ZPW; CPU_STY; cpu_temp_cycles = 3; break; }
+		case 0x94: { CPU_ZPXW; CPU_STY; cpu_temp_cycles = 4; break; }
+		case 0x8C: { CPU_ABSW; CPU_STY; cpu_temp_cycles = 4; break; }
 		
 		// TAX
 		case 0xAA:
@@ -2224,6 +2212,10 @@ void nes_loop(unsigned long loop_count)
 	cpu_current_cycles = 0;
 
 	cpu_current_cycles += cpu_run();
+	
+	cpu_current_cycles += cpu_dma_cycles;
+	
+	cpu_dma_cycles = 0;
 
 	if (cpu_current_cycles == 0)
 	{
@@ -2263,6 +2255,7 @@ void nes_loop(unsigned long loop_count)
 	if (cpu_scanline_cycles >= 341) // 114 cycles per scanline
 	{		
 		cpu_scanline_cycles -= 341;
+		//cpu_scanline_cycles = 0;
 		
 		if (cpu_frame_count == loop_count)
 		{	
@@ -2279,7 +2272,7 @@ void nes_loop(unsigned long loop_count)
 	if (cpu_frame_cycles < 4546) // 2273 cycles in v-blank
 	{
 		// v-sync
-		ppu_flag_v = 0x0001;
+		//ppu_flag_v = 0x0001;
 		
 		cpu_scanline_cycles = 0;
 		cpu_scanline_count = 0;
@@ -2310,6 +2303,8 @@ void nes_loop(unsigned long loop_count)
 		cpu_scanline_cycles = 0;
 		cpu_scanline_count = 0;
 		
+		ppu_reg_a = 0;
+		
 		// nmi
 		if (ppu_flag_e != 0x0000)
 		{	
@@ -2322,6 +2317,8 @@ void nes_loop(unsigned long loop_count)
 			CPU_PUSH;
 			cpu_reg_pc = cpu_read(0xFFFA);
 			cpu_reg_pc += (cpu_read(0xFFFB)<<8);
+			
+			cpu_frame_cycles += 7;
 		}
 		
 		// sprite 0
