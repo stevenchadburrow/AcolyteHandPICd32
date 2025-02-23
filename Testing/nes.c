@@ -24,11 +24,6 @@ int main()
 }
 */
 
-// By the way, to convert .mp4 to .gif:
-// ffmpeg -i input.mp4 -vf scale=320:-1 -r 10 -f image2pipe -vcodec ppm - | convert -delay 10 -loop 0 - output.gif
-
-
-
 // if using for other platforms, adjust variable types here
 unsigned char *cart_rom = (unsigned char *)0x9D100000;
 
@@ -2259,7 +2254,7 @@ void nes_audio(unsigned long cycles)
 	
 	apu_mixer_output += apu_pulse_1_o;	
 	apu_mixer_output += apu_pulse_2_o;
-	apu_mixer_output += (apu_triangle_o>>1); //(((apu_triangle_o+0x80)&0x00FF)>>1);
+	apu_mixer_output += (apu_triangle_o>>1);
 	apu_mixer_output += (apu_noise_o>>1);
 	apu_mixer_output += (apu_dmc_o);
 	apu_mixer_output = (apu_mixer_output>>2); // divide by 4
