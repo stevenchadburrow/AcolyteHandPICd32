@@ -621,6 +621,8 @@ int main()
 	display_string(0x0010, 0x0048, "  Load Balloon Fight\\");
 	display_string(0x0010, 0x0050, "  Load Micro Mages\\");
 	display_string(0x0010, 0x0058, "  ???\\");
+	display_string(0x0010, 0x0060, "  ???\\");
+	display_string(0x0010, 0x0068, "  ???\\");
 	
 	DelayMS(1000);
 	
@@ -647,7 +649,7 @@ int main()
 			
 			display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
 			
-			if (menu_pos < 9) menu_pos++;
+			if (menu_pos < 11) menu_pos++;
 		}
 		else
 		{
@@ -710,7 +712,17 @@ int main()
 			}
 			case 0x09:
 			{
-				// ???
+				
+				break;
+			}
+			case 0x0A:
+			{
+				
+				break;
+			}
+			case 0x0B:
+			{
+				
 				break;
 			}
 		}
