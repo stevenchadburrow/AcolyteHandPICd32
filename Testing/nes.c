@@ -2263,7 +2263,7 @@ void nes_audio(unsigned long cycles)
 	nes_sound(apu_mixer_output);
 }
 
-void nes_loop(unsigned long loop_count)
+void nes_loop(unsigned short loop_count)
 {	  
 	if (nes_init_flag == 0)
 	{
@@ -2393,7 +2393,7 @@ void nes_loop(unsigned long loop_count)
 		}
 		
 		// finish frame drawing
-		if (cpu_frame_count == loop_count)
+		if (cpu_frame_count >= loop_count)
 		{
 			cpu_frame_count = 0;
 			
@@ -2405,7 +2405,7 @@ void nes_loop(unsigned long loop_count)
 		cpu_frame_count++;
 		
 		// start frame drawing
-		if (cpu_frame_count == loop_count)
+		if (cpu_frame_count >= loop_count)
 		{
 			nes_border();
 		

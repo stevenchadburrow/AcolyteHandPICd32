@@ -273,6 +273,7 @@ volatile unsigned int audio_enable = 0;
 // controllers
 volatile unsigned char controller_status_1 = 0x00;
 volatile unsigned char controller_status_2 = 0x00;
+volatile unsigned char controller_enable = 0;
 
 
 const unsigned char text_bitmap[64*96] = { 
@@ -569,17 +570,22 @@ void display_string(unsigned int x, unsigned int y, char *value)
 #include "setup.c" 
 
 
-unsigned short menu_pos = 0;
-unsigned long menu_wait = 0;
 
 
 int main()
 {
+	unsigned short menu_pos = 0;
+	unsigned long menu_wait = 0;
+	
+	unsigned short rate = 3; // default of 3:1 frame rate
+	
+	audio_enable = 0;
+	
 	Setup();
 	
 	// for debug purposes
 	TRISKbits.TRISK7 = 1;
-	//while (PORTKbits.RK7 == 0) { }
+	while (PORTKbits.RK7 == 0) { }
 	
 	DelayMS(1000);
 	
@@ -602,6 +608,11 @@ int main()
 	TRISFbits.TRISF5 = 1;
 	TRISFbits.TRISF8 = 1;
 	
+	for (unsigned short i=0; i<AUDIO_LEN*2; i++)
+	{
+		audio_buffer[i] = 0x00;
+	}
+	
 	for (unsigned short y=0; y<SCREEN_Y*2; y++)
 	{
 		for (unsigned short x=0; x<SCREEN_X; x++)
@@ -610,6 +621,11 @@ int main()
 			screen_buffer[y*SCREEN_X+x] = 0x00;
 		}
 	}
+	
+	controller_enable = 0;
+	screen_frame = 0;
+	
+	DelayMS(1000);
 	
 	display_string(0x0010, 0x0010, "  Play Current Game\\");
 	display_string(0x0010, 0x0018, "  Load Super Mario Bros\\");
@@ -625,6 +641,9 @@ int main()
 	display_string(0x0010, 0x0068, "  ???\\");
 	
 	DelayMS(1000);
+	
+	menu_pos = 0;
+	menu_wait = 0;
 	
 	while (PORTKbits.RK4 == 1 && PORTKbits.RK5 == 1)
 	{	
@@ -659,11 +678,92 @@ int main()
 	
 	if (menu_pos == 0)
 	{
-		audio_enable = 1;
+		audio_enable = 1; // audio on by default
+		controller_enable = 1; // must be on to play games
 		
 		while (1)
 		{ 
-			nes_loop(3); // frame rate divider
+			if (PORTKbits.RK7 == 0)
+			{
+				while (PORTKbits.RK7 == 0) { }
+				
+				for (unsigned short i=0; i<AUDIO_LEN*2; i++)
+				{
+					audio_buffer[i] = 0x00;
+				}
+				
+				for (unsigned short y=0; y<SCREEN_Y*2; y++)
+				{
+					for (unsigned short x=0; x<SCREEN_X; x++)
+					{
+						screen_buffer[y*SCREEN_X+x] = 0x00;
+						screen_buffer[y*SCREEN_X+x] = 0x00;
+					}
+				}
+				
+				controller_enable = 0;
+				screen_frame = 0;
+				
+				DelayMS(1000);
+
+				display_string(0x0010, 0x0010, "  Return to Game\\");
+				display_string(0x0010, 0x0018, "  Audio Enable\\");
+				display_string(0x0010, 0x0020, "  Audio Disable\\");
+				display_string(0x0010, 0x0028, "  Frames 1:1\\");
+				display_string(0x0010, 0x0030, "  Frames 2:1\\");
+				display_string(0x0010, 0x0038, "  Frames 3:1\\");
+				display_string(0x0010, 0x0040, "  Frames 4:1\\");
+				display_string(0x0010, 0x0048, "  Frames 5:1\\");
+				display_string(0x0010, 0x0050, "  Frames 6:1\\");
+				display_string(0x0010, 0x0058, "  Frames 7:1\\");
+				display_string(0x0010, 0x0060, "  Frames 8:1\\");
+				display_string(0x0010, 0x0068, "  Frames 9:1\\");
+
+				DelayMS(1000);
+				
+				menu_pos = 0;
+				menu_wait = 0;
+				
+				while (PORTKbits.RK4 == 1 && PORTKbits.RK5 == 1)
+				{	
+					display_character(0x0010, 0x0010+0x0008*menu_pos, '>');
+
+					if (PORTKbits.RK0 == 0 && menu_wait == 0)
+					{
+						menu_wait = 0x0001FFFF;
+
+						display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
+
+						if (menu_pos > 0) menu_pos--;
+					}
+					else
+					{
+						if (menu_wait > 0) menu_wait--;
+					}
+
+					if (PORTKbits.RK1 == 0 && menu_wait == 0)
+					{
+						menu_wait = 0x0001FFFF;
+
+						display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
+
+						if (menu_pos < 11) menu_pos++;
+					}
+					else
+					{
+						if (menu_wait > 0) menu_wait--;
+					}
+				}
+				
+				controller_enable = 1;
+				
+				if (menu_pos == 0) { }
+				else if (menu_pos == 1) audio_enable = 1;
+				else if (menu_pos == 2) audio_enable = 0;
+				else if (menu_pos > 2) rate = menu_pos - 2;
+			}
+			
+			nes_loop(rate); // frame rate divider
 		}
 	}
 	else
@@ -723,6 +823,10 @@ int main()
 			case 0x0B:
 			{
 				
+				break;
+			}
+			default:
+			{
 				break;
 			}
 		}
