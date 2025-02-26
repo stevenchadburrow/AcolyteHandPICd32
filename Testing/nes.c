@@ -36,12 +36,14 @@ volatile unsigned long prg_offset = 0x00000000; // offsets in cart_rom
 volatile unsigned long chr_offset = 0x00000000;
 
 volatile unsigned char nes_init_flag = 0;
+volatile unsigned char nes_audio_flag = 1;
 volatile unsigned long nes_pixel_location = 0;
 
 volatile unsigned long cpu_current_cycles = 0, cpu_dma_cycles = 0;
 volatile unsigned long cpu_scanline_cycles = 0, cpu_frame_cycles = 0;
 volatile unsigned long cpu_frame_count = 0;
-volatile signed long cpu_scanline_count = 0; // needs to be signed?
+volatile unsigned long cpu_interrupt_count = 0;
+volatile signed long cpu_scanline_count = 0; // needs to be signed
 
 volatile unsigned short cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
 volatile unsigned short cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
@@ -260,10 +262,15 @@ void nes_pixel(unsigned short pos_x, unsigned short pos_y, unsigned char color)
 	screen_buffer[nes_pixel_location+1] = color;
 }
 
+void nes_interrupt()
+{
+	cpu_interrupt_count = cpu_interrupt_count + 1;
+}
+
 // change for platform
 void nes_frame()
 {
-	screen_frame= 1 - screen_frame;
+	screen_frame = 1 - screen_frame;
 	
 	for (unsigned short i=audio_write; i<AUDIO_LEN; i++)
 	{
@@ -278,14 +285,20 @@ void nes_frame()
 	audio_read = 0;
 }
 
+void nes_audible(unsigned char enable)
+{
+	nes_audio_flag = enable;
+}
+
 // change for platform
 void nes_sound(unsigned char sample)
 {
 	audio_buffer[AUDIO_LEN*(1-audio_frame)+audio_write] = sample;
 	audio_buffer[AUDIO_LEN*(1-audio_frame)+audio_write+1] = sample;
 	audio_buffer[AUDIO_LEN*(1-audio_frame)+audio_write+2] = sample;
+	audio_buffer[AUDIO_LEN*(1-audio_frame)+audio_write+3] = sample;
 	
-	audio_write = audio_write + 3;
+	audio_write = audio_write + 4;
 	
 	if (audio_write >= AUDIO_LEN)
 	{
@@ -1676,13 +1689,29 @@ void nes_border()
 		pixel_color = ppu_palette[pal_ram[0]];
 	}
 	
-	for (unsigned short y=0; y<240; y++)
+	for (unsigned short y=0; y<8; y++)
+	{
+		for (unsigned short x=0; x<256; x++)
+		{
+			nes_pixel(x, y, 0x00);
+		}
+	}
+	
+	for (unsigned short y=8; y<232; y++) // remove overscan
 	{
 		for (unsigned short x=0; x<256; x++)
 		{
 			nes_pixel(x, y, pixel_color); // background color
 		}
-	}	
+	}
+	
+	for (unsigned short y=232; y<240; y++)
+	{
+		for (unsigned short x=0; x<256; x++)
+		{
+			nes_pixel(x, y, 0x00);
+		}
+	}
 }
 
 void nes_background(unsigned short line)
@@ -1695,114 +1724,118 @@ void nes_background(unsigned short line)
 	
 	if (ppu_flag_eb > 0)
 	{
-		for (unsigned char w=0; w<32; w++)
-		{	
-			scroll_x = w + ((ppu_reg_x & 0xF8) >> 3);
-			scroll_y = (line>>3) + ((ppu_reg_y & 0xF8) >> 3);
-			scroll_n = ppu_flag_n;
+		pixel_y = line - (ppu_reg_y & 0x07);
+		
+		if (pixel_y >= 8 && pixel_y < 232) // remove overscan above and below
+		{
+			for (unsigned char w=0; w<32; w++)
+			{	
+				scroll_x = w + ((ppu_reg_x & 0xF8) >> 3);
+				scroll_y = (line>>3) + ((ppu_reg_y & 0xF8) >> 3);
+				scroll_n = ppu_flag_n;
 
-			switch (ppu_flag_n)
-			{
-				case (0x00):
+				switch (ppu_flag_n)
 				{
-					if (scroll_x >= 32)
+					case (0x00):
 					{
-						scroll_n += 1;
-						scroll_x -= 32;
-					}
-					
-					if (scroll_y >= 30)
-					{
-						scroll_n += 2;
-						scroll_y -= 30;
-					}
-					
-					break;
-				}
-				case (0x01):
-				{
-					if (scroll_x >= 32)
-					{
-						scroll_n -= 1;
-						scroll_x -= 32;
-					}
-
-					if (scroll_y >= 30)
-					{
-						scroll_n += 2;
-						scroll_y -= 30;
-					}
-					
-					break;
-				}
-				case (0x02):
-				{
-					if (scroll_x >= 32)
-					{
-						scroll_n += 1;
-						scroll_x -= 32;
-					}
-
-					if (scroll_y >= 30)
-					{
-						scroll_n -= 2;
-						scroll_y -= 30;
-					}
-					
-					break;
-				}
-				case (0x03):
-				{
-					if (scroll_x >= 32)
-					{
-						scroll_n -= 1;
-						scroll_x -= 32;
-					}
-
-					if (scroll_y >= 30)
-					{
-						scroll_n -= 2;
-						scroll_y -= 30;
-					}
-					
-					break;
-				}
-			}
-
-			pixel_table = (ppu_ram[((0x03C0+(scroll_n<<10)+((scroll_y&0xFC)<<1)+((scroll_x&0xFC)>>2))&ppu_status_m)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
-
-			pixel_lookup = chr_offset+(ppu_ram[(((scroll_n<<10)+(scroll_y<<5)+(scroll_x))&ppu_status_m)]<<4)+0x1000*ppu_flag_b+(line&0x07);
-
-			pixel_low = cart_rom[pixel_lookup];
-			pixel_high = cart_rom[pixel_lookup+8];
-
-			for (unsigned char i=0; i<8; i++)
-			{
-				pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
-
-				if (pixel_color != 0x00)
-				{
-					pixel_x = w * 8 + i - (ppu_reg_x & 0x07);
-					pixel_y = line - (ppu_reg_y & 0x07);
-
-					if (pixel_x >= 0 && pixel_x < 256 && pixel_y >= 0 && pixel_y < 240)
-					{
-						if (ppu_flag_lb > 0 || w*8+i >= 8) 
+						if (scroll_x >= 32)
 						{
-							if (ppu_flag_g > 0)
+							scroll_n += 1;
+							scroll_x -= 32;
+						}
+
+						if (scroll_y >= 30)
+						{
+							scroll_n += 2;
+							scroll_y -= 30;
+						}
+
+						break;
+					}
+					case (0x01):
+					{
+						if (scroll_x >= 32)
+						{
+							scroll_n -= 1;
+							scroll_x -= 32;
+						}
+
+						if (scroll_y >= 30)
+						{
+							scroll_n += 2;
+							scroll_y -= 30;
+						}
+
+						break;
+					}
+					case (0x02):
+					{
+						if (scroll_x >= 32)
+						{
+							scroll_n += 1;
+							scroll_x -= 32;
+						}
+
+						if (scroll_y >= 30)
+						{
+							scroll_n -= 2;
+							scroll_y -= 30;
+						}
+
+						break;
+					}
+					case (0x03):
+					{
+						if (scroll_x >= 32)
+						{
+							scroll_n -= 1;
+							scroll_x -= 32;
+						}
+
+						if (scroll_y >= 30)
+						{
+							scroll_n -= 2;
+							scroll_y -= 30;
+						}
+
+						break;
+					}
+				}
+
+				pixel_table = (ppu_ram[((0x03C0+(scroll_n<<10)+((scroll_y&0xFC)<<1)+((scroll_x&0xFC)>>2))&ppu_status_m)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+
+				pixel_lookup = chr_offset+(ppu_ram[(((scroll_n<<10)+(scroll_y<<5)+(scroll_x))&ppu_status_m)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+
+				pixel_low = cart_rom[pixel_lookup];
+				pixel_high = cart_rom[pixel_lookup+8];
+
+				for (unsigned char i=0; i<8; i++)
+				{
+					pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
+
+					if (pixel_color != 0x00)
+					{
+						pixel_x = w * 8 + i - (ppu_reg_x & 0x07);
+
+						if (pixel_x >= 0 && pixel_x < 256)
+						{
+							if (ppu_flag_lb > 0 || w*8+i >= 8) 
 							{
-								nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[((pixel_table&0x03)<<2)+pixel_color]&0x30)]);
-							}
-							else
-							{
-								nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[((pixel_table&0x03)<<2)+pixel_color]]);
+								if (ppu_flag_g > 0)
+								{
+									nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[((pixel_table&0x03)<<2)+pixel_color]&0x30)]);
+								}
+								else
+								{
+									nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[((pixel_table&0x03)<<2)+pixel_color]]);
+								}
 							}
 						}
 					}
-				}
 
-				pixel_high = pixel_high << 1;
-				pixel_low = pixel_low << 1;
+					pixel_high = pixel_high << 1;
+					pixel_low = pixel_low << 1;
+				}
 			}
 		}
 	}
@@ -1820,14 +1853,14 @@ void nes_sprites(unsigned char ground)
 	{
 		for (signed char s=63; s>=0; s--) // must be signed!
 		{
-			sprite_attr = oam_ram[(s<<2)+2];
+			sprite_x = oam_ram[(s<<2)+3];
+			sprite_y = oam_ram[(s<<2)+0];
 
-			if (((sprite_attr&0x20)>>5) == ground) // foreground/background
+			if (sprite_x < 0xF9 && sprite_y < 0xEF)
 			{
-				sprite_x = oam_ram[(s<<2)+3];
-				sprite_y = oam_ram[(s<<2)+0];
+				sprite_attr = oam_ram[(s<<2)+2];
 
-				if (sprite_x < 0xF9 && sprite_y < 0xEF)
+				if (((sprite_attr&0x20)>>5) == ground) // foreground/background
 				{
 					sprite_flip_horz = ((sprite_attr>>6)&0x01);
 					sprite_flip_vert = (sprite_attr>>7);
@@ -1883,9 +1916,9 @@ void nes_audio(unsigned long cycles)
 {
 	apu_counter_q += (cycles);
 	
-	while (apu_counter_q >= 7456) // quarter of a frame
+	while (apu_counter_q >= 7446) //7456) // quarter of a frame
 	{
-		apu_counter_q -= 7456;
+		apu_counter_q -= 7446; //7456;
 		
 		apu_counter_s++;
 		
@@ -2323,18 +2356,18 @@ void nes_loop(unsigned short loop_count)
 		
 		cpu_scanline_count++;
 		
-		nes_audio(114);
+		if (nes_audio_flag > 0)
+		{
+			nes_audio(114);
+		}
 	}
-	
+
 	cpu_frame_cycles += (cpu_current_cycles<<1);
 	
 	if (cpu_frame_cycles < 4546) // 2273 cycles in v-blank
 	{
 		// v-sync
 		ppu_flag_v = 0x0001;
-		
-		cpu_scanline_cycles = 0;
-		cpu_scanline_count = 0;
 		
 		ppu_flag_0 = 0;
 		
@@ -2359,8 +2392,7 @@ void nes_loop(unsigned short loop_count)
 		// v-sync
 		ppu_flag_v = 0x0001;
 		
-		cpu_scanline_cycles = 0;
-		cpu_scanline_count = 0;
+		cpu_scanline_count = -21;
 		
 		ppu_reg_a = 0;
 		
@@ -2400,6 +2432,11 @@ void nes_loop(unsigned short loop_count)
 			nes_sprites(0);
 
 			nes_frame();
+			
+			// wait for interrupts to catch up
+			while (cpu_interrupt_count < loop_count) { }
+		
+			cpu_interrupt_count = 0;
 		}
 		
 		cpu_frame_count++;
@@ -2414,5 +2451,6 @@ void nes_loop(unsigned short loop_count)
 		
 		nes_buttons();
 	}
+	
 }
 

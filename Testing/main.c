@@ -2,37 +2,33 @@
 // By: Professor Steven Chad Burrow
 
 
-// comment out if you want to program the PIC32 faster
-//#define SPLASH
-
-
 /*
-VESA Signal 800 x 600 @ 72 Hz timing
+VESA Signal 1280 x 1024 @ 60 Hz timing
 
 Interested in easy to use VGA solution for embedded applications? Click here!
 
 General timing
-Screen refresh rate	72 Hz
-Vertical refresh	48.076923076923 kHz
-Pixel freq.	50.0 MHz
+Screen refresh rate	60 Hz
+Vertical refresh	63.981042654028 kHz
+Pixel freq.	108.0 MHz
 Horizontal timing (line)
 Polarity of horizontal sync pulse is positive.
 
 Scanline part	Pixels	Time [µs]
-Visible area	800	16
-Front porch	56	1.12
-Sync pulse	120	2.4
-Back porch	64	1.28
-Whole line	1040	20.8
+Visible area	1280	11.851851851852
+Front porch	48	0.44444444444444
+Sync pulse	112	1.037037037037
+Back porch	248	2.2962962962963
+Whole line	1688	15.62962962963
 Vertical timing (frame)
 Polarity of vertical sync pulse is positive.
 
 Frame part	Lines	Time [ms]
-Visible area	600	12.48
-Front porch	37	0.7696
-Sync pulse	6	0.1248
-Back porch	23	0.4784
-Whole frame	666	13.8528
+Visible area	1024	16.004740740741
+Front porch	1	0.01562962962963
+Sync pulse	3	0.046888888888889
+Back porch	38	0.59392592592593
+Whole frame	1066	16.661185185185
 */
 
 /*	
@@ -257,7 +253,8 @@ void SendLongHex(unsigned long value)
 volatile unsigned char __attribute__((coherent,address(0x8004F800))) screen_line[SCREEN_X*2];
 volatile unsigned char __attribute__((coherent,address(0x80010000))) screen_buffer[SCREEN_X*SCREEN_Y*2]; // visible portion of screen
 volatile unsigned char screen_frame = 0;
-volatile unsigned int screen_scanline = 637; // start of vertical sync
+volatile unsigned char screen_interlace = 0;
+volatile unsigned int screen_scanline = 1025; // start of vertical sync
 volatile unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 
 #define AUDIO_LEN 4096
@@ -572,6 +569,14 @@ void display_string(unsigned int x, unsigned int y, char *value)
 
 
 
+void __attribute__((vector(_TIMER_8_VECTOR), interrupt(ipl1srs))) t8_handler()
+{		
+   IFS1bits.T8IF = 0;  // clear interrupt flag
+   
+   nes_interrupt();
+}
+
+
 int main()
 {
 	unsigned short menu_pos = 0;
@@ -607,6 +612,18 @@ int main()
 	TRISFbits.TRISF4 = 1;
 	TRISFbits.TRISF5 = 1;
 	TRISFbits.TRISF8 = 1;
+
+	T8CON = 0x0060; // prescale of 1:64, 16-bit
+	TMR8 = 0x0000; // zero out counter
+	PR8 = 0xDBB9; // v-blank start (minus one)
+	
+	IPC9bits.T8IP = 0x1; // interrupt priority 1
+	IPC9bits.T8IS = 0x0; // interrupt sub-priority 0
+	IFS1bits.T8IF = 0; // T8 clear flag
+	IEC1bits.T8IE = 1; // T8 interrupt on
+	
+	// turn on timer
+	T8CONbits.ON = 1;
 	
 	for (unsigned short i=0; i<AUDIO_LEN*2; i++)
 	{
@@ -709,15 +726,15 @@ int main()
 				display_string(0x0010, 0x0010, "  Return to Game\\");
 				display_string(0x0010, 0x0018, "  Audio Enable\\");
 				display_string(0x0010, 0x0020, "  Audio Disable\\");
-				display_string(0x0010, 0x0028, "  Frames 1:1\\");
-				display_string(0x0010, 0x0030, "  Frames 2:1\\");
-				display_string(0x0010, 0x0038, "  Frames 3:1\\");
-				display_string(0x0010, 0x0040, "  Frames 4:1\\");
-				display_string(0x0010, 0x0048, "  Frames 5:1\\");
-				display_string(0x0010, 0x0050, "  Frames 6:1\\");
-				display_string(0x0010, 0x0058, "  Frames 7:1\\");
-				display_string(0x0010, 0x0060, "  Frames 8:1\\");
-				display_string(0x0010, 0x0068, "  Frames 9:1\\");
+				display_string(0x0010, 0x0028, "  Video Progressive\\");
+				display_string(0x0010, 0x0030, "  Video Interlaced\\");
+				display_string(0x0010, 0x0038, "  Frames 1:1\\");
+				display_string(0x0010, 0x0040, "  Frames 2:1\\");
+				display_string(0x0010, 0x0048, "  Frames 3:1\\");
+				display_string(0x0010, 0x0050, "  Frames 4:1\\");
+				display_string(0x0010, 0x0058, "  Frames 5:1\\");
+				display_string(0x0010, 0x0060, "  Frames 6:1\\");
+				display_string(0x0010, 0x0068, "  Frames 7:1\\");
 
 				DelayMS(1000);
 				
@@ -758,9 +775,11 @@ int main()
 				controller_enable = 1;
 				
 				if (menu_pos == 0) { }
-				else if (menu_pos == 1) audio_enable = 1;
-				else if (menu_pos == 2) audio_enable = 0;
-				else if (menu_pos > 2) rate = menu_pos - 2;
+				else if (menu_pos == 1) { audio_enable = 1; nes_audible(1); }
+				else if (menu_pos == 2) { audio_enable = 0; nes_audible(0); }
+				else if (menu_pos == 3) { screen_interlace = 0; }
+				else if (menu_pos == 4) { screen_interlace = 1; }
+				else if (menu_pos > 4) rate = menu_pos - 4;
 			}
 			
 			nes_loop(rate); // frame rate divider

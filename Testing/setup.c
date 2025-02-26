@@ -86,13 +86,13 @@ void Setup()
 	CFGCONbits.OCACLK = 1; // use alternate OC/TMR table
 	
 	PB1DIV = 0x00008001; // divide by 2
-	PB2DIV = 0x00008003; // change PB2 clock to 200 / 4 = 50 MHz for SPI and UART
+	PB2DIV = 0x00008004; // change PB2 clock to 216 / 5 = 43.2 MHz for SPI and UART
 	PB3DIV = 0x00008000; // set OC and TMR clock division by 1
 	PB4DIV = 0x00008001; // divide by 2
 	PB5DIV = 0x00008001; // divide by 2
 	//PB6DIV = 0x00008001; // divide by 2
 	PB7DIV = 0x00008000; // CPU clock divide by 1
-	SPLLCON = 0x01310201; // use PLL to bring external 24 MHz into 200 MHz
+	SPLLCON = 0x01110001; // use PLL to bring external 24 MHz into 216 MHz
 	
 	// PRECON - Set up prefetch
 	PRECONbits.PFMSECEN = 0; // Flash SEC Interrupt Enable (Do not generate an interrupt when the PFMSEC bit is set)
@@ -114,9 +114,9 @@ void Setup()
 	SYSKEY = 0x556699AA; // unlock key #2
 	CFGCONbits.IOLOCK = 0; // PPS is unlocked
 	//RPD0R = 0xC; // OC1 on pin RPD0 (pixel clock)
-	//RPD5R = 0xB; // OC2 on pin RPD5 (visible clock)
+	RPD5R = 0xB; // OC2 on pin RPD5 (visible clock)
 	RPD2R = 0xB; // OC3 on pin RPD2 (h-sync)
-	RPD3R = 0xB; // OC4 on pin RPD3 (v-sync)
+	RPD3R = 0xC; // OC7 on pin RPD3 (v-sync)
 	SDI1R = 0xE; // SDI1 on pin RPD6 (miso)
 	RPD7R = 0x5; // SDO1 on pin RPD7 (mosi)
 	// SCK1 on RD1 (sclk)
@@ -129,45 +129,43 @@ void Setup()
 	// set OC2 and OC3 and TMR5, horizontal visible and sync clocks
 	OC2CON = 0x0; // reset OC2
 	OC2CON = 0x0000000D; // toggle, use Timer5
-	OC2R = 0x02E0; // 0x02E0; // h-visible rise
-	OC2RS = 0x0F60; // 0x0F60; // h-blank fall
+	OC2R = 0x02D0; // h-visible rise
+	OC2RS = 0x0CD0; // h-blank fall
 	OC3CON = 0x0; // reset OC3
 	OC3CON = 0x0000000D; // toggle, use Timer5
 	OC3R = 0x0000; // h-sync rise
-	OC3RS = 0x01E0; // h-sync fall
+	OC3RS = 0x00E0; // h-sync fall
 	T5CON = 0x0000; // reset Timer5, prescale of 1:1
 	TMR5 = 0x0000; // zero out counter (offset some cycles)
-	PR5 = 0x103F; // h-reset (minus one)
+	PR5 = 0x0D2F; // h-reset (minus one)
 	
-	// set OC4 and TMR2, vertical sync clock
-	OC4CON = 0x0; // reset OC4
-	OC4CON = 0x00000005; // toggle, use Timer2
-	OC4R = 0x0000; // v-sync rise
-	OC4RS = 0x0186; // v-sync fall
-	T2CON = 0x0060; // prescale of 1:64
-	TMR2 = 0x0000; // zero out counter (offset some cycles)
-	PR2 = 0xA919; // v-reset (minus one)
+	// set OC7 and TMR6, vertical sync clock
+	OC7CON = 0x0; // reset OC7
+	OC7CON = 0x0025; // toggle, use Timer6, 32-bit
+	OC7R = 0x00000000; // v-sync rise
+	OC7RS = 0x00002790; // v-sync fall
+	T6CON = 0x0008; // prescale of 1:1, 32-bit
+	TMR6 = 0x00000000; // zero out counter (offset some cycles)
+	PR6 = 0x0036E9DF; // v-reset (minus one)
 	
 	// TMR3, start of scanline
 	T3CON = 0x0000; // reset Timer3, prescale of 1:1
-	TMR3 = 0x0CC0; // zero out counter (offset some cycles)
-	PR3 = 0x103F; // h-reset (minus one)
+	TMR3 = 0x0A60; // zero out counter (offset some cycles)
+	PR3 = 0x0D2F; // h-reset (minus one)
 	
 	// TMR4, end of scanline
 	T4CON = 0x0000; // rest Timer4, prescale of 1:1
-	TMR4 = 0x0180; // zero out counter
-	PR4 = 0x103F; // pixel-reset (minus one)
+	TMR4 = 0x0260; // zero out counter
+	PR4 = 0x0D2F; // h-reset (minus one)
 	
 	IPC4bits.OC3IP = 0x7; // interrupt priority 7
 	IPC4bits.OC3IS = 0x0; // interrupt sub-priority 0
 	IFS0bits.OC3IF = 0; // OC3 clear flag
 	IEC0bits.OC3IE = 1; // OC3 interrupt on (set priority here?)
 	
-	OC1CONbits.ON = 1; // turn OC1 on
 	OC2CONbits.ON = 1; // turn OC2 on
 	OC3CONbits.ON = 1; // turn OC3 on
-	OC4CONbits.ON = 1; // turn OC4 on
-	OC5CONbits.ON = 1; // turn OC5 on
+	OC7CONbits.ON = 1; // turn OC7 on
 
 	// DMA setup
 	IEC4bits.DMA0IE = 0; // disable interrupts
@@ -238,7 +236,7 @@ void Setup()
 	IEC3bits.CNDIE = 1; // enable interrupts
 
 	// set up UART here
-	U3BRG = 0x0145; // 50 MHz to 9600 baud = 50000000/(16*9600)-1 = 324.52 = 0x0145
+	U3BRG = 0x0118; // 43.2 MHz to 9600 baud = 43200000/(16*9600)-1 = 280.25 = 0x0118
 	
 	U3MODEbits.STSEL = 0; // 1-Stop bit
 	U3MODEbits.PDSEL = 0; // No Parity, 8-Data bits
@@ -351,7 +349,7 @@ void Setup()
 	T5CONbits.ON = 1; // turn on TMR5 horizontal sync (cycle offset pre-calculated above)
 	T3CONbits.ON = 1; // turn on TMR3 scanline start (cycle offset pre-calculated above)
 	T4CONbits.ON = 1; // turn on TMR4 scanline end (independent of others)
-	T2CONbits.ON = 1; // turn on TMR2 vertical sync (cycle offset pre-calculated above)
+	T6CONbits.ON = 1; // turn on TMR6 vertical sync (cycle offset pre-calculated above)
 	
 	
 	return;

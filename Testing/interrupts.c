@@ -23,10 +23,52 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 	
 	screen_scanline = screen_scanline + 1; // increment scanline
 	
-	if (screen_scanline == 666)
+	if (screen_scanline == 1066)
 	{
 		screen_scanline = 0;
-		
+	}
+	
+	if (screen_scanline == 0)
+	{
+		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+		DCH1SSA = VirtToPhys(screen_line); // transfer source physical address
+		DCH1SSIZ = SCREEN_X; // source size
+		DCH1DSIZ = 1; // dst size 
+		DCH1CSIZ = SCREEN_X; // X byte per event
+		DCH1CONbits.CHEN = 1; // enable channel
+	}
+	else if (screen_scanline < SCREEN_Y*4)
+	{	
+		if (screen_interlace == 0 || (screen_interlace > 0 && (screen_scanline & 0x0001) == 0x0000))
+		{
+			DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+			DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*SCREEN_Y*screen_frame + SCREEN_X*((screen_scanline)>>2)); // transfer source physical address
+			DCH1SSIZ = SCREEN_X; // source size
+			DCH1DSIZ = 1; // dst size 
+			DCH1CSIZ = SCREEN_X; // X byte per event
+			DCH1CONbits.CHEN = 1; // enable channel
+		}
+		else
+		{
+			DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+			DCH1SSA = VirtToPhys(screen_zero); // transfer source physical address
+			DCH1SSIZ = 1; // source size
+			DCH1DSIZ = 1; // dst size 
+			DCH1CSIZ = 1; // X byte per event
+			DCH1CONbits.CHEN = 1; // enable channel
+		}
+	}
+	else if (screen_scanline == SCREEN_Y*4)
+	{
+		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+		DCH1SSA = VirtToPhys(screen_line); // transfer source physical address
+		DCH1SSIZ = SCREEN_X; // source size
+		DCH1DSIZ = 1; // dst size 
+		DCH1CSIZ = SCREEN_X; // X byte per event
+		DCH1CONbits.CHEN = 1; // enable channel
+	}
+	else if (screen_scanline == SCREEN_Y*4+1)
+	{
 		if (controller_enable > 0)
 		{
 			if (TRISKbits.TRISK6 > 0)
@@ -79,42 +121,6 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 		}
 	}
 	
-	if (screen_scanline < 43)
-	{
-		// do nothing
-	}
-	else if (screen_scanline == 43)
-	{
-		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-		DCH1SSA = VirtToPhys(screen_line); // transfer source physical address
-		DCH1SSIZ = SCREEN_X; // source size
-		DCH1DSIZ = 1; // dst size 
-		DCH1CSIZ = SCREEN_X; // X byte per event
-		DCH1CONbits.CHEN = 1; // enable channel
-	}
-	else if (screen_scanline < SCREEN_Y*2+44)
-	{	
-		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-		DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*SCREEN_Y*screen_frame + SCREEN_X*((screen_scanline-44)>>1)); // transfer source physical address
-		DCH1SSIZ = SCREEN_X; // source size
-		DCH1DSIZ = 1; // dst size 
-		DCH1CSIZ = SCREEN_X; // X byte per event
-		DCH1CONbits.CHEN = 1; // enable channel
-	}
-	else if (screen_scanline == SCREEN_Y*2+44)
-	{
-		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-		DCH1SSA = VirtToPhys(screen_line); // transfer source physical address
-		DCH1SSIZ = SCREEN_X; // source size
-		DCH1DSIZ = 1; // dst size 
-		DCH1CSIZ = SCREEN_X; // X byte per event
-		DCH1CONbits.CHEN = 1; // enable channel
-	}
-	else if (screen_scanline == 665)
-	{
-		// do nothing
-	}
-	
 	return;
 }
 
@@ -152,3 +158,4 @@ void __attribute__((vector(_UART3_RX_VECTOR), interrupt(ipl3srs))) u3rx_handler(
 	
 	return;
 }
+
