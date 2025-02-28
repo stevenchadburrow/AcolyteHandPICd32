@@ -38,6 +38,7 @@ volatile unsigned long chr_offset = 0x00000000;
 
 volatile unsigned char nes_init_flag = 0;
 volatile unsigned char nes_audio_flag = 1;
+volatile unsigned char nes_overscan_flag = 0;
 volatile unsigned long nes_pixel_location = 0;
 
 volatile unsigned long cpu_current_cycles = 0, cpu_dma_cycles = 0;
@@ -294,6 +295,11 @@ void nes_frame()
 void nes_audible(unsigned char enable)
 {
 	nes_audio_flag = enable;
+}
+
+void nes_overscan(unsigned char enable)
+{
+	nes_overscan_flag = enable;
 }
 
 // change for platform
@@ -1735,27 +1741,73 @@ void nes_border()
 		pixel_color = ppu_palette[pal_ram[0]];
 	}
 	
-	for (unsigned short y=0; y<8; y++)
+	if (nes_overscan_flag > 0)
 	{
-		for (unsigned short x=0; x<256; x++)
+		/*
+		for (unsigned short y=0; y<8; y++)
 		{
-			nes_pixel(x, y, 0x00);
+			for (unsigned short x=0; x<256; x++)
+			{
+				nes_pixel(x, y, 0x00);
+			}
+		}
+		
+		for (unsigned short y=232; y<240; y++)
+		{
+			for (unsigned short x=0; x<256; x++)
+			{
+				nes_pixel(x, y, 0x00);
+			}
+		}
+		*/
+		
+		for (unsigned short y=8; y<232; y++) // remove overscan
+		{
+			for (unsigned short x=0; x<256; x++)
+			{
+				nes_pixel(x, y, pixel_color); // background color
+			}
 		}
 	}
-	
-	for (unsigned short y=8; y<232; y++) // remove overscan
+	else
 	{
-		for (unsigned short x=0; x<256; x++)
+		/*
+		for (unsigned short y=0; y<16; y++)
 		{
-			nes_pixel(x, y, pixel_color); // background color
+			for (unsigned short x=0; x<256; x++)
+			{
+				nes_pixel(x, y, 0x00);
+			}
 		}
-	}
-	
-	for (unsigned short y=232; y<240; y++)
-	{
-		for (unsigned short x=0; x<256; x++)
+		
+		for (unsigned short y=224; y<240; y++)
 		{
-			nes_pixel(x, y, 0x00);
+			for (unsigned short x=0; x<256; x++)
+			{
+				nes_pixel(x, y, 0x00);
+			}
+		}
+		
+		for (unsigned short y=8; y<232; y++)
+		{
+			for (unsigned short x=0; x<8; x++)
+			{
+				nes_pixel(x, y, 0x00);
+			}
+			
+			for (unsigned short x=248; x<256; x++)
+			{
+				nes_pixel(x, y, 0x00);
+			}
+		}
+		*/
+		
+		for (unsigned short y=16; y<228; y++) // remove overscan
+		{
+			for (unsigned short x=8; x<248; x++)
+			{
+				nes_pixel(x, y, pixel_color); // background color
+			}
 		}
 	}
 }
@@ -1772,9 +1824,12 @@ void nes_background(unsigned short line)
 	{
 		pixel_y = line - (ppu_reg_y & 0x07);
 		
-		if (pixel_y >= 8 && pixel_y < 232) // remove overscan above and below
+		if ((pixel_y >= 8 && pixel_y < 232 && nes_overscan_flag == 1) ||
+			(pixel_y >= 16 && pixel_y < 228 && nes_overscan_flag == 0)) // remove overscan above and below
+		//if (pixel_y >= 8 && pixel_y < 232)
 		{
-			for (unsigned char w=0; w<33; w++) // go one more than 32
+			for (unsigned char w=(1-nes_overscan_flag); w<32+nes_overscan_flag; w++) // go one more than 32
+			//for (unsigned char w=0; w<33; w++)
 			{	
 				scroll_x = w + ((ppu_reg_x & 0xF8) >> 3);
 				scroll_y = (line>>3) + ((ppu_reg_y & 0xF8) >> 3);
@@ -1878,7 +1933,9 @@ void nes_background(unsigned short line)
 					{
 						pixel_x = w * 8 + i - (ppu_reg_x & 0x07);
 
-						if (pixel_x >= 0 && pixel_x < 256)
+						if ((pixel_x >= 0 && pixel_x < 256 && nes_overscan_flag == 1) ||
+							(pixel_x >= 8 && pixel_x < 248 && nes_overscan_flag == 0))
+						//if (pixel_x >= 0 && pixel_x < 256)
 						{
 							if (ppu_flag_lb > 0 || w*8+i >= 8) 
 							{
@@ -1907,6 +1964,7 @@ void nes_sprites(unsigned char ground)
 	unsigned char sprite_x = 0, sprite_y = 0, sprite_attr = 0, sprite_tile = 0;
 	unsigned char sprite_flip_horz = 0, sprite_flip_vert = 0;
 	
+	unsigned short pixel_x = 0, pixel_y = 0;
 	unsigned short pixel_lookup = 0, pixel_table = 0;
 	unsigned char pixel_high = 0, pixel_low = 0, pixel_color = 0;
 	
@@ -1956,18 +2014,25 @@ void nes_sprites(unsigned char ground)
 							{
 								if (sprite_flip_horz == 0x00) pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
 								else pixel_color = ((pixel_high<<1)&0x02)|(pixel_low&0x01);
-
+								
 								if (pixel_color != 0x00)
 								{
-									if (ppu_flag_ls > 0 || sprite_x+i >= 8) 
+									pixel_x = sprite_x+i;
+									pixel_y = sprite_y+j+1;
+									
+									if (ppu_flag_ls > 0 || pixel_x >= 8) 
 									{
-										if (ppu_flag_g > 0)
+										if ((pixel_x >= 0 && pixel_x < 256 && pixel_y >= 8 && pixel_y < 232 && nes_overscan_flag == 1) ||
+											(pixel_x >= 8 && pixel_x < 248 && pixel_y >= 16 && pixel_y < 228 && nes_overscan_flag == 0))
 										{
-											nes_pixel(sprite_x+i, sprite_y+j+1, ppu_palette[(pal_ram[0x0010+((sprite_attr&0x03)<<2)+pixel_color]&0x30)]);
-										}
-										else
-										{
-											nes_pixel(sprite_x+i, sprite_y+j+1, ppu_palette[pal_ram[0x0010+((sprite_attr&0x03)<<2)+pixel_color]]);
+											if (ppu_flag_g > 0)
+											{
+												nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[0x0010+((sprite_attr&0x03)<<2)+pixel_color]&0x30)]);
+											}
+											else
+											{
+												nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[0x0010+((sprite_attr&0x03)<<2)+pixel_color]]);
+											}
 										}
 									}
 								}
@@ -2034,15 +2099,22 @@ void nes_sprites(unsigned char ground)
 
 								if (pixel_color != 0x00)
 								{
-									if (ppu_flag_ls > 0 || sprite_x+i >= 8) 
+									pixel_x = sprite_x+i;
+									pixel_y = sprite_y+j+1;
+									
+									if (ppu_flag_ls > 0 || pixel_x >= 8) 
 									{
-										if (ppu_flag_g > 0)
+										if ((pixel_x >= 0 && pixel_x < 256 && pixel_y >= 8 && pixel_y < 232 && nes_overscan_flag == 1) ||
+											(pixel_x >= 8 && pixel_x < 248 && pixel_y >= 16 && pixel_y < 228 && nes_overscan_flag == 0))
 										{
-											nes_pixel(sprite_x+i, sprite_y+j+1, ppu_palette[(pal_ram[0x0010+((sprite_attr&0x03)<<2)+pixel_color]&0x30)]);
-										}
-										else
-										{
-											nes_pixel(sprite_x+i, sprite_y+j+1, ppu_palette[pal_ram[0x0010+((sprite_attr&0x03)<<2)+pixel_color]]);
+											if (ppu_flag_g > 0)
+											{
+												nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[0x0010+((sprite_attr&0x03)<<2)+pixel_color]&0x30)]);
+											}
+											else
+											{
+												nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[0x0010+((sprite_attr&0x03)<<2)+pixel_color]]);
+											}
 										}
 									}
 								}

@@ -661,7 +661,7 @@ int main()
 	display_string(0x0010, 0x0078, "  Load Duck Tales\\");
 	display_string(0x0010, 0x0080, "  Load Paperboy\\");
 	display_string(0x0010, 0x0088, "  Load Ghostbusters\\");
-	display_string(0x0010, 0x0090, "  ???\\");
+	display_string(0x0010, 0x0090, "  Load Gradius\\");
 	display_string(0x0010, 0x0098, "  ???\\");
 	
 	DelayMS(1000);
@@ -735,13 +735,13 @@ int main()
 				display_string(0x0010, 0x0020, "  Audio Disable\\");
 				display_string(0x0010, 0x0028, "  Video Progressive\\");
 				display_string(0x0010, 0x0030, "  Video Interlaced\\");
-				display_string(0x0010, 0x0038, "  Frames 1:1\\");
-				display_string(0x0010, 0x0040, "  Frames 2:1\\");
-				display_string(0x0010, 0x0048, "  Frames 3:1\\");
-				display_string(0x0010, 0x0050, "  Frames 4:1\\");
-				display_string(0x0010, 0x0058, "  Frames 5:1\\");
-				display_string(0x0010, 0x0060, "  Frames 6:1\\");
-				display_string(0x0010, 0x0068, "  Frames 7:1\\");
+				display_string(0x0010, 0x0038, "  Overscan Visible\\");
+				display_string(0x0010, 0x0040, "  Overscan Invisible\\");
+				display_string(0x0010, 0x0048, "  Frames 1:1\\");
+				display_string(0x0010, 0x0050, "  Frames 2:1\\");
+				display_string(0x0010, 0x0058, "  Frames 3:1\\");
+				display_string(0x0010, 0x0060, "  Frames 4:1\\");
+				display_string(0x0010, 0x0068, "  Frames 5:1\\");
 
 				DelayMS(1000);
 				
@@ -786,7 +786,9 @@ int main()
 				else if (menu_pos == 2) { audio_enable = 0; nes_audible(0); }
 				else if (menu_pos == 3) { screen_interlace = 0; }
 				else if (menu_pos == 4) { screen_interlace = 1; }
-				else if (menu_pos > 4) rate = menu_pos - 4;
+				else if (menu_pos == 5) { nes_overscan(1); }
+				else if (menu_pos == 6) { nes_overscan(0); }
+				else if (menu_pos > 6) rate = menu_pos - 6;
 			}
 			
 			nes_loop(rate, 0); // frame rate divider
@@ -869,6 +871,11 @@ int main()
 			case 0x0F:
 			{
 				nes_load("GHOST.NES");
+				break;
+			}
+			case 0x10:
+			{
+				nes_load("GRADIUS.NES");
 				break;
 			}
 			default:
