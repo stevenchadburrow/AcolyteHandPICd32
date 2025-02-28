@@ -573,7 +573,7 @@ void __attribute__((vector(_TIMER_8_VECTOR), interrupt(ipl1srs))) t8_handler()
 {		
    IFS1bits.T8IF = 0;  // clear interrupt flag
    
-   nes_interrupt();
+   nes_increment();
 }
 
 
@@ -613,6 +613,7 @@ int main()
 	TRISFbits.TRISF5 = 1;
 	TRISFbits.TRISF8 = 1;
 
+	T8CON = 0x0000; // reset
 	T8CON = 0x0060; // prescale of 1:64, 16-bit
 	TMR8 = 0x0000; // zero out counter
 	PR8 = 0xDBB9; // v-blank start (minus one)
@@ -653,9 +654,15 @@ int main()
 	display_string(0x0010, 0x0040, "  Load Donkey Kong\\");
 	display_string(0x0010, 0x0048, "  Load Balloon Fight\\");
 	display_string(0x0010, 0x0050, "  Load Micro Mages\\");
-	display_string(0x0010, 0x0058, "  ???\\");
-	display_string(0x0010, 0x0060, "  ???\\");
-	display_string(0x0010, 0x0068, "  ???\\");
+	display_string(0x0010, 0x0058, "  Load 1943\\");
+	display_string(0x0010, 0x0060, "  Load Castlevania\\");
+	display_string(0x0010, 0x0068, "  Load Contra\\");
+	display_string(0x0010, 0x0070, "  Load Mega Man\\");
+	display_string(0x0010, 0x0078, "  Load Duck Tales\\");
+	display_string(0x0010, 0x0080, "  Load Paperboy\\");
+	display_string(0x0010, 0x0088, "  Load Ghostbusters\\");
+	display_string(0x0010, 0x0090, "  ???\\");
+	display_string(0x0010, 0x0098, "  ???\\");
 	
 	DelayMS(1000);
 	
@@ -685,7 +692,7 @@ int main()
 			
 			display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
 			
-			if (menu_pos < 11) menu_pos++;
+			if (menu_pos < 17) menu_pos++;
 		}
 		else
 		{
@@ -782,7 +789,7 @@ int main()
 				else if (menu_pos > 4) rate = menu_pos - 4;
 			}
 			
-			nes_loop(rate); // frame rate divider
+			nes_loop(rate, 0); // frame rate divider
 		}
 	}
 	else
@@ -831,17 +838,37 @@ int main()
 			}
 			case 0x09:
 			{
-				
+				nes_load("1943.NES");
 				break;
 			}
 			case 0x0A:
 			{
-				
+				nes_load("CASTLE.NES");
 				break;
 			}
 			case 0x0B:
 			{
-				
+				nes_load("CONTRA.NES");
+				break;
+			}
+			case 0x0C:
+			{
+				nes_load("MEGAMAN.NES");
+				break;
+			}
+			case 0x0D:
+			{
+				nes_load("DUCKTALE.NES");
+				break;
+			}
+			case 0x0E:
+			{
+				nes_load("PAPERBOY.NES");
+				break;
+			}
+			case 0x0F:
+			{
+				nes_load("GHOST.NES");
 				break;
 			}
 			default:
