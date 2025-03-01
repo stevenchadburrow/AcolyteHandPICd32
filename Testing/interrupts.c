@@ -9,15 +9,22 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 
 	if (audio_enable > 0)
 	{
-		// 8-bit signed audio add 0x80, unsigned add 0x00
-		PORTJ = (unsigned short)(((audio_buffer[AUDIO_LEN*audio_frame+audio_read]) + 0x00) + 
-			(((audio_buffer[AUDIO_LEN*audio_frame+audio_read]) + 0x00) << 8));
+		audio_counter = audio_counter + 1;
 		
-		audio_read = audio_read + 1;
-		
-		if (audio_read >= AUDIO_LEN)
+		if (audio_counter >= 4)
 		{
-			audio_read = 0;
+			audio_counter = 0;
+			
+			// 8-bit signed audio add 0x80, unsigned add 0x00
+			PORTJ = (unsigned short)(((audio_buffer[AUDIO_LEN*audio_frame+audio_read]) + 0x00) + 
+				(((audio_buffer[AUDIO_LEN*audio_frame+audio_read]) + 0x00) << 8));
+
+			audio_read = audio_read + 1;
+
+			if (audio_read >= AUDIO_LEN)
+			{
+				audio_read = 0;
+			}
 		}
 	}
 	

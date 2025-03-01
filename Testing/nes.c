@@ -305,17 +305,14 @@ void nes_overscan(unsigned char enable)
 // change for platform
 void nes_sound(unsigned char sample)
 {
-	if (audio_write+4 >= AUDIO_LEN)
+	audio_buffer[AUDIO_LEN*(1-audio_frame)+audio_write] = sample;
+	
+	audio_write = audio_write + 1;
+	
+	if (audio_write >= AUDIO_LEN)
 	{
 		audio_write = 0;
 	}
-	
-	audio_buffer[AUDIO_LEN*(1-audio_frame)+audio_write] = sample;
-	audio_buffer[AUDIO_LEN*(1-audio_frame)+audio_write+1] = sample;
-	audio_buffer[AUDIO_LEN*(1-audio_frame)+audio_write+2] = sample;
-	audio_buffer[AUDIO_LEN*(1-audio_frame)+audio_write+3] = sample;
-	
-	audio_write = audio_write + 4;
 }
 	
 // change for platform

@@ -257,7 +257,7 @@ volatile unsigned char screen_interlace = 0;
 volatile unsigned int screen_scanline = 1025; // start of vertical sync
 volatile unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 
-#define AUDIO_LEN 4096
+#define AUDIO_LEN 2048
 
 // audio
 volatile unsigned char __attribute__((address(0x8004C000))) audio_buffer[AUDIO_LEN*2];
@@ -265,6 +265,7 @@ volatile unsigned int audio_length = 0;
 volatile unsigned int audio_frame = 0;
 volatile unsigned int audio_read = 0;
 volatile unsigned int audio_write = 0;
+volatile unsigned int audio_counter = 0;
 volatile unsigned int audio_enable = 0;
 
 // controllers
