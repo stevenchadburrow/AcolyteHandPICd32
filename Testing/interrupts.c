@@ -16,8 +16,8 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 			audio_counter = 0;
 			
 			// 8-bit signed audio add 0x80, unsigned add 0x00
-			PORTJ = (unsigned short)(((audio_buffer[AUDIO_LEN*audio_frame+audio_read]) + 0x00) + 
-				(((audio_buffer[AUDIO_LEN*audio_frame+audio_read]) + 0x00) << 8));
+			PORTJ = (unsigned short)(((audio_buffer[audio_read]) + 0x00) + 
+				(((audio_buffer[audio_read]) + 0x00) << 8));
 
 			audio_read = audio_read + 1;
 
@@ -46,24 +46,12 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 	}
 	else if (screen_scanline < SCREEN_Y*4)
 	{	
-		if (screen_interlace == 0 || (screen_interlace > 0 && (screen_scanline & 0x0001) == 0x0000))
-		{
-			DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-			DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*SCREEN_Y*screen_frame + SCREEN_X*((screen_scanline)>>2)); // transfer source physical address
-			DCH1SSIZ = SCREEN_X; // source size
-			DCH1DSIZ = 1; // dst size 
-			DCH1CSIZ = SCREEN_X; // X byte per event
-			DCH1CONbits.CHEN = 1; // enable channel
-		}
-		else
-		{
-			DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-			DCH1SSA = VirtToPhys(screen_zero); // transfer source physical address
-			DCH1SSIZ = 1; // source size
-			DCH1DSIZ = 1; // dst size 
-			DCH1CSIZ = 1; // X byte per event
-			DCH1CONbits.CHEN = 1; // enable channel
-		}
+		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+		DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*SCREEN_Y*screen_frame + SCREEN_X*((screen_scanline)>>2)); // transfer source physical address
+		DCH1SSIZ = SCREEN_X; // source size
+		DCH1DSIZ = 1; // dst size 
+		DCH1CSIZ = SCREEN_X; // X byte per event
+		DCH1CONbits.CHEN = 1; // enable channel
 	}
 	else if (screen_scanline == SCREEN_Y*4)
 	{

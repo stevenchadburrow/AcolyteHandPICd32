@@ -2,6 +2,9 @@
 // By: Professor Steven Chad Burrow
 
 
+// Runs must faster with gcc optimization at level 2,
+// but then USB doesn't work?  Hm.
+
 /*
 VESA Signal 1280 x 1024 @ 60 Hz timing
 
@@ -181,8 +184,9 @@ Pin126,RK7,EXT-BUTTON
 // keeps program code from being written here, reserved for Gameboy
 #pragma region name="game_rom" origin=0x9D100000 size=0x00100000
 
-
 #define SYS_FREQ 200000000 // Running at 200MHz
+
+
 
 unsigned long VirtToPhys(volatile void* p) // changed 'const' to 'volatile'
 {
@@ -244,6 +248,17 @@ void SendLongHex(unsigned long value)
 	SendHex((unsigned char)(temp));
 }
 
+void _general_exception_handler(void)
+{
+	SendString("General Exception\n\r\\");
+	SendLongHex((_CP0_GET_CAUSE() & 0x0000007C) >> 2);
+	SendString("\n\r\\");
+    SendLongHex(_CP0_GET_EPC());
+	SendString("\n\r\\");
+   
+	while (1) { }
+}
+
 
 #define SCREEN_X 512
 #define SCREEN_Y 240
@@ -253,16 +268,13 @@ void SendLongHex(unsigned long value)
 volatile unsigned char __attribute__((coherent,address(0x8004F800))) screen_line[SCREEN_X*2];
 volatile unsigned char __attribute__((coherent,address(0x80010000))) screen_buffer[SCREEN_X*SCREEN_Y*2]; // visible portion of screen
 volatile unsigned char screen_frame = 0;
-volatile unsigned char screen_interlace = 0;
 volatile unsigned int screen_scanline = 1025; // start of vertical sync
 volatile unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 
-#define AUDIO_LEN 2048
+#define AUDIO_LEN 4096
 
 // audio
-volatile unsigned char __attribute__((address(0x8004C000))) audio_buffer[AUDIO_LEN*2];
-volatile unsigned int audio_length = 0;
-volatile unsigned int audio_frame = 0;
+volatile unsigned char __attribute__((address(0x8004C000))) audio_buffer[AUDIO_LEN];
 volatile unsigned int audio_read = 0;
 volatile unsigned int audio_write = 0;
 volatile unsigned int audio_counter = 0;
@@ -663,7 +675,9 @@ int main()
 	display_string(0x0010, 0x0080, "  Load Paperboy\\");
 	display_string(0x0010, 0x0088, "  Load Ghostbusters\\");
 	display_string(0x0010, 0x0090, "  Load Gradius\\");
-	display_string(0x0010, 0x0098, "  ???\\");
+	display_string(0x0010, 0x0098, "  Load Zelda\\");
+	display_string(0x0010, 0x00A0, "  Load Zelda 2\\");
+	display_string(0x0010, 0x00A8, "  ???\\");
 	
 	DelayMS(1000);
 	
@@ -693,7 +707,7 @@ int main()
 			
 			display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
 			
-			if (menu_pos < 17) menu_pos++;
+			if (menu_pos < 19) menu_pos++;
 		}
 		else
 		{
@@ -734,15 +748,11 @@ int main()
 				display_string(0x0010, 0x0010, "  Return to Game\\");
 				display_string(0x0010, 0x0018, "  Audio Enable\\");
 				display_string(0x0010, 0x0020, "  Audio Disable\\");
-				display_string(0x0010, 0x0028, "  Video Progressive\\");
-				display_string(0x0010, 0x0030, "  Video Interlaced\\");
-				display_string(0x0010, 0x0038, "  Overscan Visible\\");
-				display_string(0x0010, 0x0040, "  Overscan Invisible\\");
-				display_string(0x0010, 0x0048, "  Frames 1:1\\");
-				display_string(0x0010, 0x0050, "  Frames 2:1\\");
-				display_string(0x0010, 0x0058, "  Frames 3:1\\");
-				display_string(0x0010, 0x0060, "  Frames 4:1\\");
-				display_string(0x0010, 0x0068, "  Frames 5:1\\");
+				display_string(0x0010, 0x0028, "  Frames 1:1\\");
+				display_string(0x0010, 0x0030, "  Frames 2:1\\");
+				display_string(0x0010, 0x0038, "  Frames 3:1\\");
+				display_string(0x0010, 0x0040, "  Frames 4:1\\");
+				display_string(0x0010, 0x0048, "  Frames 5:1\\");
 
 				DelayMS(1000);
 				
@@ -772,7 +782,7 @@ int main()
 
 						display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
 
-						if (menu_pos < 11) menu_pos++;
+						if (menu_pos < 7) menu_pos++;
 					}
 					else
 					{
@@ -783,16 +793,12 @@ int main()
 				controller_enable = 1;
 				
 				if (menu_pos == 0) { }
-				else if (menu_pos == 1) { audio_enable = 1; nes_audible(1); }
-				else if (menu_pos == 2) { audio_enable = 0; nes_audible(0); }
-				else if (menu_pos == 3) { screen_interlace = 0; }
-				else if (menu_pos == 4) { screen_interlace = 1; }
-				else if (menu_pos == 5) { nes_overscan(1); }
-				else if (menu_pos == 6) { nes_overscan(0); }
-				else if (menu_pos > 6) rate = menu_pos - 6;
+				else if (menu_pos == 1) { audio_enable = 1; nes_audio_flag = 1; }
+				else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
+				else if (menu_pos > 2) rate = menu_pos - 2;
 			}
 			
-			nes_loop(rate, 0); // frame rate divider
+			nes_loop(rate, 0); // frame rate divider and external interrupt
 		}
 	}
 	else
@@ -877,6 +883,16 @@ int main()
 			case 0x10:
 			{
 				nes_load("GRADIUS.NES");
+				break;
+			}
+			case 0x11:
+			{
+				nes_load("ZELDA.NES");
+				break;
+			}
+			case 0x12:
+			{
+				nes_load("ZELDA2.NES");
 				break;
 			}
 			default:

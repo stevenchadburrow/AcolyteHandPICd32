@@ -16,7 +16,7 @@ int main()
 	{
 		while (1)
 		{ 
-			nes_loop(3, 1); // frame rate divider and incrementer
+			nes_loop(3, 1); // frame rate divider and internal interrupt
 		}
 	}
 	
@@ -27,9 +27,10 @@ int main()
 // if using for other platforms, adjust variable types here
 unsigned char *cart_rom = (unsigned char *)0x9D100000;
 
-volatile unsigned char __attribute__((address(0x8004E000))) cpu_ram[2048]; // only cpu ram from 0x0000 to 0x0800
+volatile unsigned char __attribute__((address(0x8004E000))) cpu_ram[2048]; // only cpu ram from 0x0000 to 0x07FF
 volatile unsigned char __attribute__((address(0x80050000))) ppu_ram[4096]; // ppu ram from 0x2000 to 0x2FFF
-volatile unsigned char __attribute__((address(0x80052000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
+volatile unsigned char __attribute__((address(0x80052000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
+volatile unsigned char __attribute__((address(0x80054000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
 volatile unsigned char oam_ram[256]; // special sprite ram inside of ppu
 volatile unsigned char pal_ram[32]; // special palette ram inside of ppu
 
@@ -38,18 +39,28 @@ volatile unsigned long chr_offset = 0x00000000;
 
 volatile unsigned char nes_init_flag = 0;
 volatile unsigned char nes_audio_flag = 1;
-volatile unsigned char nes_overscan_flag = 0;
 volatile unsigned long nes_pixel_location = 0;
 
 volatile unsigned long cpu_current_cycles = 0, cpu_dma_cycles = 0;
-volatile unsigned long cpu_scanline_cycles = 0, cpu_frame_cycles = 0x0000;
-volatile unsigned long cpu_frame_count = 0;
 volatile unsigned long cpu_interrupt_count = 0;
-volatile signed long cpu_scanline_count = 0; // needs to be signed
+volatile unsigned long ppu_scanline_cycles = 0;
+volatile unsigned long ppu_frame_cycles = 0;
+volatile unsigned long ppu_frame_count = 0;
+volatile signed long ppu_scanline_count = 0; // needs to be signed
+volatile unsigned long apu_sample_cycles = 0;
 
 volatile unsigned short map_number = 0x0000;
 volatile unsigned short map_unrom_bank = 0x0000;
 volatile unsigned short map_cnrom_bank = 0x0000;
+
+volatile unsigned short map_mmc1_shift = 0x0000;
+volatile unsigned short map_mmc1_count = 0x0000;
+volatile unsigned short map_mmc1_prg_mode = 0x0003; // should be 0x0003
+volatile unsigned short map_mmc1_chr_mode = 0x0000;
+volatile unsigned short map_mmc1_chr_bank_0 = 0x0000;
+volatile unsigned short map_mmc1_chr_bank_1 = 0x0000;
+volatile unsigned short map_mmc1_prg_bank = 0x0000;
+volatile unsigned short map_mmc1_ram = 0x0000;
 
 volatile unsigned short cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
 volatile unsigned short cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
@@ -59,14 +70,17 @@ volatile unsigned short cpu_reg_pc = 0xFFFC;
 volatile unsigned short cpu_temp_opcode = 0x0000, cpu_temp_memory = 0x0000, cpu_temp_address = 0x0000; 
 volatile unsigned short cpu_temp_result = 0x0000, cpu_temp_cycles = 0x0000;
 
+volatile unsigned short cpu_status_r = 0x0000;
+
 volatile unsigned short ppu_reg_v = 0x0000, ppu_reg_t = 0x0000, ppu_reg_w = 0x0000;
 volatile unsigned short ppu_reg_a = 0x0000, ppu_reg_b = 0x0000;
 
 volatile unsigned short ppu_reg_x = 0x0000, ppu_reg_y = 0x0000;
 
 // flag_e and flag_v were 0x0001;
-volatile unsigned short ppu_flag_e = 0x0000, ppu_flag_p = 0x0000, ppu_flag_h = 0x0000, ppu_flag_b = 0x0000;
-volatile unsigned short ppu_flag_s = 0x0000, ppu_flag_i = 0x0000, ppu_flag_n = 0x0000;
+volatile unsigned short ppu_flag_e = 0x0000, ppu_flag_p = 0x0000, ppu_flag_h = 0x0000;
+volatile unsigned short ppu_flag_b = 0x0000, ppu_flag_s = 0x0000;
+volatile unsigned short ppu_flag_i = 0x0000, ppu_flag_n = 0x0000;
 volatile unsigned short ppu_flag_v = 0x0000, ppu_flag_0 = 0x0000, ppu_flag_o = 0x0000;
 
 volatile unsigned short ppu_flag_g = 0x0000, ppu_flag_lb = 0x0000, ppu_flag_ls = 0x0000;
@@ -279,33 +293,14 @@ void nes_frame()
 {
 	screen_frame = 1 - screen_frame;
 	
-	for (unsigned short i=audio_write; i<AUDIO_LEN; i++)
-	{
-		audio_buffer[AUDIO_LEN*(1-audio_frame)+i] = 0x00;
-	}
-	
-	audio_length = audio_write;
-	
-	audio_frame = 1 - audio_frame;
-	
-	audio_write = 0;
-	audio_read = 0;
-}
-
-void nes_audible(unsigned char enable)
-{
-	nes_audio_flag = enable;
-}
-
-void nes_overscan(unsigned char enable)
-{
-	nes_overscan_flag = enable;
+	//audio_write = 0;
+	//audio_read = 0;
 }
 
 // change for platform
 void nes_sound(unsigned char sample)
 {
-	audio_buffer[AUDIO_LEN*(1-audio_frame)+audio_write] = sample;
+	audio_buffer[audio_write] = sample;
 	
 	audio_write = audio_write + 1;
 	
@@ -499,26 +494,56 @@ unsigned char cpu_read(unsigned short addr)
 			}
 			default:
 			{
-				return 0x00;
+				return 0xFF;
 				break;
 			}
 		}
 	}
 	else if (addr < 0x4020) // disabled apu and i/o
 	{
-		return 0x00; 
+		return 0xFF; 
 	}
 	else if (addr < 0x6000) // unmapped
 	{
-		return 0x00; 
+		return 0xFF; 
 	}
 	else if (addr < 0x8000) // cart ram
 	{	
-		return 0x00;
+		if (cpu_status_r > 0)
+		{
+			if (map_number == 0x0001)
+			{
+				if (map_mmc1_ram == 0)
+				{
+					return prg_ram[addr-0x6000];
+				}
+				else return 0xFF;
+			}
+			else
+			{
+				return prg_ram[addr-0x6000];
+			}
+		}
+		else return 0xFF;
 	}
 	else if (addr < 0xC000) // cart rom (lower half)
 	{
-		if (map_number == 0x0002) // unrom
+		if (map_number == 0x0001) // mmc1
+		{
+			if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
+			{
+				return cart_rom[prg_offset+0x8000*(map_mmc1_prg_bank&0x0E)+addr-0x8000];
+			}
+			else if (map_mmc1_prg_mode == 2)
+			{
+				return cart_rom[prg_offset+addr-0x8000];
+			}
+			else
+			{
+				return cart_rom[prg_offset+0x4000*map_mmc1_prg_bank+addr-0x8000];
+			}
+		}
+		else if (map_number == 0x0002) // unrom
 		{
 			return cart_rom[prg_offset+0x4000*map_unrom_bank+addr-0x8000];
 		}
@@ -529,7 +554,22 @@ unsigned char cpu_read(unsigned short addr)
 	}
 	else // cart rom (upper half)
 	{
-		if (map_number == 0x0002) // unrom
+		if (map_number == 0x0001) // mmc1
+		{
+			if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
+			{
+				cart_rom[prg_offset+0x8000*(map_mmc1_prg_bank&0x0E)+addr-0x8000];
+			}
+			else if (map_mmc1_prg_mode == 2)
+			{
+				return cart_rom[prg_offset+0x4000*map_mmc1_prg_bank+addr-0xC000];
+			}
+			else
+			{
+				return cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000];
+			}
+		}
+		else if (map_number == 0x0002) // unrom
 		{
 			return cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000];
 		}
@@ -612,13 +652,20 @@ void cpu_write(unsigned short addr, unsigned char val)
 			{
 				if (ppu_reg_w == 0x0000)
 				{
-					ppu_reg_t = ((ppu_reg_t & 0x00FF) | (val << 8));
+					ppu_reg_t = ((ppu_reg_t & 0x00FF) | ((val & 0x3F) << 8));
 					ppu_reg_w = 0x0001;
+					
+					// scrolling!
+					ppu_reg_y = ((ppu_reg_y & 0x38) | ((val & 0x03) << 6) | ((val & 0x30) >> 4));
 				}
 				else
 				{
 					ppu_reg_t = ((ppu_reg_t & 0xFF00) | val);
 					ppu_reg_w = 0x0000;
+					
+					// scrolling!
+					ppu_reg_x = ((ppu_reg_x & 0x07) | ((val & 0x1F) << 3));
+					ppu_reg_y = ((ppu_reg_y & 0xC7) | ((val & 0xE0) >> 2));
 				}
 				
 				break;
@@ -630,7 +677,7 @@ void cpu_write(unsigned short addr, unsigned char val)
 					chr_ram[ppu_reg_t] = val;
 				}
 				else if (ppu_reg_t >= 0x2000 && ppu_reg_t < 0x3000)
-				{
+				{	
 					ppu_ram[((ppu_reg_t-0x2000)&ppu_status_m)] = val;
 				}
 				else if (ppu_reg_t == 0x3F00 || ppu_reg_t == 0x3F10)
@@ -941,10 +988,94 @@ void cpu_write(unsigned short addr, unsigned char val)
 	}
 	else if (addr < 0x8000) // cart ram
 	{
+		if (cpu_status_r > 0)
+		{
+			if (map_number == 0x0001)
+			{
+				if (map_mmc1_ram == 0)
+				{
+					prg_ram[addr-0x6000] = val;
+				}
+			}
+			else
+			{
+				prg_ram[addr-0x6000] = val;
+			}
+		}
 	}
 	else // cart rom and mapper
 	{
-		if (map_number == 0x0002) // unrom
+		if (map_number == 0x0001) // mmc1
+		{
+			if ((val & 0x80) != 0x00)
+			{
+				map_mmc1_shift = 0x0000;
+				map_mmc1_count = 0x0000;
+				map_mmc1_prg_mode = 0x0003;
+				map_mmc1_chr_mode = 0x0000;
+				map_mmc1_chr_bank_0 = 0x0000;
+				map_mmc1_chr_bank_1 = 0x0000;
+				map_mmc1_prg_bank = 0x0000;
+				map_mmc1_ram = 0x0000;
+			}
+			else
+			{
+				map_mmc1_shift = ((map_mmc1_shift >> 1) | ((val & 0x01) << 4));
+				map_mmc1_count = map_mmc1_count + 1;
+				
+				if (map_mmc1_count >= 5)
+				{
+					map_mmc1_count = 0;
+				
+					if (addr < 0xA000) // control
+					{
+						/*
+						switch ((map_mmc1_shift & 0x03)) // nametable
+						{
+							case 0x00:
+							{
+								break;
+							}
+							case 0x01:
+							{
+								break;
+							}
+							case 0x02:
+							{
+								ppu_status_m = 0xF7FF; // horizontal scrolling
+								
+								break;
+							}
+							case 0x03:
+							{
+								ppu_status_m = 0xFBFF; // vertical scrolling
+								
+								break;
+							}
+						}
+						*/
+						map_mmc1_prg_mode = ((map_mmc1_shift & 0x0C) >> 2);
+						map_mmc1_chr_mode = ((map_mmc1_shift & 0x10) >> 4);
+					}
+					else if (addr < 0xC000) // chr bank 0
+					{
+						map_mmc1_chr_bank_0 = (map_mmc1_shift & 0x1F);
+					}
+					else if (addr < 0xE000) // chr bank 1
+					{
+						map_mmc1_chr_bank_1 = (map_mmc1_shift & 0x1F);
+					}
+					else // prg bank
+					{
+						map_mmc1_prg_bank = (map_mmc1_shift & 0x0F);
+						map_mmc1_ram = ((map_mmc1_shift & 0x10) >> 4);
+					}
+					
+					map_mmc1_shift = 0x0000;
+				}
+			}
+		}
+		else if (map_number == 0x0002) // unrom
 		{
 			map_unrom_bank = (val & 0x0F);
 		}
@@ -1738,73 +1869,11 @@ void nes_border()
 		pixel_color = ppu_palette[pal_ram[0]];
 	}
 	
-	if (nes_overscan_flag > 0)
+	for (unsigned short y=8; y<232; y++) // remove overscan
 	{
-		/*
-		for (unsigned short y=0; y<8; y++)
+		for (unsigned short x=0; x<256; x++)
 		{
-			for (unsigned short x=0; x<256; x++)
-			{
-				nes_pixel(x, y, 0x00);
-			}
-		}
-		
-		for (unsigned short y=232; y<240; y++)
-		{
-			for (unsigned short x=0; x<256; x++)
-			{
-				nes_pixel(x, y, 0x00);
-			}
-		}
-		*/
-		
-		for (unsigned short y=8; y<232; y++) // remove overscan
-		{
-			for (unsigned short x=0; x<256; x++)
-			{
-				nes_pixel(x, y, pixel_color); // background color
-			}
-		}
-	}
-	else
-	{
-		/*
-		for (unsigned short y=0; y<16; y++)
-		{
-			for (unsigned short x=0; x<256; x++)
-			{
-				nes_pixel(x, y, 0x00);
-			}
-		}
-		
-		for (unsigned short y=224; y<240; y++)
-		{
-			for (unsigned short x=0; x<256; x++)
-			{
-				nes_pixel(x, y, 0x00);
-			}
-		}
-		
-		for (unsigned short y=8; y<232; y++)
-		{
-			for (unsigned short x=0; x<8; x++)
-			{
-				nes_pixel(x, y, 0x00);
-			}
-			
-			for (unsigned short x=248; x<256; x++)
-			{
-				nes_pixel(x, y, 0x00);
-			}
-		}
-		*/
-		
-		for (unsigned short y=16; y<228; y++) // remove overscan
-		{
-			for (unsigned short x=8; x<248; x++)
-			{
-				nes_pixel(x, y, pixel_color); // background color
-			}
+			nes_pixel(x, y, pixel_color); // background color
 		}
 	}
 }
@@ -1821,12 +1890,9 @@ void nes_background(unsigned short line)
 	{
 		pixel_y = line - (ppu_reg_y & 0x07);
 		
-		if ((pixel_y >= 8 && pixel_y < 232 && nes_overscan_flag == 1) ||
-			(pixel_y >= 16 && pixel_y < 228 && nes_overscan_flag == 0)) // remove overscan above and below
-		//if (pixel_y >= 8 && pixel_y < 232)
+		if (pixel_y >= 8 && pixel_y < 232) // remove overscan above and below
 		{
-			for (unsigned char w=(1-nes_overscan_flag); w<32+nes_overscan_flag; w++) // go one more than 32
-			//for (unsigned char w=0; w<33; w++)
+			for (unsigned char w=0; w<33; w++) // go one more than 32
 			{	
 				scroll_x = w + ((ppu_reg_x & 0xF8) >> 3);
 				scroll_y = (line>>3) + ((ppu_reg_y & 0xF8) >> 3);
@@ -1930,9 +1996,7 @@ void nes_background(unsigned short line)
 					{
 						pixel_x = w * 8 + i - (ppu_reg_x & 0x07);
 
-						if ((pixel_x >= 0 && pixel_x < 256 && nes_overscan_flag == 1) ||
-							(pixel_x >= 8 && pixel_x < 248 && nes_overscan_flag == 0))
-						//if (pixel_x >= 0 && pixel_x < 256)
+						if (pixel_x >= 0 && pixel_x < 256)
 						{
 							if (ppu_flag_lb > 0 || w*8+i >= 8) 
 							{
@@ -2019,8 +2083,7 @@ void nes_sprites(unsigned char ground)
 									
 									if (ppu_flag_ls > 0 || pixel_x >= 8) 
 									{
-										if ((pixel_x >= 0 && pixel_x < 256 && pixel_y >= 8 && pixel_y < 232 && nes_overscan_flag == 1) ||
-											(pixel_x >= 8 && pixel_x < 248 && pixel_y >= 16 && pixel_y < 228 && nes_overscan_flag == 0))
+										if (pixel_x >= 0 && pixel_x < 256 && pixel_y >= 8 && pixel_y < 232)
 										{
 											if (ppu_flag_g > 0)
 											{
@@ -2101,8 +2164,7 @@ void nes_sprites(unsigned char ground)
 									
 									if (ppu_flag_ls > 0 || pixel_x >= 8) 
 									{
-										if ((pixel_x >= 0 && pixel_x < 256 && pixel_y >= 8 && pixel_y < 232 && nes_overscan_flag == 1) ||
-											(pixel_x >= 8 && pixel_x < 248 && pixel_y >= 16 && pixel_y < 228 && nes_overscan_flag == 0))
+										if (pixel_x >= 0 && pixel_x < 256 && pixel_y >= 8 && pixel_y < 232)
 										{
 											if (ppu_flag_g > 0)
 											{
@@ -2518,8 +2580,8 @@ void nes_audio(unsigned long cycles)
 	nes_sound(apu_mixer_output);
 }
 
-void nes_loop(unsigned short loop_count, unsigned short incrementer)
-{	  
+void nes_loop(unsigned short loop_count, unsigned short internal_interrupt)
+{	 
 	if (nes_init_flag == 0)
 	{
 		nes_init_flag = 1;
@@ -2533,14 +2595,17 @@ void nes_loop(unsigned short loop_count, unsigned short incrementer)
 		map_number = ((cart_rom[6] & 0xF0) >> 4) + (cart_rom[7] & 0xF0);
 		
 		// scrolling mask
-		if ((cart_rom[6]&0x01) == 0x00)
+		if ((cart_rom[6] & 0x01) == 0x00)
 		{
-			ppu_status_m = 0xFBFF;
+			ppu_status_m = 0xFBFF; // vertical scrolling
 		}
 		else
 		{
-			ppu_status_m = 0xF7FF;
+			ppu_status_m = 0xF7FF; // horizontal scrolling
 		}
+		
+		// prg ram
+		cpu_status_r = ((cart_rom[6] & 0x02) >> 1);
 		
 		// reset
 		cpu_reg_pc = cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFC] + (cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFD] << 8);
@@ -2561,28 +2626,35 @@ void nes_loop(unsigned short loop_count, unsigned short incrementer)
 		while (1) { }
 	}
 	
-	cpu_scanline_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);
+	ppu_scanline_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);
 	
-	if (cpu_scanline_cycles >= 341) // 114 cycles per scanline
+	if (ppu_scanline_cycles >= 341) // 114 cycles per scanline
 	{		
-		cpu_scanline_cycles -= 341;
+		ppu_scanline_cycles -= 341;
 
-		if (cpu_frame_count == loop_count)
+		if (ppu_frame_count == loop_count)
 		{	
-			nes_background(cpu_scanline_count);
+			nes_background(ppu_scanline_count);
 		}
 		
-		cpu_scanline_count++;
+		ppu_scanline_count++;
+	}
+	
+	apu_sample_cycles += (cpu_current_cycles<<2); // need to find what works best here
+	
+	if (apu_sample_cycles >= 447) // need to find what works best here
+	{
+		apu_sample_cycles -= 447;
 		
 		if (nes_audio_flag > 0)
 		{
-			nes_audio(114);
+			nes_audio(112); // need to find what works best here
 		}
 	}
 
-	cpu_frame_cycles += (cpu_current_cycles<<1);
+	ppu_frame_cycles += (cpu_current_cycles<<1);
 	
-	if (cpu_frame_cycles < 4546) // 2273 cycles in v-blank
+	if (ppu_frame_cycles < 4546) // 2273 cycles in v-blank
 	{
 		// v-sync
 		ppu_flag_v = 0x0001;
@@ -2591,12 +2663,12 @@ void nes_loop(unsigned short loop_count, unsigned short incrementer)
 		
 		ppu_status_0 = 0;
 	}
-	else if (cpu_frame_cycles < 59565) // 29780.5 cycles per frame
+	else if (ppu_frame_cycles < 59565) // 29780.5 cycles per frame
 	{
 		// v-sync
 		ppu_flag_v = 0x0000;
 		
-		if (cpu_scanline_count >= (oam_ram[0]+ppu_status_s) && cpu_scanline_cycles >= (oam_ram[3])) // very rough math
+		if (ppu_scanline_count >= (oam_ram[0]+ppu_status_s) && ppu_scanline_cycles >= (oam_ram[3])) // very rough math
 		{
 			if (ppu_status_0 == 0) ppu_flag_0 = 1;
 
@@ -2604,15 +2676,16 @@ void nes_loop(unsigned short loop_count, unsigned short incrementer)
 		}
 	}
 	else
-	{
-		cpu_frame_cycles -= 59565;
+	{		
+		ppu_frame_cycles -= 59565;
 		
 		// v-sync
 		ppu_flag_v = 0x0001;
 		
-		cpu_scanline_count = -21;
+		ppu_scanline_count = -21;
+		//ppu_scanline_count = 0;
 		
-		if (incrementer > 0)
+		if (internal_interrupt > 0)
 		{
 			nes_increment();
 		}
@@ -2632,7 +2705,7 @@ void nes_loop(unsigned short loop_count, unsigned short incrementer)
 			cpu_reg_pc = cpu_read(0xFFFA);
 			cpu_reg_pc += (cpu_read(0xFFFB)<<8);
 			
-			cpu_frame_cycles += 7;
+			ppu_frame_cycles += 7;
 		}
 		
 		// sprite 0
@@ -2661,9 +2734,9 @@ void nes_loop(unsigned short loop_count, unsigned short incrementer)
 		}
 		
 		// finish frame drawing
-		if (cpu_frame_count >= loop_count)
+		if (ppu_frame_count >= loop_count)
 		{
-			cpu_frame_count = 0;
+			ppu_frame_count = 0;
 			
 			nes_sprites(0);
 
@@ -2675,10 +2748,10 @@ void nes_loop(unsigned short loop_count, unsigned short incrementer)
 			cpu_interrupt_count = 0;
 		}
 		
-		cpu_frame_count++;
+		ppu_frame_count++;
 		
 		// start frame drawing
-		if (cpu_frame_count >= loop_count)
+		if (ppu_frame_count >= loop_count)
 		{
 			nes_border();
 		
@@ -2687,6 +2760,5 @@ void nes_loop(unsigned short loop_count, unsigned short incrementer)
 		
 		nes_buttons();
 	}
-	
 }
 
