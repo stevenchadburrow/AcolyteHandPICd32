@@ -1,7 +1,7 @@
 
 
 
-void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_handler()
+void __attribute__((optimize("02"),vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_handler()
 {		
     IFS0bits.OC3IF = 0;  // clear interrupt flag
 	
@@ -119,7 +119,7 @@ void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_h
 	return;
 }
 
-void __attribute__((vector(_UART3_RX_VECTOR), interrupt(ipl3srs))) u3rx_handler() //, nomips16)) u3rx_handler()
+void __attribute__((optimize("O0"),vector(_UART3_RX_VECTOR), interrupt(ipl3srs))) u3rx_handler() //, nomips16)) u3rx_handler()
 {	
 	IFS4bits.U3RXIF = 0;  // clear interrupt flag
 	

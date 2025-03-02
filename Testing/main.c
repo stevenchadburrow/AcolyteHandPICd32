@@ -265,25 +265,25 @@ void _general_exception_handler(void)
 #define SCREEN_XY 122880
 
 // video
-volatile unsigned char __attribute__((coherent,address(0x8004F800))) screen_line[SCREEN_X*2];
-volatile unsigned char __attribute__((coherent,address(0x80010000))) screen_buffer[SCREEN_X*SCREEN_Y*2]; // visible portion of screen
-volatile unsigned char screen_frame = 0;
-volatile unsigned int screen_scanline = 1025; // start of vertical sync
-volatile unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
+unsigned char __attribute__((coherent,address(0x8004F800))) screen_line[SCREEN_X*2];
+unsigned char __attribute__((coherent,address(0x80010000))) screen_buffer[SCREEN_X*SCREEN_Y*2]; // visible portion of screen
+unsigned char screen_frame = 0;
+unsigned int screen_scanline = 1025; // start of vertical sync
+unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 
 #define AUDIO_LEN 4096
 
 // audio
-volatile unsigned char __attribute__((address(0x8004C000))) audio_buffer[AUDIO_LEN];
-volatile unsigned int audio_read = 0;
-volatile unsigned int audio_write = 0;
-volatile unsigned int audio_counter = 0;
-volatile unsigned int audio_enable = 0;
+unsigned char __attribute__((address(0x8004D000))) audio_buffer[AUDIO_LEN];
+unsigned int audio_read = 0;
+unsigned int audio_write = 0;
+unsigned int audio_counter = 0;
+unsigned int audio_enable = 0;
 
 // controllers
-volatile unsigned char controller_status_1 = 0x00;
-volatile unsigned char controller_status_2 = 0x00;
-volatile unsigned char controller_enable = 0;
+unsigned char controller_status_1 = 0x00;
+unsigned char controller_status_2 = 0x00;
+unsigned char controller_enable = 0;
 
 
 const unsigned char text_bitmap[64*96] = { 
@@ -582,7 +582,7 @@ void display_string(unsigned int x, unsigned int y, char *value)
 
 
 
-void __attribute__((vector(_TIMER_8_VECTOR), interrupt(ipl1srs))) t8_handler()
+void __attribute__((optimize("O0"),vector(_TIMER_8_VECTOR), interrupt(ipl1srs))) t8_handler()
 {		
    IFS1bits.T8IF = 0;  // clear interrupt flag
    
@@ -590,12 +590,12 @@ void __attribute__((vector(_TIMER_8_VECTOR), interrupt(ipl1srs))) t8_handler()
 }
 
 
-int main()
+int __attribute__((optimize("O0"))) main()
 {
 	unsigned short menu_pos = 0;
 	unsigned long menu_wait = 0;
 	
-	unsigned short rate = 3; // default of 3:1 frame rate
+	unsigned long rate = 3; // default of 3:1 frame rate
 	
 	audio_enable = 0;
 	
@@ -639,7 +639,7 @@ int main()
 	// turn on timer
 	T8CONbits.ON = 1;
 	
-	for (unsigned short i=0; i<AUDIO_LEN*2; i++)
+	for (unsigned short i=0; i<AUDIO_LEN; i++)
 	{
 		audio_buffer[i] = 0x00;
 	}
@@ -690,7 +690,7 @@ int main()
 		
 		if (PORTKbits.RK0 == 0 && menu_wait == 0)
 		{
-			menu_wait = 0x0001FFFF;
+			menu_wait = 0x00003FFF;
 			
 			display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
 			
@@ -703,7 +703,7 @@ int main()
 		
 		if (PORTKbits.RK1 == 0 && menu_wait == 0)
 		{
-			menu_wait = 0x0001FFFF;
+			menu_wait = 0x00003FFF;
 			
 			display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
 			
@@ -726,7 +726,7 @@ int main()
 			{
 				while (PORTKbits.RK7 == 0) { }
 				
-				for (unsigned short i=0; i<AUDIO_LEN*2; i++)
+				for (unsigned short i=0; i<AUDIO_LEN; i++)
 				{
 					audio_buffer[i] = 0x00;
 				}
@@ -765,7 +765,7 @@ int main()
 
 					if (PORTKbits.RK0 == 0 && menu_wait == 0)
 					{
-						menu_wait = 0x0001FFFF;
+						menu_wait = 0x00003FFF;
 
 						display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
 
@@ -778,7 +778,7 @@ int main()
 
 					if (PORTKbits.RK1 == 0 && menu_wait == 0)
 					{
-						menu_wait = 0x0001FFFF;
+						menu_wait = 0x00003FFF;
 
 						display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
 
@@ -795,7 +795,7 @@ int main()
 				if (menu_pos == 0) { }
 				else if (menu_pos == 1) { audio_enable = 1; nes_audio_flag = 1; }
 				else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
-				else if (menu_pos > 2) rate = menu_pos - 2;
+				else if (menu_pos > 2) rate = (unsigned long)(menu_pos - 2);
 			}
 			
 			nes_loop(rate, 0); // frame rate divider and external interrupt

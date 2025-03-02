@@ -27,169 +27,169 @@ int main()
 // if using for other platforms, adjust variable types here
 unsigned char *cart_rom = (unsigned char *)0x9D100000;
 
-volatile unsigned char __attribute__((address(0x8004E000))) cpu_ram[2048]; // only cpu ram from 0x0000 to 0x07FF
-volatile unsigned char __attribute__((address(0x80050000))) ppu_ram[4096]; // ppu ram from 0x2000 to 0x2FFF
-volatile unsigned char __attribute__((address(0x80052000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
-volatile unsigned char __attribute__((address(0x80054000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
-volatile unsigned char oam_ram[256]; // special sprite ram inside of ppu
-volatile unsigned char pal_ram[32]; // special palette ram inside of ppu
+unsigned char __attribute__((address(0x8004E000))) cpu_ram[2048]; // only cpu ram from 0x0000 to 0x07FF
+unsigned char __attribute__((address(0x80050000))) ppu_ram[4096]; // ppu ram from 0x2000 to 0x2FFF
+unsigned char __attribute__((address(0x80052000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
+unsigned char __attribute__((address(0x80054000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
+unsigned char oam_ram[256]; // special sprite ram inside of ppu
+unsigned char pal_ram[32]; // special palette ram inside of ppu
 
-volatile unsigned long prg_offset = 0x00000000; // offsets in cart_rom
-volatile unsigned long chr_offset = 0x00000000;
+unsigned long prg_offset = 0x00000000; // offsets in cart_rom
+unsigned long chr_offset = 0x00000000;
 
-volatile unsigned char nes_init_flag = 0;
-volatile unsigned char nes_audio_flag = 1;
-volatile unsigned long nes_pixel_location = 0;
+unsigned char nes_init_flag = 0;
+unsigned char nes_audio_flag = 1;
+unsigned long nes_pixel_location = 0;
+unsigned long nes_interrupt_count = 0;
 
-volatile unsigned long cpu_current_cycles = 0, cpu_dma_cycles = 0;
-volatile unsigned long cpu_interrupt_count = 0;
-volatile unsigned long ppu_scanline_cycles = 0;
-volatile unsigned long ppu_frame_cycles = 0;
-volatile unsigned long ppu_frame_count = 0;
-volatile signed long ppu_scanline_count = 0; // needs to be signed
-volatile unsigned long apu_sample_cycles = 0;
+unsigned long cpu_current_cycles = 0, cpu_dma_cycles = 0;
+unsigned long ppu_scanline_cycles = 0;
+unsigned long ppu_frame_cycles = 0;
+unsigned long ppu_frame_count = 0;
+signed long ppu_scanline_count = 0; // needs to be signed
+unsigned long apu_sample_cycles = 0;
 
-volatile unsigned short map_number = 0x0000;
-volatile unsigned short map_unrom_bank = 0x0000;
-volatile unsigned short map_cnrom_bank = 0x0000;
+unsigned short map_number = 0x0000;
+unsigned short map_unrom_bank = 0x0000;
+unsigned short map_cnrom_bank = 0x0000;
 
-volatile unsigned short map_mmc1_shift = 0x0000;
-volatile unsigned short map_mmc1_count = 0x0000;
-volatile unsigned short map_mmc1_prg_mode = 0x0003; // should be 0x0003
-volatile unsigned short map_mmc1_chr_mode = 0x0000;
-volatile unsigned short map_mmc1_chr_bank_0 = 0x0000;
-volatile unsigned short map_mmc1_chr_bank_1 = 0x0000;
-volatile unsigned short map_mmc1_prg_bank = 0x0000;
-volatile unsigned short map_mmc1_ram = 0x0000;
+unsigned short map_mmc1_shift = 0x0000;
+unsigned short map_mmc1_count = 0x0000;
+unsigned short map_mmc1_prg_mode = 0x0003; // should be 0x0003
+unsigned short map_mmc1_chr_mode = 0x0000;
+unsigned short map_mmc1_chr_bank_0 = 0x0000;
+unsigned short map_mmc1_chr_bank_1 = 0x0000;
+unsigned short map_mmc1_prg_bank = 0x0000;
+unsigned short map_mmc1_ram = 0x0000;
 
-volatile unsigned short cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
-volatile unsigned short cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
-volatile unsigned short cpu_flag_d = 0x0000, cpu_flag_i = 0x0000;
-volatile unsigned short cpu_reg_pc = 0xFFFC;
+unsigned short cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
+unsigned short cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
+unsigned short cpu_flag_d = 0x0000, cpu_flag_i = 0x0000;
+unsigned short cpu_reg_pc = 0xFFFC;
 
-volatile unsigned short cpu_temp_opcode = 0x0000, cpu_temp_memory = 0x0000, cpu_temp_address = 0x0000; 
-volatile unsigned short cpu_temp_result = 0x0000, cpu_temp_cycles = 0x0000;
+unsigned short cpu_temp_opcode = 0x0000, cpu_temp_memory = 0x0000, cpu_temp_address = 0x0000; 
+unsigned short cpu_temp_result = 0x0000, cpu_temp_cycles = 0x0000;
 
-volatile unsigned short cpu_status_r = 0x0000;
+unsigned short cpu_status_r = 0x0000;
 
-volatile unsigned short ppu_reg_v = 0x0000, ppu_reg_t = 0x0000, ppu_reg_w = 0x0000;
-volatile unsigned short ppu_reg_a = 0x0000, ppu_reg_b = 0x0000;
+unsigned short ppu_reg_v = 0x0000, ppu_reg_t = 0x0000, ppu_reg_w = 0x0000;
+unsigned short ppu_reg_a = 0x0000, ppu_reg_b = 0x0000;
 
-volatile unsigned short ppu_reg_x = 0x0000, ppu_reg_y = 0x0000;
+unsigned short ppu_reg_x = 0x0000, ppu_reg_y = 0x0000;
 
 // flag_e and flag_v were 0x0001;
-volatile unsigned short ppu_flag_e = 0x0000, ppu_flag_p = 0x0000, ppu_flag_h = 0x0000;
-volatile unsigned short ppu_flag_b = 0x0000, ppu_flag_s = 0x0000;
-volatile unsigned short ppu_flag_i = 0x0000, ppu_flag_n = 0x0000;
-volatile unsigned short ppu_flag_v = 0x0000, ppu_flag_0 = 0x0000, ppu_flag_o = 0x0000;
+unsigned short ppu_flag_e = 0x0000, ppu_flag_p = 0x0000, ppu_flag_h = 0x0000;
+unsigned short ppu_flag_b = 0x0000, ppu_flag_s = 0x0000;
+unsigned short ppu_flag_i = 0x0000, ppu_flag_n = 0x0000;
+unsigned short ppu_flag_v = 0x0000, ppu_flag_0 = 0x0000, ppu_flag_o = 0x0000;
 
-volatile unsigned short ppu_flag_g = 0x0000, ppu_flag_lb = 0x0000, ppu_flag_ls = 0x0000;
-volatile unsigned short ppu_flag_eb = 0x0000, ppu_flag_es = 0x0000;
+unsigned short ppu_flag_g = 0x0000, ppu_flag_lb = 0x0000, ppu_flag_ls = 0x0000;
+unsigned short ppu_flag_eb = 0x0000, ppu_flag_es = 0x0000;
 
-volatile unsigned short ppu_status_0 = 0x0000, ppu_status_s = 0x0000, ppu_status_m = 0xFFFF;
+unsigned short ppu_status_0 = 0x0000, ppu_status_s = 0x0000, ppu_status_m = 0xFFFF;
 
-volatile unsigned short ctl_flag_s = 0x0000;
-volatile unsigned short ctl_value_1 = 0x0000, ctl_value_2 = 0x0000;
-volatile unsigned short ctl_latch_1 = 0x0000, ctl_latch_2 = 0x0000;
+unsigned short ctl_flag_s = 0x0000;
+unsigned short ctl_value_1 = 0x0000, ctl_value_2 = 0x0000;
+unsigned short ctl_latch_1 = 0x0000, ctl_latch_2 = 0x0000;
 
-volatile unsigned short apu_pulse_1_d = 0x0000, apu_pulse_2_d = 0x0000;
-volatile unsigned short apu_pulse_1_u = 0x0000, apu_pulse_2_u = 0x0000;
-volatile unsigned short apu_pulse_1_i = 0x0000, apu_pulse_2_i = 0x0000;
-volatile unsigned short apu_pulse_1_c = 0x0000, apu_pulse_2_c = 0x0000;
-volatile unsigned short apu_pulse_1_v = 0x0000, apu_pulse_2_v = 0x0000;
-volatile unsigned short apu_pulse_1_m = 0x0000, apu_pulse_2_m = 0x0000;
-volatile unsigned short apu_pulse_1_r = 0x0000, apu_pulse_2_r = 0x0000;
-volatile unsigned short apu_pulse_1_s = 0x0000, apu_pulse_2_s = 0x0000;
-volatile unsigned short apu_pulse_1_a = 0x0000, apu_pulse_2_a = 0x0000;
-volatile unsigned short apu_pulse_1_n = 0x0000, apu_pulse_2_n = 0x0000;
-volatile unsigned short apu_pulse_1_p = 0x0000, apu_pulse_2_p = 0x0000;
-volatile unsigned short apu_pulse_1_w = 0x0000, apu_pulse_2_w = 0x0000;
-volatile unsigned short apu_pulse_1_e = 0x0000, apu_pulse_2_e = 0x0000;
-volatile unsigned short apu_pulse_1_t = 0x0000, apu_pulse_2_t = 0x0000;
-volatile unsigned short apu_pulse_1_k = 0x0000, apu_pulse_2_k = 0x0000;
-volatile unsigned short apu_pulse_1_l = 0x0000, apu_pulse_2_l = 0x0000;
-volatile unsigned short apu_pulse_1_o = 0x0000, apu_pulse_2_o = 0x0000;
+unsigned short apu_pulse_1_d = 0x0000, apu_pulse_2_d = 0x0000;
+unsigned short apu_pulse_1_u = 0x0000, apu_pulse_2_u = 0x0000;
+unsigned short apu_pulse_1_i = 0x0000, apu_pulse_2_i = 0x0000;
+unsigned short apu_pulse_1_c = 0x0000, apu_pulse_2_c = 0x0000;
+unsigned short apu_pulse_1_v = 0x0000, apu_pulse_2_v = 0x0000;
+unsigned short apu_pulse_1_m = 0x0000, apu_pulse_2_m = 0x0000;
+unsigned short apu_pulse_1_r = 0x0000, apu_pulse_2_r = 0x0000;
+unsigned short apu_pulse_1_s = 0x0000, apu_pulse_2_s = 0x0000;
+unsigned short apu_pulse_1_a = 0x0000, apu_pulse_2_a = 0x0000;
+unsigned short apu_pulse_1_n = 0x0000, apu_pulse_2_n = 0x0000;
+unsigned short apu_pulse_1_p = 0x0000, apu_pulse_2_p = 0x0000;
+unsigned short apu_pulse_1_w = 0x0000, apu_pulse_2_w = 0x0000;
+unsigned short apu_pulse_1_e = 0x0000, apu_pulse_2_e = 0x0000;
+unsigned short apu_pulse_1_t = 0x0000, apu_pulse_2_t = 0x0000;
+unsigned short apu_pulse_1_k = 0x0000, apu_pulse_2_k = 0x0000;
+unsigned short apu_pulse_1_l = 0x0000, apu_pulse_2_l = 0x0000;
+unsigned short apu_pulse_1_o = 0x0000, apu_pulse_2_o = 0x0000;
 
-volatile unsigned short apu_triangle_c = 0x0000;
-volatile unsigned short apu_triangle_r = 0x0000;
-volatile unsigned short apu_triangle_v = 0x0000;
-volatile unsigned short apu_triangle_f = 0x0000;
-volatile unsigned short apu_triangle_h = 0x0000;
-volatile unsigned short apu_triangle_q = 0x0000;
-volatile unsigned short apu_triangle_t = 0x0000;
-volatile unsigned short apu_triangle_k = 0x0000;
-volatile unsigned short apu_triangle_l = 0x0000;
-volatile unsigned short apu_triangle_p = 0x0000;
-volatile unsigned short apu_triangle_d = 0x0000;
-volatile unsigned short apu_triangle_o = 0x0000;
+unsigned short apu_triangle_c = 0x0000;
+unsigned short apu_triangle_r = 0x0000;
+unsigned short apu_triangle_v = 0x0000;
+unsigned short apu_triangle_f = 0x0000;
+unsigned short apu_triangle_h = 0x0000;
+unsigned short apu_triangle_q = 0x0000;
+unsigned short apu_triangle_t = 0x0000;
+unsigned short apu_triangle_k = 0x0000;
+unsigned short apu_triangle_l = 0x0000;
+unsigned short apu_triangle_p = 0x0000;
+unsigned short apu_triangle_d = 0x0000;
+unsigned short apu_triangle_o = 0x0000;
 
-volatile unsigned short apu_noise_i = 0x0000;
-volatile unsigned short apu_noise_c = 0x0000;
-volatile unsigned short apu_noise_v = 0x0000;
-volatile unsigned short apu_noise_m = 0x0000;
-volatile unsigned short apu_noise_r = 0x0000;
-volatile unsigned short apu_noise_s = 0x0001; // must be set to 0x0001
-volatile unsigned short apu_noise_x = 0x0000;
-volatile unsigned short apu_noise_d = 0x0000;
-volatile unsigned short apu_noise_t = 0x0000;
-volatile unsigned short apu_noise_k = 0x0000;
-volatile unsigned short apu_noise_l = 0x0000;
-volatile unsigned short apu_noise_o = 0x0000;
+unsigned short apu_noise_i = 0x0000;
+unsigned short apu_noise_c = 0x0000;
+unsigned short apu_noise_v = 0x0000;
+unsigned short apu_noise_m = 0x0000;
+unsigned short apu_noise_r = 0x0000;
+unsigned short apu_noise_s = 0x0001; // must be set to 0x0001
+unsigned short apu_noise_x = 0x0000;
+unsigned short apu_noise_d = 0x0000;
+unsigned short apu_noise_t = 0x0000;
+unsigned short apu_noise_k = 0x0000;
+unsigned short apu_noise_l = 0x0000;
+unsigned short apu_noise_o = 0x0000;
 
-volatile unsigned short apu_dmc_i = 0x0000;
-volatile unsigned short apu_dmc_l = 0x0000;
-volatile unsigned short apu_dmc_r = 0x0000;
-volatile unsigned short apu_dmc_k = 0x0000;
-volatile unsigned short apu_dmc_d = 0x0000;
-volatile unsigned short apu_dmc_a = 0x0000;
-volatile unsigned short apu_dmc_s = 0x0000;
-volatile unsigned short apu_dmc_b = 0x0000;
-volatile unsigned short apu_dmc_t = 0x0000;
-volatile unsigned short apu_dmc_o = 0x0000;
+unsigned short apu_dmc_i = 0x0000;
+unsigned short apu_dmc_l = 0x0000;
+unsigned short apu_dmc_r = 0x0000;
+unsigned short apu_dmc_k = 0x0000;
+unsigned short apu_dmc_d = 0x0000;
+unsigned short apu_dmc_a = 0x0000;
+unsigned short apu_dmc_s = 0x0000;
+unsigned short apu_dmc_b = 0x0000;
+unsigned short apu_dmc_t = 0x0000;
+unsigned short apu_dmc_o = 0x0000;
 
-volatile unsigned short apu_flag_i = 0x0000;
-volatile unsigned short apu_flag_f = 0x0000;
-volatile unsigned short apu_flag_d = 0x0000;
-volatile unsigned short apu_flag_n = 0x0000;
-volatile unsigned short apu_flag_t = 0x0000;
-volatile unsigned short apu_flag_2 = 0x0000;
-volatile unsigned short apu_flag_1 = 0x0000;
-volatile unsigned short apu_flag_m = 0x0000;
-volatile unsigned short apu_flag_b = 0x0001;
+unsigned short apu_flag_i = 0x0000;
+unsigned short apu_flag_f = 0x0000;
+unsigned short apu_flag_d = 0x0000;
+unsigned short apu_flag_n = 0x0000;
+unsigned short apu_flag_t = 0x0000;
+unsigned short apu_flag_2 = 0x0000;
+unsigned short apu_flag_1 = 0x0000;
+unsigned short apu_flag_m = 0x0000;
+unsigned short apu_flag_b = 0x0001;
 
-volatile unsigned short apu_counter_q = 0x0000;
-volatile unsigned short apu_counter_s = 0x0000;
-volatile unsigned short apu_mixer_output = 0x0000;
+unsigned short apu_counter_q = 0x0000;
+unsigned short apu_counter_s = 0x0000;
+unsigned short apu_mixer_output = 0x0000;
 
-volatile unsigned char ppu_palette[64] = {
+unsigned char ppu_palette[64] = {
 	0x6D,0x03,0x02,0x46,0x82,0xA0,0xA0,0x80,0x44,0x0C,0x0C,0x08,0x09,0x00,0x00,0x00,
 	0xB6,0x0F,0x0B,0x6B,0xC3,0xE1,0xE4,0xE8,0xAC,0x14,0x14,0x15,0x12,0x00,0x00,0x00,
 	0xFF,0x37,0x73,0x8F,0xEF,0xEA,0xED,0xF5,0xF4,0xBC,0x59,0x5E,0x1F,0x6D,0x00,0x00,
 	0xFF,0xBF,0xB7,0xD7,0xF7,0xF7,0xFA,0xFE,0xF9,0xDD,0xBE,0xBF,0x1F,0xFB,0x00,0x00
 };
 
-volatile unsigned char apu_length[32] = {
+unsigned char apu_length[32] = {
 	 10, 254,  20,   2,  40,   4,  80,   6, 160,   8,  60,  10,  14,  12,  26,  14,
 	 12,  16,  24,  18,  48,  20,  96,  22, 192,  24,  72,  26,  16,  28,  32,  30
 };
 
-volatile unsigned short apu_duty[32] = {
+unsigned short apu_duty[32] = {
 	0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00,
 	0xFF, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
-volatile unsigned short apu_rate[16] = {
+unsigned short apu_rate[16] = {
 	428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54
 };
 
-volatile unsigned short apu_period[16] = {
+unsigned short apu_period[16] = {
 	4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
 };
 
 // change for platform
-unsigned char nes_load(char *filename)
+unsigned char __attribute__((optimize("O2"))) nes_load(char *filename)
 {
 	for (unsigned long i=0x1D100000; i<0x1D200000; i+=0x00001000) // pages are 0x1000
 	{
@@ -276,20 +276,15 @@ unsigned char nes_load(char *filename)
 }
 
 // change for platform
-void nes_pixel(unsigned short pos_x, unsigned short pos_y, unsigned char color)
+void __attribute__((optimize("O2"))) nes_pixel(unsigned short pos_x, unsigned short pos_y, unsigned char color)
 {
 	nes_pixel_location = ((pos_y))*SCREEN_X+((pos_x<<1))+(1-screen_frame)*SCREEN_XY;
 	screen_buffer[nes_pixel_location] = color;
 	screen_buffer[nes_pixel_location+1] = color;
 }
 
-void nes_increment()
-{
-	cpu_interrupt_count = cpu_interrupt_count + 1;
-}
-
 // change for platform
-void nes_frame()
+void __attribute__((optimize("O2"))) nes_frame()
 {
 	screen_frame = 1 - screen_frame;
 	
@@ -298,7 +293,7 @@ void nes_frame()
 }
 
 // change for platform
-void nes_sound(unsigned char sample)
+void __attribute__((optimize("O2"))) nes_sound(unsigned char sample)
 {
 	audio_buffer[audio_write] = sample;
 	
@@ -311,14 +306,14 @@ void nes_sound(unsigned char sample)
 }
 	
 // change for platform
-void nes_buttons()
+void __attribute__((optimize("O2"))) nes_buttons()
 {
 	ctl_value_1 = controller_status_1;
 	ctl_value_2 = controller_status_2;
 }
 
 // change for platform
-void nes_error(unsigned char code)
+void __attribute__((optimize("O2"))) nes_error(unsigned char code)
 {		
 	SendChar('\n');
 	SendChar('\r');
@@ -337,12 +332,19 @@ void nes_error(unsigned char code)
 	}
 }
 
-unsigned char cpu_read(unsigned short addr)
+void __attribute__((optimize("O2"))) nes_increment()
+{
+	nes_interrupt_count = nes_interrupt_count + 1;
+	
+	if (nes_interrupt_count > 60) nes_interrupt_count = 60;
+}
+
+unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 {		
-	if (addr < 0x2000) return cpu_ram[(addr&0x07FF)]; // internal ram (and mirrors)
-	else if (addr < 0x4000) // ppu (and mirrors)
+	if (addr < 0x00002000) return cpu_ram[(addr&0x000007FF)]; // internal ram (and mirrors)
+	else if (addr < 0x00004000) // ppu (and mirrors)
 	{
-		switch ((addr&0x0007))
+		switch ((addr&0x00000007))
 		{
 			case 0x00: // ppuctrl
 			{
@@ -438,9 +440,9 @@ unsigned char cpu_read(unsigned short addr)
 			}
 		}
 	}
-	else if (addr < 0x4018) // apu and i/o
+	else if (addr < 0x00004018) // apu and i/o
 	{
-		switch ((addr&0x00FF))
+		switch ((addr&0x000000FF))
 		{
 			case 0x15: // apu status
 			{
@@ -499,15 +501,15 @@ unsigned char cpu_read(unsigned short addr)
 			}
 		}
 	}
-	else if (addr < 0x4020) // disabled apu and i/o
+	else if (addr < 0x00004020) // disabled apu and i/o
 	{
 		return 0xFF; 
 	}
-	else if (addr < 0x6000) // unmapped
+	else if (addr < 0x00006000) // unmapped
 	{
 		return 0xFF; 
 	}
-	else if (addr < 0x8000) // cart ram
+	else if (addr < 0x00008000) // cart ram
 	{	
 		if (cpu_status_r > 0)
 		{
@@ -526,13 +528,13 @@ unsigned char cpu_read(unsigned short addr)
 		}
 		else return 0xFF;
 	}
-	else if (addr < 0xC000) // cart rom (lower half)
+	else if (addr < 0x0000C000) // cart rom (lower half)
 	{
 		if (map_number == 0x0001) // mmc1
 		{
 			if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
 			{
-				return cart_rom[prg_offset+0x8000*(map_mmc1_prg_bank&0x0E)+addr-0x8000];
+				return cart_rom[prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000];
 			}
 			else if (map_mmc1_prg_mode == 2)
 			{
@@ -552,13 +554,13 @@ unsigned char cpu_read(unsigned short addr)
 			return cart_rom[prg_offset+addr-0x8000];
 		}
 	}
-	else // cart rom (upper half)
+	else if (addr < 0x00010000) // cart rom (upper half)
 	{
 		if (map_number == 0x0001) // mmc1
 		{
 			if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
 			{
-				cart_rom[prg_offset+0x8000*(map_mmc1_prg_bank&0x0E)+addr-0x8000];
+				cart_rom[prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000];
 			}
 			else if (map_mmc1_prg_mode == 2)
 			{
@@ -585,14 +587,18 @@ unsigned char cpu_read(unsigned short addr)
 			}
 		}
 	}
+	else
+	{
+		return cpu_read((addr & 0x0000FFFF));
+	}
 }
 
-void cpu_write(unsigned short addr, unsigned char val)
+void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char val)
 {		
-	if (addr < 0x2000) cpu_ram[(addr&0x07FF)] = val; // internal ram (and mirrors)
-	else if (addr < 0x4000) // ppu (and mirrors)
+	if (addr < 0x00002000) cpu_ram[(addr&0x000007FF)] = val; // internal ram (and mirrors)
+	else if (addr < 0x00004000) // ppu (and mirrors)
 	{
-		switch ((addr&0x0007))
+		switch ((addr&0x00000007))
 		{
 			case 0x00: // ppuctrl
 			{	
@@ -703,9 +709,9 @@ void cpu_write(unsigned short addr, unsigned char val)
 			}
 		}
 	}
-	else if (addr < 0x4018) // apu and i/o
+	else if (addr < 0x00004018) // apu and i/o
 	{
-		switch ((addr&0x00FF))
+		switch ((addr&0x000000FF))
 		{
 			case 0x00: // pulse 1 volume
 			{
@@ -980,13 +986,13 @@ void cpu_write(unsigned short addr, unsigned char val)
 			}
 		}
 	}
-	else if (addr < 0x4020) // disabled apu and i/o
+	else if (addr < 0x00004020) // disabled apu and i/o
 	{
 	} 
-	else if (addr < 0x6000) // unmapped
+	else if (addr < 0x00006000) // unmapped
 	{
 	}
-	else if (addr < 0x8000) // cart ram
+	else if (addr < 0x00008000) // cart ram
 	{
 		if (cpu_status_r > 0)
 		{
@@ -1003,7 +1009,7 @@ void cpu_write(unsigned short addr, unsigned char val)
 			}
 		}
 	}
-	else // cart rom and mapper
+	else if (addr < 0x00010000) // cart rom and mapper
 	{
 		if (map_number == 0x0001) // mmc1
 		{
@@ -1083,6 +1089,10 @@ void cpu_write(unsigned short addr, unsigned char val)
 		{
 			map_cnrom_bank = (val & 0x03);
 		}
+	}
+	else
+	{
+		cpu_write((addr & 0x0000FFFF), val);
 	}
 }
 
@@ -1324,7 +1334,7 @@ void cpu_write(unsigned short addr, unsigned char val)
 	cpu_temp_memory=cpu_ram[0x0100+cpu_reg_s]; }
 
 
-unsigned short cpu_run()
+unsigned short __attribute__((optimize("O2"))) cpu_run()
 {	
 	cpu_temp_opcode = cpu_read(cpu_reg_pc++);
 	
@@ -1856,7 +1866,7 @@ unsigned short cpu_run()
 	return cpu_temp_cycles;
 }
 
-void nes_border()
+void __attribute__((optimize("O2"))) nes_border()
 {
 	unsigned char pixel_color = 0;
 
@@ -1878,7 +1888,7 @@ void nes_border()
 	}
 }
 
-void nes_background(unsigned short line)
+void __attribute__((optimize("O2"))) nes_background(unsigned short line)
 {
 	unsigned short scroll_x = 0, scroll_y = 0, scroll_n = 0;
 	
@@ -2020,7 +2030,7 @@ void nes_background(unsigned short line)
 	}
 }
 	
-void nes_sprites(unsigned char ground)
+void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground)
 {
 	unsigned char sprite_x = 0, sprite_y = 0, sprite_attr = 0, sprite_tile = 0;
 	unsigned char sprite_flip_horz = 0, sprite_flip_vert = 0;
@@ -2197,7 +2207,7 @@ void nes_sprites(unsigned char ground)
 	}
 }
 
-void nes_audio(unsigned long cycles)
+void __attribute__((optimize("O2"))) nes_audio(unsigned long cycles)
 {
 	apu_counter_q += (cycles);
 	
@@ -2580,11 +2590,20 @@ void nes_audio(unsigned long cycles)
 	nes_sound(apu_mixer_output);
 }
 
-void nes_loop(unsigned short loop_count, unsigned short internal_interrupt)
+// needs to be unoptimized else it will be deleted
+void __attribute__((optimize("O0"))) nes_wait(unsigned long loop_count)
+{
+	// wait for interrupts to catch up
+	while (nes_interrupt_count < loop_count) { }
+}
+
+void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned long internal_interrupt)
 {	 
 	if (nes_init_flag == 0)
 	{
 		nes_init_flag = 1;
+		
+		nes_interrupt_count = 0;
 		
 		// offsets
 		prg_offset = 16; // length of header
@@ -2609,6 +2628,8 @@ void nes_loop(unsigned short loop_count, unsigned short internal_interrupt)
 		
 		// reset
 		cpu_reg_pc = cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFC] + (cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFD] << 8);
+		
+		//SendString("Reset\n\r\\");
 	}
 	
 	cpu_current_cycles = 0;
@@ -2709,30 +2730,85 @@ void nes_loop(unsigned short loop_count, unsigned short internal_interrupt)
 		}
 		
 		// sprite 0
-		for (unsigned short i=0; i<8; i++) // should I make this work for 8x16 sprites too?
+		if (ppu_flag_h == 0) // 8x8 sprites
 		{
-			if (map_number == 3) // cnrom
+			for (unsigned short i=0; i<8; i++)
 			{
-				if (cart_rom[chr_offset+0x2000*map_cnrom_bank+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
-					cart_rom[chr_offset+0x2000*map_cnrom_bank+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+				if (map_number == 3) // cnrom
 				{
-					ppu_status_s = i+1;
+					if (cart_rom[chr_offset+0x2000*map_cnrom_bank+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+						cart_rom[chr_offset+0x2000*map_cnrom_bank+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+					{
+						ppu_status_s = i+1;
 
-					break;
+						break;
+					}				
 				}
-			}
-			else
-			{
-				if (cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
-					cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+				else
 				{
-					ppu_status_s = i+1;
+					if (cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+						cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+					{
+						ppu_status_s = i+1;
 
-					break;
+						break;
+					}
 				}
 			}
 		}
-		
+		else // 8x16 sprites
+		{
+			for (unsigned short i=0; i<16; i++)
+			{
+				if (i < 8)
+				{
+					if (map_number == 3) // cnrom
+					{
+						if (cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+							cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+						{
+							ppu_status_s = i+1;
+
+							break;
+						}
+					}
+					else
+					{
+						if (cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+							cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+						{
+							ppu_status_s = i+1;
+
+							break;
+						}
+					}
+				}
+				else
+				{
+					if (map_number == 3) // cnrom
+					{
+						if (cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+							cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+						{
+							ppu_status_s = i+9;
+
+							break;
+						}
+					}
+					else
+					{
+						if (cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+							cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+						{
+							ppu_status_s = i+9;
+
+							break;
+						}
+					}
+				}
+			}
+		}
+
 		// finish frame drawing
 		if (ppu_frame_count >= loop_count)
 		{
@@ -2742,10 +2818,9 @@ void nes_loop(unsigned short loop_count, unsigned short internal_interrupt)
 
 			nes_frame();
 			
-			// wait for interrupts to catch up
-			while (cpu_interrupt_count < loop_count) { }
+			nes_wait(loop_count);
 		
-			cpu_interrupt_count = 0;
+			nes_interrupt_count = 0;
 		}
 		
 		ppu_frame_count++;
