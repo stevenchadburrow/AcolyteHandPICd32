@@ -2,9 +2,6 @@
 // By: Professor Steven Chad Burrow
 
 
-// Runs must faster with gcc optimization at level 2,
-// but then USB doesn't work?  Hm.
-
 /*
 VESA Signal 1280 x 1024 @ 60 Hz timing
 

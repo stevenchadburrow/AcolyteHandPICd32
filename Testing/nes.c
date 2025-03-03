@@ -662,6 +662,7 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 					ppu_reg_w = 0x0001;
 					
 					// scrolling!
+					ppu_flag_n = ((val & 0x0C) >> 2);
 					ppu_reg_y = ((ppu_reg_y & 0x38) | ((val & 0x03) << 6) | ((val & 0x30) >> 4));
 				}
 				else
