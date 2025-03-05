@@ -253,7 +253,16 @@ void _general_exception_handler(void)
     SendLongHex(_CP0_GET_EPC());
 	SendString("\n\r\\");
    
-	while (1) { }
+	DelayMS(1000);
+	
+	// soft reset system
+	SYSKEY = 0x0; // reset
+	SYSKEY = 0xAA996655; // unlock key #1
+	SYSKEY = 0x556699AA; // unlock key #2
+	RSWRST = 1; // set bit to reset of system
+	SYSKEY = 0x0; // re-lock
+	RSWRST; // read from register to reset
+	while (1) { } // wait until reset occurs
 }
 
 
@@ -273,8 +282,8 @@ unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 // audio
 unsigned char __attribute__((address(0x8004D000))) audio_buffer[AUDIO_LEN];
 unsigned int audio_read = 0;
-unsigned int audio_write = 0;
-unsigned int audio_counter = 0;
+unsigned int audio_write = (AUDIO_LEN >> 4);
+unsigned long audio_sync = 0;
 unsigned int audio_enable = 0;
 
 // controllers
@@ -579,11 +588,40 @@ void display_string(unsigned int x, unsigned int y, char *value)
 
 
 
-void __attribute__((optimize("O0"),vector(_TIMER_8_VECTOR), interrupt(ipl1srs))) t8_handler()
+
+void __attribute__((optimize("O2"),vector(_TIMER_8_VECTOR), interrupt(ipl1srs))) t8_handler()
 {		
-   IFS1bits.T8IF = 0;  // clear interrupt flag
+	IFS1bits.T8IF = 0;  // clear interrupt flag
    
-   nes_increment();
+	nes_increment(); // two scanlines at a time
+	nes_increment();
+   
+	if (audio_enable > 0)
+	{
+		// 8-bit signed audio add 0x80, unsigned add 0x00
+		PORTJ = (unsigned short)(((audio_buffer[audio_read]) + 0x00) + 
+			(((audio_buffer[audio_read]) + 0x00) << 8));
+
+		audio_read = audio_read + 1;
+
+		if (audio_read >= AUDIO_LEN)
+		{
+			audio_read = 0;
+		}
+		
+		audio_sync = audio_sync + 1;
+		
+		/*
+		// sync every 30 seconds?
+		if (audio_sync > 235800)
+		{
+			audio_sync = 0;
+			
+			audio_read = 0;
+			audio_write = (AUDIO_LEN >> 4);
+		}
+		*/
+	}
 }
 
 
@@ -624,9 +662,9 @@ int __attribute__((optimize("O0"))) main()
 	TRISFbits.TRISF8 = 1;
 
 	T8CON = 0x0000; // reset
-	T8CON = 0x0060; // prescale of 1:64, 16-bit
+	T8CON = 0x0000; //0x0060; // prescale of 1:64, 16-bit
 	TMR8 = 0x0000; // zero out counter
-	PR8 = 0xDBB9; // v-blank start (minus one)
+	PR8 = 0x6B58; //0xDBB9; // v-blank start (minus one)
 	
 	IPC9bits.T8IP = 0x1; // interrupt priority 1
 	IPC9bits.T8IS = 0x0; // interrupt sub-priority 0

@@ -6,27 +6,6 @@ void __attribute__((optimize("02"),vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(i
     IFS0bits.OC3IF = 0;  // clear interrupt flag
 	
 	PORTH = 0;
-
-	if (audio_enable > 0)
-	{
-		audio_counter = audio_counter + 1;
-		
-		if (audio_counter >= 4)
-		{
-			audio_counter = 0;
-			
-			// 8-bit signed audio add 0x80, unsigned add 0x00
-			PORTJ = (unsigned short)(((audio_buffer[audio_read]) + 0x00) + 
-				(((audio_buffer[audio_read]) + 0x00) << 8));
-
-			audio_read = audio_read + 1;
-
-			if (audio_read >= AUDIO_LEN)
-			{
-				audio_read = 0;
-			}
-		}
-	}
 	
 	screen_scanline = screen_scanline + 1; // increment scanline
 	

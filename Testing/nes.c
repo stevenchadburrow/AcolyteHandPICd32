@@ -31,8 +31,8 @@ unsigned char __attribute__((address(0x8004E000))) cpu_ram[2048]; // only cpu ra
 unsigned char __attribute__((address(0x80050000))) ppu_ram[4096]; // ppu ram from 0x2000 to 0x2FFF
 unsigned char __attribute__((address(0x80052000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
 unsigned char __attribute__((address(0x80054000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
-unsigned char oam_ram[256]; // special sprite ram inside of ppu
-unsigned char pal_ram[32]; // special palette ram inside of ppu
+unsigned char __attribute__((address(0x8004F700))) oam_ram[256]; // special sprite ram inside of ppu
+unsigned char __attribute__((address(0x8004F600))) pal_ram[32]; // special palette ram inside of ppu
 
 unsigned long prg_offset = 0x00000000; // offsets in cart_rom
 unsigned long chr_offset = 0x00000000;
@@ -332,16 +332,84 @@ void __attribute__((optimize("O2"))) nes_error(unsigned char code)
 	}
 }
 
+// semi-public?
 void __attribute__((optimize("O2"))) nes_increment()
 {
 	nes_interrupt_count = nes_interrupt_count + 1;
 	
-	if (nes_interrupt_count > 60) nes_interrupt_count = 60;
+	if (nes_interrupt_count > 60*262) nes_interrupt_count = 60*262;
+}
+
+unsigned char __attribute__((address(0x8004E000))) cpu_ram[2048]; // only cpu ram from 0x0000 to 0x07FF
+unsigned char __attribute__((address(0x80050000))) ppu_ram[4096]; // ppu ram from 0x2000 to 0x2FFF
+unsigned char __attribute__((address(0x80052000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
+unsigned char __attribute__((address(0x80054000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
+unsigned char __attribute__((address(0x8004F700))) oam_ram[256]; // special sprite ram inside of ppu
+unsigned char __attribute__((address(0x8004F600))) pal_ram[32]; // special palette ram inside of ppu
+
+unsigned char __attribute__((optimize("O0"))) nes_read_cpu_ram(unsigned long addr)
+{
+	return cpu_ram[(addr&2047)];
+}
+
+void __attribute__((optimize("O0"))) nes_write_cpu_ram(unsigned long addr, unsigned char val)
+{
+	cpu_ram[(addr&2047)] = val;
+}
+
+unsigned char __attribute__((optimize("O0"))) nes_read_ppu_ram(unsigned long addr)
+{
+	return ppu_ram[(addr&4095)];
+}
+
+void __attribute__((optimize("O0"))) nes_write_ppu_ram(unsigned long addr, unsigned char val)
+{
+	ppu_ram[(addr&4095)] = val;
+}
+
+unsigned char __attribute__((optimize("O0"))) nes_read_prg_ram(unsigned long addr)
+{
+	return prg_ram[(addr&8191)];
+}
+
+void __attribute__((optimize("O0"))) nes_write_prg_ram(unsigned long addr, unsigned char val)
+{
+	prg_ram[(addr&8191)] = val;
+}
+
+unsigned char __attribute__((optimize("O0"))) nes_read_chr_ram(unsigned long addr)
+{
+	return chr_ram[(addr&8191)];
+}
+
+void __attribute__((optimize("O0"))) nes_write_chr_ram(unsigned long addr, unsigned char val)
+{
+	chr_ram[(addr&8191)] = val;
+}
+
+unsigned char __attribute__((optimize("O0"))) nes_read_oam_ram(unsigned long addr)
+{
+	return oam_ram[(addr&255)];
+}
+
+void __attribute__((optimize("O0"))) nes_write_oam_ram(unsigned long addr, unsigned char val)
+{
+	oam_ram[(addr&255)] = val;
+}
+
+unsigned char __attribute__((optimize("O0"))) nes_read_pal_ram(unsigned long addr)
+{
+	return pal_ram[(addr&31)];
+}
+
+void __attribute__((optimize("O0"))) nes_write_pal_ram(unsigned long addr, unsigned char val)
+{
+	pal_ram[(addr&31)] = val;
 }
 
 unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 {		
-	if (addr < 0x00002000) return cpu_ram[(addr&0x000007FF)]; // internal ram (and mirrors)
+	if (addr < 0x00002000) return nes_read_cpu_ram((addr&0x000007FF)); // internal ram (and mirrors)
 	else if (addr < 0x00004000) // ppu (and mirrors)
 	{
 		switch ((addr&0x00000007))
@@ -404,25 +472,25 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 					{
 						if (map_number == 3) // cnrom
 						{
-							ppu_reg_b = cart_rom[(chr_offset+0x2000*map_cnrom_bank+ppu_reg_t)];
+							ppu_reg_b = cart_rom[((chr_offset+0x2000*map_cnrom_bank+ppu_reg_t))];
 						}
 						else
 						{
-							ppu_reg_b = cart_rom[(chr_offset+ppu_reg_t)];
+							ppu_reg_b = cart_rom[((chr_offset+ppu_reg_t))];
 						}
 					}
 					else // chr_ram
 					{
-						ppu_reg_b = chr_ram[ppu_reg_t];
+						ppu_reg_b = nes_read_chr_ram(ppu_reg_t);
 					}
 				}
 				else if (ppu_reg_t >= 0x2000 && ppu_reg_t < 0x3000)
 				{
-					ppu_reg_b = ppu_ram[((ppu_reg_t-0x2000)&ppu_status_m)];
+					ppu_reg_b = nes_read_ppu_ram(((ppu_reg_t-0x2000)&ppu_status_m));
 				}
 				else if (ppu_reg_t >= 0x3F00 && ppu_reg_t < 0x4000)
 				{
-					ppu_reg_b = pal_ram[(ppu_reg_t&0x001F)];
+					ppu_reg_b = nes_read_pal_ram((ppu_reg_t&0x001F));
 				}
 				 
 				if (ppu_flag_i == 0x0000)
@@ -517,13 +585,13 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 			{
 				if (map_mmc1_ram == 0)
 				{
-					return prg_ram[addr-0x6000];
+					return nes_read_prg_ram(addr-0x6000);
 				}
 				else return 0xFF;
 			}
 			else
 			{
-				return prg_ram[addr-0x6000];
+				return nes_read_prg_ram(addr-0x6000);
 			}
 		}
 		else return 0xFF;
@@ -534,24 +602,24 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 		{
 			if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
 			{
-				return cart_rom[prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000];
+				return cart_rom[(prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000)];
 			}
 			else if (map_mmc1_prg_mode == 2)
 			{
-				return cart_rom[prg_offset+addr-0x8000];
+				return cart_rom[(prg_offset+addr-0x8000)];
 			}
 			else
 			{
-				return cart_rom[prg_offset+0x4000*map_mmc1_prg_bank+addr-0x8000];
+				return cart_rom[(prg_offset+0x4000*map_mmc1_prg_bank+addr-0x8000)];
 			}
 		}
 		else if (map_number == 0x0002) // unrom
 		{
-			return cart_rom[prg_offset+0x4000*map_unrom_bank+addr-0x8000];
+			return cart_rom[(prg_offset+0x4000*map_unrom_bank+addr-0x8000)];
 		}
 		else // nrom
 		{
-			return cart_rom[prg_offset+addr-0x8000];
+			return cart_rom[(prg_offset+addr-0x8000)];
 		}
 	}
 	else if (addr < 0x00010000) // cart rom (upper half)
@@ -560,30 +628,30 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 		{
 			if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
 			{
-				cart_rom[prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000];
+				return cart_rom[(prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000)];
 			}
 			else if (map_mmc1_prg_mode == 2)
 			{
-				return cart_rom[prg_offset+0x4000*map_mmc1_prg_bank+addr-0xC000];
+				return cart_rom[(prg_offset+0x4000*map_mmc1_prg_bank+addr-0xC000)];
 			}
 			else
 			{
-				return cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000];
+				return cart_rom[(prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000)];
 			}
 		}
 		else if (map_number == 0x0002) // unrom
 		{
-			return cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000];
+			return cart_rom[(prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000)];
 		}
 		else // nrom
 		{
 			if (cart_rom[4] == 0x01)
 			{
-				return cart_rom[prg_offset+addr-0xC000];
+				return cart_rom[(prg_offset+addr-0xC000)];
 			}
 			else
 			{
-				return cart_rom[prg_offset+addr-0x8000];
+				return cart_rom[(prg_offset+addr-0x8000)];
 			}
 		}
 	}
@@ -595,7 +663,7 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 
 void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char val)
 {		
-	if (addr < 0x00002000) cpu_ram[(addr&0x000007FF)] = val; // internal ram (and mirrors)
+	if (addr < 0x00002000) nes_write_cpu_ram((addr&0x000007FF), val); // internal ram (and mirrors)
 	else if (addr < 0x00004000) // ppu (and mirrors)
 	{
 		switch ((addr&0x00000007))
@@ -634,7 +702,7 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 			}
 			case 0x04: // oamdata
 			{
-				oam_ram[ppu_reg_a] = val;
+				nes_write_oam_ram(ppu_reg_a, val);
 				ppu_reg_a++;
 				
 				break;
@@ -681,20 +749,20 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 			{
 				if (ppu_reg_t < 0x2000)
 				{
-					chr_ram[ppu_reg_t] = val;
+					nes_write_chr_ram(ppu_reg_t, val);
 				}
 				else if (ppu_reg_t >= 0x2000 && ppu_reg_t < 0x3000)
 				{	
-					ppu_ram[((ppu_reg_t-0x2000)&ppu_status_m)] = val;
+					nes_write_ppu_ram(((ppu_reg_t-0x2000)&ppu_status_m), val);
 				}
 				else if (ppu_reg_t == 0x3F00 || ppu_reg_t == 0x3F10)
 				{
-					pal_ram[0x00] = val;
-					pal_ram[0x10] = val;
+					nes_write_pal_ram(0x00, val);
+					nes_write_pal_ram(0x10, val);
 				}
 				else if (ppu_reg_t > 0x3F00 && ppu_reg_t < 0x4000)
 				{
-					pal_ram[(ppu_reg_t&0x001F)] = val;
+					nes_write_pal_ram((ppu_reg_t&0x001F), val);
 				}
 					
 				if (ppu_flag_i == 0x0000)
@@ -937,7 +1005,7 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 				
 				for (unsigned short loop=0; loop<256; loop++)
 				{
-					oam_ram[loop] = cpu_read(loop+(val<<8)); // perhaps read from internal ram directly to make faster?
+					nes_write_oam_ram(loop, cpu_read(loop+(val<<8))); // perhaps read from internal ram directly to make faster?
 				}
 				
 				break;
@@ -1001,12 +1069,12 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 			{
 				if (map_mmc1_ram == 0)
 				{
-					prg_ram[addr-0x6000] = val;
+					nes_write_prg_ram(addr-0x6000, val);
 				}
 			}
 			else
 			{
-				prg_ram[addr-0x6000] = val;
+				nes_write_prg_ram(addr-0x6000, val);
 			}
 		}
 	}
@@ -2595,7 +2663,9 @@ void __attribute__((optimize("O2"))) nes_audio(unsigned long cycles)
 void __attribute__((optimize("O0"))) nes_wait(unsigned long loop_count)
 {
 	// wait for interrupts to catch up
-	while (nes_interrupt_count < loop_count) { }
+	while (nes_interrupt_count < (loop_count*261)) { }
+	
+	nes_interrupt_count -= loop_count*261;
 }
 
 void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned long internal_interrupt)
@@ -2660,17 +2730,22 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 		}
 		
 		ppu_scanline_count++;
+		
+		if (internal_interrupt > 0)
+		{
+			nes_increment();
+		}
 	}
 	
-	apu_sample_cycles += (cpu_current_cycles<<2); // need to find what works best here
+	apu_sample_cycles += (cpu_current_cycles); // need to find what works best here
 	
-	if (apu_sample_cycles >= 447) // need to find what works best here
+	if (apu_sample_cycles >= 228) // need to find what works best here
 	{
-		apu_sample_cycles -= 447;
+		apu_sample_cycles -= 228;
 		
 		if (nes_audio_flag > 0)
 		{
-			nes_audio(112); // need to find what works best here
+			nes_audio(228); // need to find what works best here
 		}
 	}
 
@@ -2706,11 +2781,6 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 		
 		ppu_scanline_count = -21;
 		//ppu_scanline_count = 0;
-		
-		if (internal_interrupt > 0)
-		{
-			nes_increment();
-		}
 		
 		ppu_reg_a = 0;
 		
@@ -2820,8 +2890,6 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 			nes_frame();
 			
 			nes_wait(loop_count);
-		
-			nes_interrupt_count = 0;
 		}
 		
 		ppu_frame_count++;
