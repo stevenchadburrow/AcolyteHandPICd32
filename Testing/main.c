@@ -271,8 +271,8 @@ void _general_exception_handler(void)
 #define SCREEN_XY 122880
 
 // video
-unsigned char __attribute__((coherent,address(0x8004F800))) screen_line[SCREEN_X*2];
-unsigned char __attribute__((coherent,address(0x80010000))) screen_buffer[SCREEN_X*SCREEN_Y*2]; // visible portion of screen
+volatile unsigned char __attribute__((coherent,address(0x8004F800))) screen_line[SCREEN_X*2];
+volatile unsigned char __attribute__((coherent,address(0x80010000))) screen_buffer[SCREEN_X*SCREEN_Y*2]; // visible portion of screen
 unsigned char screen_frame = 0;
 unsigned int screen_scanline = 1025; // start of vertical sync
 unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
@@ -280,7 +280,7 @@ unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 #define AUDIO_LEN 4096
 
 // audio
-unsigned char __attribute__((address(0x8004D000))) audio_buffer[AUDIO_LEN];
+volatile unsigned char __attribute__((address(0x8004D000))) audio_buffer[AUDIO_LEN];
 unsigned int audio_read = 0;
 unsigned int audio_write = (AUDIO_LEN >> 4);
 unsigned long audio_sync = 0;
@@ -711,8 +711,10 @@ int __attribute__((optimize("O0"))) main()
 	display_string(0x0010, 0x0088, "  Load Ghostbusters\\");
 	display_string(0x0010, 0x0090, "  Load Gradius\\");
 	display_string(0x0010, 0x0098, "  Load Zelda\\");
-	display_string(0x0010, 0x00A0, "  Load Zelda 2\\");
-	display_string(0x0010, 0x00A8, "  ???\\");
+	display_string(0x0010, 0x00A0, "  Load Dragon Warrior 3\\");
+	display_string(0x0010, 0x00A8, "  Load Final Fantasy\\");
+	display_string(0x0010, 0x00B0, "  ???\\");
+	display_string(0x0010, 0x00B8, "  ???\\");
 	
 	DelayMS(1000);
 	
@@ -742,7 +744,7 @@ int __attribute__((optimize("O0"))) main()
 			
 			display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
 			
-			if (menu_pos < 19) menu_pos++;
+			if (menu_pos < 21) menu_pos++;
 		}
 		else
 		{
@@ -757,6 +759,7 @@ int __attribute__((optimize("O0"))) main()
 		
 		while (1)
 		{ 
+			
 			if (PORTKbits.RK7 == 0)
 			{
 				while (PORTKbits.RK7 == 0) { }
@@ -927,7 +930,12 @@ int __attribute__((optimize("O0"))) main()
 			}
 			case 0x12:
 			{
-				nes_load("ZELDA2.NES");
+				nes_load("DW3.NES");
+				break;
+			}
+			case 0x13:
+			{
+				nes_load("FF.NES");
 				break;
 			}
 			default:

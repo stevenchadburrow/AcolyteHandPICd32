@@ -27,15 +27,16 @@ int main()
 // if using for other platforms, adjust variable types here
 unsigned char *cart_rom = (unsigned char *)0x9D100000;
 
-unsigned char __attribute__((address(0x8004E000))) cpu_ram[2048]; // only cpu ram from 0x0000 to 0x07FF
-unsigned char __attribute__((address(0x80050000))) ppu_ram[4096]; // ppu ram from 0x2000 to 0x2FFF
-unsigned char __attribute__((address(0x80052000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
-unsigned char __attribute__((address(0x80054000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
-unsigned char __attribute__((address(0x8004F700))) oam_ram[256]; // special sprite ram inside of ppu
-unsigned char __attribute__((address(0x8004F600))) pal_ram[32]; // special palette ram inside of ppu
+volatile unsigned char __attribute__((address(0x8004E000))) cpu_ram[2048]; // only cpu ram from 0x0000 to 0x07FF
+volatile unsigned char __attribute__((address(0x80050000))) ppu_ram[2048]; // ppu ram from 0x2000 to 0x2FFF (halved, mirrored)
+volatile unsigned char __attribute__((address(0x80052000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
+volatile unsigned char __attribute__((address(0x80054000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
+volatile unsigned char __attribute__((address(0x8004F700))) oam_ram[256]; // special sprite ram inside of ppu
+volatile unsigned char __attribute__((address(0x8004F600))) pal_ram[32]; // special palette ram inside of ppu
 
 unsigned long prg_offset = 0x00000000; // offsets in cart_rom
 unsigned long chr_offset = 0x00000000;
+unsigned long end_offset = 0x00000000;
 
 unsigned char nes_init_flag = 0;
 unsigned char nes_audio_flag = 1;
@@ -57,14 +58,14 @@ unsigned short map_mmc1_shift = 0x0000;
 unsigned short map_mmc1_count = 0x0000;
 unsigned short map_mmc1_prg_mode = 0x0003; // should be 0x0003
 unsigned short map_mmc1_chr_mode = 0x0000;
-unsigned short map_mmc1_chr_bank_0 = 0x0000;
+unsigned short map_mmc1_chr_bank_0 = 0x0010;
 unsigned short map_mmc1_chr_bank_1 = 0x0000;
 unsigned short map_mmc1_prg_bank = 0x0000;
 unsigned short map_mmc1_ram = 0x0000;
 
 unsigned short cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
 unsigned short cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
-unsigned short cpu_flag_d = 0x0000, cpu_flag_i = 0x0000;
+unsigned short cpu_flag_d = 0x0000, cpu_flag_i = 0x0001;
 unsigned short cpu_reg_pc = 0xFFFC;
 
 unsigned short cpu_temp_opcode = 0x0000, cpu_temp_memory = 0x0000, cpu_temp_address = 0x0000; 
@@ -74,19 +75,17 @@ unsigned short cpu_status_r = 0x0000;
 
 unsigned short ppu_reg_v = 0x0000, ppu_reg_t = 0x0000, ppu_reg_w = 0x0000;
 unsigned short ppu_reg_a = 0x0000, ppu_reg_b = 0x0000;
-
-unsigned short ppu_reg_x = 0x0000, ppu_reg_y = 0x0000;
+unsigned short ppu_reg_x = 0x0000;
 
 // flag_e and flag_v were 0x0001;
 unsigned short ppu_flag_e = 0x0000, ppu_flag_p = 0x0000, ppu_flag_h = 0x0000;
-unsigned short ppu_flag_b = 0x0000, ppu_flag_s = 0x0000;
-unsigned short ppu_flag_i = 0x0000, ppu_flag_n = 0x0000;
+unsigned short ppu_flag_b = 0x0000, ppu_flag_s = 0x0000, ppu_flag_i = 0x0000;
 unsigned short ppu_flag_v = 0x0000, ppu_flag_0 = 0x0000, ppu_flag_o = 0x0000;
 
 unsigned short ppu_flag_g = 0x0000, ppu_flag_lb = 0x0000, ppu_flag_ls = 0x0000;
 unsigned short ppu_flag_eb = 0x0000, ppu_flag_es = 0x0000;
 
-unsigned short ppu_status_0 = 0x0000, ppu_status_s = 0x0000, ppu_status_m = 0xFFFF;
+unsigned short ppu_status_0 = 0x0000, ppu_status_s = 0x0000, ppu_status_m = 0x0000;
 
 unsigned short ctl_flag_s = 0x0000;
 unsigned short ctl_value_1 = 0x0000, ctl_value_2 = 0x0000;
@@ -340,13 +339,6 @@ void __attribute__((optimize("O2"))) nes_increment()
 	if (nes_interrupt_count > 60*262) nes_interrupt_count = 60*262;
 }
 
-unsigned char __attribute__((address(0x8004E000))) cpu_ram[2048]; // only cpu ram from 0x0000 to 0x07FF
-unsigned char __attribute__((address(0x80050000))) ppu_ram[4096]; // ppu ram from 0x2000 to 0x2FFF
-unsigned char __attribute__((address(0x80052000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
-unsigned char __attribute__((address(0x80054000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
-unsigned char __attribute__((address(0x8004F700))) oam_ram[256]; // special sprite ram inside of ppu
-unsigned char __attribute__((address(0x8004F600))) pal_ram[32]; // special palette ram inside of ppu
-
 unsigned char __attribute__((optimize("O0"))) nes_read_cpu_ram(unsigned long addr)
 {
 	return cpu_ram[(addr&2047)];
@@ -359,12 +351,12 @@ void __attribute__((optimize("O0"))) nes_write_cpu_ram(unsigned long addr, unsig
 
 unsigned char __attribute__((optimize("O0"))) nes_read_ppu_ram(unsigned long addr)
 {
-	return ppu_ram[(addr&4095)];
+	return ppu_ram[(addr&2047)];
 }
 
 void __attribute__((optimize("O0"))) nes_write_ppu_ram(unsigned long addr, unsigned char val)
 {
-	ppu_ram[(addr&4095)] = val;
+	ppu_ram[(addr&2047)] = val;
 }
 
 unsigned char __attribute__((optimize("O0"))) nes_read_prg_ram(unsigned long addr)
@@ -446,7 +438,7 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 			}
 			case 0x04: // oamdata
 			{
-				return oam_ram[ppu_reg_a];
+				return nes_read_oam_ram(ppu_reg_a);
 				
 				break;
 			}
@@ -466,40 +458,83 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 			{	
 				unsigned char val = ppu_reg_b;
 				
-				if (ppu_reg_t < 0x2000)
+				if (ppu_reg_v < 0x2000)
 				{
 					if (cart_rom[5] > 0) // chr_rom
 					{
 						if (map_number == 3) // cnrom
 						{
-							ppu_reg_b = cart_rom[((chr_offset+0x2000*map_cnrom_bank+ppu_reg_t))];
+							ppu_reg_b = cart_rom[(((chr_offset+0x2000*map_cnrom_bank+ppu_reg_v)))];
 						}
 						else
 						{
-							ppu_reg_b = cart_rom[((chr_offset+ppu_reg_t))];
+							ppu_reg_b = cart_rom[(((chr_offset+ppu_reg_v)))];
 						}
 					}
 					else // chr_ram
 					{
-						ppu_reg_b = nes_read_chr_ram(ppu_reg_t);
+						ppu_reg_b = nes_read_chr_ram(ppu_reg_v);
 					}
 				}
-				else if (ppu_reg_t >= 0x2000 && ppu_reg_t < 0x3000)
+				else if (ppu_reg_v >= 0x2000 && ppu_reg_v < 0x3000)
 				{
-					ppu_reg_b = nes_read_ppu_ram(((ppu_reg_t-0x2000)&ppu_status_m));
+					if (ppu_reg_v < 0x2400)
+					{
+						if (ppu_status_m == 0x0000 || ppu_status_m == 0x0001 || ppu_status_m == 0x0002)
+						{
+							ppu_reg_b = nes_read_ppu_ram(ppu_reg_v-0x2000);
+						}
+						else if (ppu_status_m = 0x0003)
+						{
+							ppu_reg_b = nes_read_ppu_ram(ppu_reg_v-0x2000+0x0400);
+						}
+					}
+					else if (ppu_reg_v < 0x2800)
+					{
+						if (ppu_status_m == 0x0000 || ppu_status_m == 0x0002) // vertical scrolling
+						{
+							ppu_reg_b = nes_read_ppu_ram(ppu_reg_v-0x2400);
+						}
+						else if (ppu_status_m == 0x0001 || ppu_status_m == 0x0003) // horizontal scrolling
+						{
+							ppu_reg_b = nes_read_ppu_ram(ppu_reg_v-0x2000);
+						}
+					}
+					else if (ppu_reg_v < 0x2C00)
+					{
+						if (ppu_status_m == 0x0000 || ppu_status_m == 0x0003) // vertical scrolling
+						{
+							ppu_reg_b = nes_read_ppu_ram(ppu_reg_v-0x2400);
+						}
+						else if (ppu_status_m == 0x0001 || ppu_status_m == 0x0002) // horizontal scrolling
+						{
+							ppu_reg_b = nes_read_ppu_ram(ppu_reg_v-0x2800);
+						}
+					}
+					else
+					{
+						if (ppu_status_m == 0x0000 || ppu_status_m == 0x0001 || ppu_status_m == 0x0003)
+						{
+							ppu_reg_b = nes_read_ppu_ram(ppu_reg_v-0x2800);
+						}
+						else if (ppu_status_m == 0x0002)
+						{
+							ppu_reg_b = nes_read_ppu_ram(ppu_reg_v-0x2C00);
+						}
+					}
 				}
-				else if (ppu_reg_t >= 0x3F00 && ppu_reg_t < 0x4000)
+				else if (ppu_reg_v >= 0x3F00 && ppu_reg_v < 0x4000)
 				{
-					ppu_reg_b = nes_read_pal_ram((ppu_reg_t&0x001F));
+					ppu_reg_b = nes_read_pal_ram((ppu_reg_v&0x001F));
 				}
 				 
 				if (ppu_flag_i == 0x0000)
 				{
-					ppu_reg_t += 0x0001;
+					ppu_reg_v += 0x0001;
 				}
 				else
 				{
-					ppu_reg_t += 0x0020;
+					ppu_reg_v += 0x0020;
 				}
 				
 				return val;
@@ -514,14 +549,14 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 		{
 			case 0x15: // apu status
 			{
-				unsigned char val = ((apu_flag_i >> 7) |
-					((apu_flag_f >> 6) & 0x01) |
-					((apu_flag_d >> 4) & 0x01) |
-					((apu_flag_n >> 3) & 0x01) |
-					((apu_flag_t >> 2) & 0x01) |
-					((apu_flag_2 >> 1) & 0x01) |
-					(apu_flag_1 & 0x01));
-				
+				unsigned char val = ((apu_flag_i << 7) |
+					(apu_flag_f << 6) |
+					(apu_flag_d << 4) |
+					(apu_flag_n << 3) |
+					(apu_flag_t << 2) |
+					(apu_flag_2 << 1) |
+					(apu_flag_1));
+
 				apu_flag_f = 0x0000;
 				
 				return val;
@@ -579,8 +614,8 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 	}
 	else if (addr < 0x00008000) // cart ram
 	{	
-		if (cpu_status_r > 0)
-		{
+		//if (cpu_status_r > 0)
+		//{
 			if (map_number == 0x0001)
 			{
 				if (map_mmc1_ram == 0)
@@ -593,65 +628,101 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 			{
 				return nes_read_prg_ram(addr-0x6000);
 			}
-		}
-		else return 0xFF;
+		//}
+		//else return 0xFF;
 	}
 	else if (addr < 0x0000C000) // cart rom (lower half)
 	{
 		if (map_number == 0x0001) // mmc1
 		{
-			if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
+			if (cart_rom[4] <= 0x10) // 256KB or less
 			{
-				return cart_rom[(prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000)];
+				if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
+				{
+					return cart_rom[((prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000))];
+				}
+				else if (map_mmc1_prg_mode == 2)
+				{
+					return cart_rom[((prg_offset+addr-0x8000))];
+				}
+				else
+				{
+					return cart_rom[((prg_offset+0x4000*map_mmc1_prg_bank+addr-0x8000))];
+				}
 			}
-			else if (map_mmc1_prg_mode == 2)
+			else // up to 512KB
 			{
-				return cart_rom[(prg_offset+addr-0x8000)];
-			}
-			else
-			{
-				return cart_rom[(prg_offset+0x4000*map_mmc1_prg_bank+addr-0x8000)];
+				if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
+				{
+					return cart_rom[((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000))];
+				}
+				else if (map_mmc1_prg_mode == 2)
+				{
+					return cart_rom[((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+addr-0x8000))];
+				}
+				else
+				{
+					return cart_rom[((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x4000*map_mmc1_prg_bank+addr-0x8000))];
+				}
 			}
 		}
 		else if (map_number == 0x0002) // unrom
 		{
-			return cart_rom[(prg_offset+0x4000*map_unrom_bank+addr-0x8000)];
+			return cart_rom[((prg_offset+0x4000*map_unrom_bank+addr-0x8000))];
 		}
 		else // nrom
 		{
-			return cart_rom[(prg_offset+addr-0x8000)];
+			return cart_rom[((prg_offset+addr-0x8000))];
 		}
 	}
 	else if (addr < 0x00010000) // cart rom (upper half)
 	{
 		if (map_number == 0x0001) // mmc1
 		{
-			if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
+			if (cart_rom[4] <= 0x10) // 256KB or less
 			{
-				return cart_rom[(prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000)];
+				if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
+				{
+					return cart_rom[((prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000))];
+				}
+				else if (map_mmc1_prg_mode == 2)
+				{
+					return cart_rom[((prg_offset+0x4000*map_mmc1_prg_bank+addr-0xC000))];
+				}
+				else
+				{
+					return cart_rom[((prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000))];
+				}
 			}
-			else if (map_mmc1_prg_mode == 2)
+			else // up to 512KB
 			{
-				return cart_rom[(prg_offset+0x4000*map_mmc1_prg_bank+addr-0xC000)];
-			}
-			else
-			{
-				return cart_rom[(prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000)];
+				if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
+				{
+					return cart_rom[((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000))];
+				}
+				else if (map_mmc1_prg_mode == 2)
+				{
+					return cart_rom[((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x4000*map_mmc1_prg_bank+addr-0xC000))];
+				}
+				else
+				{
+					return cart_rom[((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x4000*((cart_rom[4]-0x10)-1)+addr-0xC000))];
+				}
 			}
 		}
 		else if (map_number == 0x0002) // unrom
 		{
-			return cart_rom[(prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000)];
+			return cart_rom[((prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000))];
 		}
-		else // nrom
+		else
 		{
 			if (cart_rom[4] == 0x01)
 			{
-				return cart_rom[(prg_offset+addr-0xC000)];
+				return cart_rom[((prg_offset+addr-0xC000))];
 			}
 			else
 			{
-				return cart_rom[(prg_offset+addr-0x8000)];
+				return cart_rom[((prg_offset+addr-0x8000))];
 			}
 		}
 	}
@@ -676,7 +747,8 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 				ppu_flag_b = ((val>>4)&0x01);
 				ppu_flag_s = ((val>>3)&0x01);
 				ppu_flag_i = ((val>>2)&0x01);
-				ppu_flag_n = (val&0x03);
+				
+				ppu_reg_t = ((ppu_reg_t & 0x73FF) | ((val & 0x03) << 10));
 				
 				break;
 			}
@@ -692,6 +764,8 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 			}
 			case 0x02: // ppustatus
 			{
+				ppu_reg_w = 0x0000;
+				
 				break;
 			}
 			case 0x03: // oamaddr
@@ -711,12 +785,15 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 			{
 				if (ppu_reg_w == 0x0000)
 				{
-					ppu_reg_x = val;
+					ppu_reg_t = ((ppu_reg_t & 0x7FE0) | ((val & 0xF8) >> 3));
+					ppu_reg_x = (val & 0x07);
 					ppu_reg_w = 0x0001;
 				}
 				else
 				{
-					ppu_reg_y = val;
+					ppu_reg_t = ((ppu_reg_t & 0x0C1F) | 
+						((val & 0x07) << 12) |
+						((val & 0xF8) << 2));
 					ppu_reg_w = 0x0000;
 				}
 				
@@ -728,50 +805,96 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 				{
 					ppu_reg_t = ((ppu_reg_t & 0x00FF) | ((val & 0x3F) << 8));
 					ppu_reg_w = 0x0001;
-					
-					// scrolling!
-					ppu_flag_n = ((val & 0x0C) >> 2);
-					ppu_reg_y = ((ppu_reg_y & 0x38) | ((val & 0x03) << 6) | ((val & 0x30) >> 4));
 				}
 				else
 				{
-					ppu_reg_t = ((ppu_reg_t & 0xFF00) | val);
+					ppu_reg_t = ((ppu_reg_t & 0x7F00) | val);
+					ppu_reg_v = ppu_reg_t;
 					ppu_reg_w = 0x0000;
-					
-					// scrolling!
-					ppu_reg_x = ((ppu_reg_x & 0x07) | ((val & 0x1F) << 3));
-					ppu_reg_y = ((ppu_reg_y & 0xC7) | ((val & 0xE0) >> 2));
 				}
 				
 				break;
 			}
 			case 0x07: // ppudata
 			{
-				if (ppu_reg_t < 0x2000)
+				if (ppu_reg_v < 0x2000)
 				{
-					nes_write_chr_ram(ppu_reg_t, val);
+					if (PORTKbits.RK7 == 0)
+					{
+						SendLongHex(cpu_reg_pc);
+						SendChar('.');
+						SendLongHex(ppu_reg_v);
+						SendChar('.');
+						SendHex(val);
+						SendChar('?');
+					}
+					
+					nes_write_chr_ram(ppu_reg_v, val);
 				}
-				else if (ppu_reg_t >= 0x2000 && ppu_reg_t < 0x3000)
+				else if (ppu_reg_v >= 0x2000 && ppu_reg_v < 0x3000)
 				{	
-					nes_write_ppu_ram(((ppu_reg_t-0x2000)&ppu_status_m), val);
+					if (ppu_reg_v < 0x2400)
+					{
+						if (ppu_status_m == 0x0000 || ppu_status_m == 0x0001 || ppu_status_m == 0x0002)
+						{
+							nes_write_ppu_ram(ppu_reg_v-0x2000, val);
+						}
+						else if (ppu_status_m == 0x0003)
+						{
+							nes_write_ppu_ram(ppu_reg_v-0x2000+0x0400, val);
+						}
+					}
+					else if (ppu_reg_v < 0x2800)
+					{
+						if (ppu_status_m == 0x0000 || ppu_status_m == 0x0002) // vertical scrolling
+						{
+							nes_write_ppu_ram(ppu_reg_v-0x2400, val);
+						}
+						else if (ppu_status_m == 0x0001 || ppu_status_m == 0x0003) // horizontal scrolling
+						{
+							nes_write_ppu_ram(ppu_reg_v-0x2000, val);
+						}
+					}
+					else if (ppu_reg_v < 0x2C00)
+					{
+						if (ppu_status_m == 0x0000 || ppu_status_m == 0x0003) // vertical scrolling
+						{
+							nes_write_ppu_ram(ppu_reg_v-0x2400, val);
+						}
+						else if (ppu_status_m == 0x0001 || ppu_status_m == 0x0002) // horizontal scrolling
+						{
+							nes_write_ppu_ram(ppu_reg_v-0x2800, val);
+						}
+					}
+					else
+					{
+						if (ppu_status_m == 0x0000 || ppu_status_m == 0x0001 || ppu_status_m == 0x0003)
+						{
+							nes_write_ppu_ram(ppu_reg_v-0x2800, val);
+						}
+						else if (ppu_status_m == 0x0002)
+						{
+							nes_write_ppu_ram(ppu_reg_v-0x2C00, val);
+						}
+					}
 				}
-				else if (ppu_reg_t == 0x3F00 || ppu_reg_t == 0x3F10)
+				else if (ppu_reg_v == 0x3F00 || ppu_reg_v == 0x3F10)
 				{
 					nes_write_pal_ram(0x00, val);
 					nes_write_pal_ram(0x10, val);
 				}
-				else if (ppu_reg_t > 0x3F00 && ppu_reg_t < 0x4000)
+				else if (ppu_reg_v > 0x3F00 && ppu_reg_v < 0x4000)
 				{
-					nes_write_pal_ram((ppu_reg_t&0x001F), val);
+					nes_write_pal_ram((ppu_reg_v&0x001F), val);
 				}
 					
 				if (ppu_flag_i == 0x0000)
 				{
-					ppu_reg_t += 0x0001;
+					ppu_reg_v += 0x0001;
 				}
 				else
 				{
-					ppu_reg_t += 0x0020;
+					ppu_reg_v += 0x0020;
 				}
 				
 				break;
@@ -1063,20 +1186,26 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 	}
 	else if (addr < 0x00008000) // cart ram
 	{
-		if (cpu_status_r > 0)
-		{
+		//if (cpu_status_r > 0)
+		//{
 			if (map_number == 0x0001)
 			{
 				if (map_mmc1_ram == 0)
 				{
 					nes_write_prg_ram(addr-0x6000, val);
+					
+					if (addr == 0x6A3D)
+					{
+						SendHex(val);
+						SendChar('#');
+					}
 				}
 			}
 			else
 			{
 				nes_write_prg_ram(addr-0x6000, val);
 			}
-		}
+		//}
 	}
 	else if (addr < 0x00010000) // cart rom and mapper
 	{
@@ -1102,46 +1231,49 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 				{
 					map_mmc1_count = 0;
 				
-					if (addr < 0xA000) // control
+					if (addr < 0x0000A000) // control
 					{
-						/*
 						switch ((map_mmc1_shift & 0x03)) // nametable
 						{
 							case 0x00:
 							{
+								ppu_status_m = 0x0002; // single, first bank
+								
 								break;
 							}
 							case 0x01:
 							{
+								ppu_status_m = 0x0003; // single, second bank
+								
 								break;
 							}
 							case 0x02:
 							{
-								ppu_status_m = 0xF7FF; // horizontal scrolling
+								ppu_status_m = 0x0001; // horizontal scrolling
 								
 								break;
 							}
 							case 0x03:
-							{
-								ppu_status_m = 0xFBFF; // vertical scrolling
+							{	
+								ppu_status_m = 0x0000; // vertical scrolling
 								
 								break;
 							}
 						}
-						*/
+						
 						map_mmc1_prg_mode = ((map_mmc1_shift & 0x0C) >> 2);
 						map_mmc1_chr_mode = ((map_mmc1_shift & 0x10) >> 4);
 					}
-					else if (addr < 0xC000) // chr bank 0
+					else if (addr < 0x0000C000) // chr bank 0
 					{
 						map_mmc1_chr_bank_0 = (map_mmc1_shift & 0x1F);
 					}
-					else if (addr < 0xE000) // chr bank 1
+					else if (addr < 0x0000E000) // chr bank 1
 					{
 						map_mmc1_chr_bank_1 = (map_mmc1_shift & 0x1F);
 					}
 					else // prg bank
-					{
+					{	
 						map_mmc1_prg_bank = (map_mmc1_shift & 0x0F);
 						map_mmc1_ram = ((map_mmc1_shift & 0x10) >> 4);
 					}
@@ -1471,7 +1603,7 @@ unsigned short __attribute__((optimize("O2"))) cpu_run()
 		// BRK
 		case 0x00:
 		{
-			//SendString("Break\n\r\\");
+			//SendString("BRK\n\r\\");
 			
 			cpu_temp_cycles = 0x0007;
 			cpu_temp_memory = ((cpu_reg_pc+1)>>8);
@@ -1479,10 +1611,15 @@ unsigned short __attribute__((optimize("O2"))) cpu_run()
 			cpu_temp_memory = ((cpu_reg_pc+1)&0x00FF);
 			CPU_PUSH;
 			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c|0x30);
+				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
 			CPU_PUSH;
 			cpu_reg_pc = cpu_read(0xFFFE);
 			cpu_reg_pc += (cpu_read(0xFFFF)<<8);
+			
+			cpu_current_cycles += 7;
+			
+			cpu_flag_i = 1;
+			
 			break;
 		}
 		
@@ -1722,7 +1859,7 @@ unsigned short __attribute__((optimize("O2"))) cpu_run()
 		{
 			cpu_temp_cycles = 0x0003;
 			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c|0x30);
+				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
 			CPU_PUSH;
 			break;
 		}
@@ -1960,6 +2097,7 @@ void __attribute__((optimize("O2"))) nes_border()
 void __attribute__((optimize("O2"))) nes_background(unsigned short line)
 {
 	unsigned short scroll_x = 0, scroll_y = 0, scroll_n = 0;
+	unsigned short scroll_t = 0, scroll_l = 0;
 	
 	unsigned short pixel_lookup = 0, pixel_table = 0;
 	unsigned short pixel_x = 0, pixel_y = 0;
@@ -1967,17 +2105,17 @@ void __attribute__((optimize("O2"))) nes_background(unsigned short line)
 	
 	if (ppu_flag_eb > 0)
 	{
-		pixel_y = line - (ppu_reg_y & 0x07);
+		pixel_y = line - ((ppu_reg_t & 0x7000) >> 12);
 		
 		if (pixel_y >= 8 && pixel_y < 232) // remove overscan above and below
 		{
 			for (unsigned char w=0; w<33; w++) // go one more than 32
 			{	
-				scroll_x = w + ((ppu_reg_x & 0xF8) >> 3);
-				scroll_y = (line>>3) + ((ppu_reg_y & 0xF8) >> 3);
-				scroll_n = ppu_flag_n;
+				scroll_x = w + (ppu_reg_t & 0x001F);
+				scroll_y = (line>>3) + ((ppu_reg_t & 0x03E0) >> 5);
+				scroll_n = ((ppu_reg_t & 0x0C00) >> 10);
 
-				switch (ppu_flag_n)
+				switch (scroll_n)
 				{
 					case (0x00):
 					{
@@ -2044,27 +2182,105 @@ void __attribute__((optimize("O2"))) nes_background(unsigned short line)
 						break;
 					}
 				}
+				
+				scroll_t = (scroll_n<<10)+((scroll_y&0xFC)<<1)+((scroll_x&0xFC)>>2);
 
-				pixel_table = (ppu_ram[((0x03C0+(scroll_n<<10)+((scroll_y&0xFC)<<1)+((scroll_x&0xFC)>>2))&ppu_status_m)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+				if (ppu_status_m == 0x0001) // horizontal scrolling
+				{
+					if (scroll_t < 0x0800)
+					{
+						pixel_table = (ppu_ram[(scroll_t+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+					}
+					else
+					{
+						pixel_table = (ppu_ram[(scroll_t-0x0800+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+					}
+				}
+				else if (ppu_status_m == 0x0000) // vertical scrolling
+				{
+					if (scroll_t < 0x0400)
+					{
+						pixel_table = (ppu_ram[(scroll_t+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+					}
+					else if (scroll_t < 0x0800)
+					{
+						pixel_table = (ppu_ram[(scroll_t-0x0400+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+					}
+					else if (scroll_t < 0x0C00)
+					{
+						pixel_table = (ppu_ram[(scroll_t-0x0400+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+					}
+					else
+					{
+						pixel_table = (ppu_ram[(scroll_t-0x0800+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+					}
+				}
+				else if (ppu_status_m == 0x0002) // single, first bank
+				{
+					pixel_table = (ppu_ram[((scroll_t&0x03FF)+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+				}
+				else if (ppu_status_m == 0x0003) // single, second bank
+				{
+					pixel_table = (ppu_ram[((scroll_t&0x03FF)+0x0400+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+				}
 					
+				scroll_l = (scroll_n<<10)+(scroll_y<<5)+(scroll_x);
+				
+				if (ppu_status_m == 0x0001) // horizontal scrolling
+				{
+					if (scroll_l < 0x0800)
+					{
+						pixel_lookup = (ppu_ram[(scroll_l)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+					}
+					else
+					{
+						pixel_lookup = (ppu_ram[(scroll_l-0x0800)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+					}
+				}
+				else if (ppu_status_m == 0x0000) // vertical scrolling
+				{
+					if (scroll_l < 0x0400)
+					{
+						pixel_lookup = (ppu_ram[(scroll_l)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+					}
+					else if (scroll_l < 0x0800)
+					{
+						pixel_lookup = (ppu_ram[(scroll_l-0x0400)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+					}
+					else if (scroll_l < 0x0C00)
+					{
+						pixel_lookup = (ppu_ram[(scroll_l-0x0400)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+					}
+					else
+					{
+						pixel_lookup = (ppu_ram[(scroll_l-0x0800)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+					}
+				}
+				else if (ppu_status_m == 0x0002) // single, first bank
+				{
+					pixel_lookup = (ppu_ram[((scroll_l&0x03FF))]<<4)+0x1000*ppu_flag_b+(line&0x07);
+				}
+				else if (ppu_status_m == 0x0003) // single, second bank
+				{
+					pixel_lookup = (ppu_ram[((scroll_l&0x03FF)+0x0400)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+				}
+				
 				if (cart_rom[5] > 0)
 				{
-					pixel_lookup = chr_offset+(ppu_ram[(((scroll_n<<10)+(scroll_y<<5)+(scroll_x))&ppu_status_m)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+					pixel_lookup += chr_offset;
 					
 					if (map_number == 3) // cnrom
 					{
 						pixel_lookup += 0x2000*map_cnrom_bank;
 					}
 
-					pixel_low = cart_rom[pixel_lookup];
-					pixel_high = cart_rom[pixel_lookup+8];
+					pixel_low = cart_rom[(pixel_lookup)];
+					pixel_high = cart_rom[(pixel_lookup+8)];
 				}
 				else
 				{
-					pixel_lookup = (ppu_ram[(((scroll_n<<10)+(scroll_y<<5)+(scroll_x))&ppu_status_m)]<<4)+0x1000*ppu_flag_b+(line&0x07);
-
-					pixel_low = chr_ram[pixel_lookup];
-					pixel_high = chr_ram[pixel_lookup+8];
+					pixel_low = chr_ram[(pixel_lookup)];
+					pixel_high = chr_ram[(pixel_lookup+8)];
 				}
 
 				for (unsigned char i=0; i<8; i++)
@@ -2081,11 +2297,11 @@ void __attribute__((optimize("O2"))) nes_background(unsigned short line)
 							{
 								if (ppu_flag_g > 0)
 								{
-									nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[((pixel_table&0x03)<<2)+pixel_color]&0x30)]);
+									nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[(((pixel_table&0x03)<<2)+pixel_color)]&0x30)]);
 								}
 								else
 								{
-									nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[((pixel_table&0x03)<<2)+pixel_color]]);
+									nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[(((pixel_table&0x03)<<2)+pixel_color)]]);
 								}
 							}
 						}
@@ -2112,12 +2328,12 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground)
 	{
 		for (signed char s=63; s>=0; s--) // must be signed!
 		{
-			sprite_x = oam_ram[(s<<2)+3];
-			sprite_y = oam_ram[(s<<2)+0];
+			sprite_x = oam_ram[((s<<2)+3)];
+			sprite_y = oam_ram[((s<<2)+0)];
 
 			if (sprite_x < 0xF9 && sprite_y < 0xEF)
 			{
-				sprite_attr = oam_ram[(s<<2)+2];
+				sprite_attr = oam_ram[((s<<2)+2)];
 
 				if (((sprite_attr&0x20)>>5) == ground) // foreground/background
 				{
@@ -2139,15 +2355,15 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground)
 									pixel_lookup += 0x2000*map_cnrom_bank;
 								}
 
-								pixel_low = cart_rom[pixel_lookup];
-								pixel_high = cart_rom[pixel_lookup+8];
+								pixel_low = cart_rom[(pixel_lookup)];
+								pixel_high = cart_rom[(pixel_lookup+8)];
 							}
 							else
 							{
 								pixel_lookup = sprite_tile*16+0x1000*ppu_flag_s+(sprite_flip_vert==0x00?j:7-j);
 
-								pixel_low = chr_ram[pixel_lookup];
-								pixel_high = chr_ram[pixel_lookup+8];
+								pixel_low = chr_ram[(pixel_lookup)];
+								pixel_high = chr_ram[(pixel_lookup+8)];
 							}
 
 							for (unsigned char i=0; i<8; i++)
@@ -2166,11 +2382,11 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground)
 										{
 											if (ppu_flag_g > 0)
 											{
-												nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[0x0010+((sprite_attr&0x03)<<2)+pixel_color]&0x30)]);
+												nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[(0x0010+((sprite_attr&0x03)<<2)+pixel_color)]&0x30)]);
 											}
 											else
 											{
-												nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[0x0010+((sprite_attr&0x03)<<2)+pixel_color]]);
+												nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[(0x0010+((sprite_attr&0x03)<<2)+pixel_color)]]);
 											}
 										}
 									}
@@ -2197,7 +2413,7 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground)
 						{
 							if (cart_rom[5] > 0)
 							{
-								pixel_lookup = chr_offset+sprite_tile*16+0x1000*(oam_ram[(s<<2)+1]&0x01)+(sprite_flip_vert==0x00?j:15-j);
+								pixel_lookup = chr_offset+sprite_tile*16+0x1000*(oam_ram[((s<<2)+1)]&0x01)+(sprite_flip_vert==0x00?j:15-j);
 
 								if (map_number == 3) // cnrom
 								{
@@ -2206,28 +2422,28 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground)
 								
 								if ((sprite_flip_vert==0x00?j:15-j) < 8)
 								{
-									pixel_low = cart_rom[pixel_lookup];
-									pixel_high = cart_rom[pixel_lookup+8];
+									pixel_low = cart_rom[(pixel_lookup)];
+									pixel_high = cart_rom[(pixel_lookup+8)];
 								}
 								else
 								{
-									pixel_low = cart_rom[pixel_lookup+8];
-									pixel_high = cart_rom[pixel_lookup+16];
+									pixel_low = cart_rom[(pixel_lookup+8)];
+									pixel_high = cart_rom[(pixel_lookup+16)];
 								}
 							}
 							else
 							{
-								pixel_lookup = sprite_tile*16+0x1000*(oam_ram[(s<<2)+1]&0x01)+(sprite_flip_vert==0x00?j:15-j);
+								pixel_lookup = sprite_tile*16+0x1000*(oam_ram[((s<<2)+1)]&0x01)+(sprite_flip_vert==0x00?j:15-j);
 
 								if ((sprite_flip_vert==0x00?j:15-j) < 8)
 								{
-									pixel_low = chr_ram[pixel_lookup];
-									pixel_high = chr_ram[pixel_lookup+8];
+									pixel_low = chr_ram[(pixel_lookup)];
+									pixel_high = chr_ram[(pixel_lookup+8)];
 								}
 								else
 								{
-									pixel_low = chr_ram[pixel_lookup+8];
-									pixel_high = chr_ram[pixel_lookup+16];
+									pixel_low = chr_ram[(pixel_lookup+8)];
+									pixel_high = chr_ram[(pixel_lookup+16)];
 								}
 							}
 
@@ -2247,11 +2463,11 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground)
 										{
 											if (ppu_flag_g > 0)
 											{
-												nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[0x0010+((sprite_attr&0x03)<<2)+pixel_color]&0x30)]);
+												nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[(0x0010+((sprite_attr&0x03)<<2)+pixel_color)]&0x30)]);
 											}
 											else
 											{
-												nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[0x0010+((sprite_attr&0x03)<<2)+pixel_color]]);
+												nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[(0x0010+((sprite_attr&0x03)<<2)+pixel_color)]]);
 											}
 										}
 									}
@@ -2469,21 +2685,9 @@ void __attribute__((optimize("O2"))) nes_audio(unsigned long cycles)
 			}
 		}
 		
-		if (apu_counter_s == 4 && apu_flag_m == 0 && apu_flag_b == 0 && cpu_flag_i == 0) // irq
+		if (apu_counter_s == 4 && apu_flag_m == 0 && apu_flag_b == 0) // irq
 		{
 			apu_flag_f = 1;
-			
-			//SendString("Frame IRQ\n\r\\");
-			
-			cpu_temp_memory = ((cpu_reg_pc+1)>>8);
-			CPU_PUSH;
-			cpu_temp_memory = ((cpu_reg_pc+1)&0x00FF);
-			CPU_PUSH;
-			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c|0x30);
-			CPU_PUSH;
-			cpu_reg_pc = cpu_read(0xFFFE);
-			cpu_reg_pc += (cpu_read(0xFFFF)<<8);
 		}
 		
 		if ((apu_counter_s == 4 && apu_flag_m == 0) ||
@@ -2612,21 +2816,9 @@ void __attribute__((optimize("O2"))) nes_audio(unsigned long cycles)
 					
 					apu_dmc_s--;
 					
-					if (apu_dmc_s == 0 && apu_dmc_i > 0 && cpu_flag_i == 0) // irq
+					if (apu_dmc_s == 0 && apu_dmc_i > 0) // irq
 					{
 						apu_flag_i = 1;
-						
-						//SendString("DMC IRQ\n\r\\");
-						
-						cpu_temp_memory = ((cpu_reg_pc+1)>>8);
-						CPU_PUSH;
-						cpu_temp_memory = ((cpu_reg_pc+1)&0x00FF);
-						CPU_PUSH;
-						cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-							(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c|0x30);
-						CPU_PUSH;
-						cpu_reg_pc = cpu_read(0xFFFE);
-						cpu_reg_pc += (cpu_read(0xFFFF)<<8);
 					}
 					
 					apu_dmc_t = cpu_read(apu_dmc_a);
@@ -2668,6 +2860,8 @@ void __attribute__((optimize("O0"))) nes_wait(unsigned long loop_count)
 	nes_interrupt_count -= loop_count*261;
 }
 
+unsigned short prev_bank[10], prev_addr[10], prev_op[10];
+
 void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned long internal_interrupt)
 {	 
 	if (nes_init_flag == 0)
@@ -2679,7 +2873,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 		// offsets
 		prg_offset = 16; // length of header
 		chr_offset = 16 + cart_rom[4]*16384; // length of header + prg_rom
-		// cart_rom[5]*8192 is length of chr_rom
+		end_offset = 16 + cart_rom[4]*16384 + cart_rom[5]*8192; // end of cart rom
 		
 		// mapper
 		map_number = ((cart_rom[6] & 0xF0) >> 4) + (cart_rom[7] & 0xF0);
@@ -2687,11 +2881,11 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 		// scrolling mask
 		if ((cart_rom[6] & 0x01) == 0x00)
 		{
-			ppu_status_m = 0xFBFF; // vertical scrolling
+			ppu_status_m = 0x0000; // vertical scrolling
 		}
 		else
 		{
-			ppu_status_m = 0xF7FF; // horizontal scrolling
+			ppu_status_m = 0x0001; // horizontal scrolling
 		}
 		
 		// prg ram
@@ -2703,6 +2897,22 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 		//SendString("Reset\n\r\\");
 	}
 	
+	/*
+	if (cpu_reg_pc == 0xC693) // last JSR before it blows up
+	{
+		SendHex(cpu_reg_a);
+		SendChar('*');
+	}
+	
+	// somewhere in there I think it does IRQ when it shouldn't?
+	
+	if (cpu_reg_pc == 0xC696) // this JSR is never reached!
+	{
+		SendHex(cpu_reg_a);
+		SendChar('?');
+	}
+	*/
+	
 	cpu_current_cycles = 0;
 
 	cpu_current_cycles += cpu_run();
@@ -2710,12 +2920,57 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 	cpu_current_cycles += cpu_dma_cycles;
 	
 	cpu_dma_cycles = 0;
+	
+	for (unsigned short i=0; i<9; i++)
+	{
+		prev_bank[i] = prev_bank[i+1];
+		prev_addr[i] = prev_addr[i+1];
+		prev_op[i] = prev_op[i+1];
+	}
+	
+	prev_bank[9] = map_mmc1_prg_bank;
+	prev_addr[9] = cpu_reg_pc;
+	prev_op[9] = cpu_temp_opcode;
 
 	if (cpu_current_cycles == 0)
 	{
 		nes_error(0x00);
+		
+		for (unsigned short i=0; i<10; i++)
+		{
+			SendHex(prev_bank[i]);
+			SendChar('.');
+			SendLongHex(prev_addr[i]);
+			SendChar('.');
+			SendHex(prev_op[i]);
+			SendChar('\n');
+			SendChar('\r');
+		}
 
 		while (1) { }
+	}
+	
+	// irq
+	if (cpu_flag_i == 0 && !(cpu_temp_opcode == 0x58 || cpu_temp_opcode == 0x78 || cpu_temp_opcode == 0x28))
+	{
+		if (apu_flag_i == 1 || apu_flag_f == 1)
+		{	
+			//SendString("IRQ\n\r\\");
+			
+			cpu_temp_memory = ((cpu_reg_pc+1)>>8);
+			CPU_PUSH;
+			cpu_temp_memory = ((cpu_reg_pc+1)&0x00FF);
+			CPU_PUSH;
+			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
+				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
+			CPU_PUSH;
+			cpu_reg_pc = cpu_read(0xFFFE);
+			cpu_reg_pc += (cpu_read(0xFFFF)<<8);
+			
+			cpu_current_cycles += 7;
+			
+			cpu_flag_i = 1;
+		}
 	}
 	
 	ppu_scanline_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);
@@ -2787,12 +3042,14 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 		// nmi
 		if (ppu_flag_e != 0x0000)
 		{	
+			//SendString("NMI\n\r\\");
+			
 			cpu_temp_memory = ((cpu_reg_pc)>>8);
 			CPU_PUSH;
 			cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
 			CPU_PUSH;
 			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c|0x30);
+				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
 			CPU_PUSH;
 			cpu_reg_pc = cpu_read(0xFFFA);
 			cpu_reg_pc += (cpu_read(0xFFFB)<<8);
