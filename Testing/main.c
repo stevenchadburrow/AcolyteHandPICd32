@@ -283,7 +283,6 @@ unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 volatile unsigned char __attribute__((address(0x8004D000))) audio_buffer[AUDIO_LEN];
 unsigned int audio_read = 0;
 unsigned int audio_write = (AUDIO_LEN >> 4);
-unsigned long audio_sync = 0;
 unsigned int audio_enable = 0;
 
 // controllers
@@ -608,19 +607,6 @@ void __attribute__((optimize("O2"),vector(_TIMER_8_VECTOR), interrupt(ipl1srs)))
 		{
 			audio_read = 0;
 		}
-		
-		audio_sync = audio_sync + 1;
-		
-		/*
-		// sync every 30 seconds?
-		if (audio_sync > 235800)
-		{
-			audio_sync = 0;
-			
-			audio_read = 0;
-			audio_write = (AUDIO_LEN >> 4);
-		}
-		*/
 	}
 }
 
@@ -662,9 +648,9 @@ int __attribute__((optimize("O0"))) main()
 	TRISFbits.TRISF8 = 1;
 
 	T8CON = 0x0000; // reset
-	T8CON = 0x0000; //0x0060; // prescale of 1:64, 16-bit
+	T8CON = 0x0000; // prescale of 1:1, 16-bit
 	TMR8 = 0x0000; // zero out counter
-	PR8 = 0x6B58; //0xDBB9; // v-blank start (minus one)
+	PR8 = 0x7180; //0x6B7C; // approx two scanlines (minus one)
 	
 	IPC9bits.T8IP = 0x1; // interrupt priority 1
 	IPC9bits.T8IS = 0x0; // interrupt sub-priority 0
@@ -695,28 +681,33 @@ int __attribute__((optimize("O0"))) main()
 	
 	display_string(0x0010, 0x0010, "  Play Current Game\\");
 	display_string(0x0010, 0x0018, "  Load Super Mario Bros\\");
-	display_string(0x0010, 0x0020, "  Load Excitebike\\");
-	display_string(0x0010, 0x0028, "  Load Ice Climber\\");
-	display_string(0x0010, 0x0030, "  Load 1942\\");
+	display_string(0x0010, 0x0020, "  Load Tetris\\");
+	display_string(0x0010, 0x0028, "  Load Micro Mages\\");
+	
+	display_string(0x0010, 0x0030, "  Load Donkey Kong\\");
 	display_string(0x0010, 0x0038, "  Load Mario Bros\\");
-	display_string(0x0010, 0x0040, "  Load Donkey Kong\\");
-	display_string(0x0010, 0x0048, "  Load Balloon Fight\\");
-	display_string(0x0010, 0x0050, "  Load Micro Mages\\");
-	display_string(0x0010, 0x0058, "  Load 1943\\");
-	display_string(0x0010, 0x0060, "  Load Castlevania\\");
+	display_string(0x0010, 0x0040, "  Load Balloon Fight\\");
+	display_string(0x0010, 0x0048, "  Load Ice Climber\\");
+	display_string(0x0010, 0x0050, "  Load Excitebike\\");
+	
+	display_string(0x0010, 0x0058, "  Load Paperboy\\");
+	display_string(0x0010, 0x0060, "  Load Gradius\\");
 	display_string(0x0010, 0x0068, "  Load Contra\\");
-	display_string(0x0010, 0x0070, "  Load Mega Man\\");
+	display_string(0x0010, 0x0070, "  Load 1943: Midway\\");
 	display_string(0x0010, 0x0078, "  Load Duck Tales\\");
-	display_string(0x0010, 0x0080, "  Load Paperboy\\");
-	display_string(0x0010, 0x0088, "  Load Ghostbusters\\");
-	display_string(0x0010, 0x0090, "  Load Gradius\\");
-	display_string(0x0010, 0x0098, "  Load Zelda\\");
-	display_string(0x0010, 0x00A0, "  Load Dragon Warrior 3\\");
-	display_string(0x0010, 0x00A8, "  Load Final Fantasy\\");
-	display_string(0x0010, 0x00B0, "  Load Tetris\\");
-	display_string(0x0010, 0x00B8, "  Load Ninja Gaiden\\");
-	display_string(0x0010, 0x00C0, "  Load Wizardry\\");
-	display_string(0x0010, 0x00C8, "  ???\\");
+	display_string(0x0010, 0x0080, "  Load Castlevania\\");
+	
+	display_string(0x0010, 0x0088, "  Load Castlevania 2\\");
+	display_string(0x0010, 0x0090, "  Load Zelda\\");
+	display_string(0x0010, 0x0098, "  Load Zelda 2\\");
+	display_string(0x0010, 0x00A0, "  Load Metroid\\");
+	display_string(0x0010, 0x00A8, "  Load Ninja Gaiden\\");
+	display_string(0x0010, 0x00B0, "  Load Bionic Commando\\");
+	display_string(0x0010, 0x00B8, "  Load Mega Man 2\\");
+	display_string(0x0010, 0x00C0, "  Load Dragon Warrior 3\\");
+	display_string(0x0010, 0x00C8, "  Load Final Fantasy\\");
+	display_string(0x0010, 0x00D0, "  Load ???\\");
+	display_string(0x0010, 0x00D8, "  Load ???\\");
 	
 	DelayMS(1000);
 	
@@ -746,7 +737,7 @@ int __attribute__((optimize("O0"))) main()
 			
 			display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
 			
-			if (menu_pos < 23) menu_pos++;
+			if (menu_pos < 25) menu_pos++;
 		}
 		else
 		{
@@ -852,17 +843,17 @@ int __attribute__((optimize("O0"))) main()
 			}
 			case 0x02:
 			{
-				nes_load("EXBIKE.NES");
+				nes_load("TETRIS.NES");
 				break;
 			}
 			case 0x03:
 			{
-				nes_load("ICECLIMB.NES");
+				nes_load("MM.NES");
 				break;
 			}
 			case 0x04:
 			{
-				nes_load("1942.NES");
+				nes_load("DK.NES");
 				break;
 			}
 			case 0x05:
@@ -872,27 +863,27 @@ int __attribute__((optimize("O0"))) main()
 			}
 			case 0x06:
 			{
-				nes_load("DK.NES");
+				nes_load("BALLOON.NES");
 				break;
 			}
 			case 0x07:
 			{
-				nes_load("BALLOON.NES");
+				nes_load("ICECLIMB.NES");
 				break;
 			}
 			case 0x08:
 			{
-				nes_load("MM.NES");
+				nes_load("EXBIKE.NES");
 				break;
 			}
 			case 0x09:
 			{
-				nes_load("1943.NES");
+				nes_load("PAPERBOY.NES");
 				break;
 			}
 			case 0x0A:
 			{
-				nes_load("CASTLE.NES");
+				nes_load("GRADIUS.NES");
 				break;
 			}
 			case 0x0B:
@@ -902,7 +893,7 @@ int __attribute__((optimize("O0"))) main()
 			}
 			case 0x0C:
 			{
-				nes_load("MEGAMAN.NES");
+				nes_load("1943.NES");
 				break;
 			}
 			case 0x0D:
@@ -912,47 +903,52 @@ int __attribute__((optimize("O0"))) main()
 			}
 			case 0x0E:
 			{
-				nes_load("PAPERBOY.NES");
+				nes_load("CASTLE.NES");
 				break;
 			}
 			case 0x0F:
 			{
-				nes_load("GHOST.NES");
+				nes_load("CASTLE2.NES");
 				break;
 			}
 			case 0x10:
 			{
-				nes_load("GRADIUS.NES");
+				nes_load("ZELDA.NES");
 				break;
 			}
 			case 0x11:
 			{
-				nes_load("ZELDA.NES");
+				nes_load("ZELDA2.NES");
 				break;
 			}
 			case 0x12:
 			{
-				nes_load("DW3.NES");
+				nes_load("METROID.NES");
 				break;
 			}
 			case 0x13:
 			{
-				nes_load("FF.NES");
+				nes_load("NINJA.NES");
 				break;
 			}
 			case 0x14:
 			{
-				nes_load("TETRIS.NES");
+				nes_load("BIOCOM.NES");
 				break;
 			}
 			case 0x15:
 			{
-				nes_load("NINJA.NES");
+				nes_load("MEGAMAN2.NES");
 				break;
 			}
 			case 0x16:
 			{
-				nes_load("WIZARD.NES");
+				nes_load("DW3.NES");
+				break;
+			}
+			case 0x17:
+			{
+				nes_load("FF.NES");
 				break;
 			}
 			default:

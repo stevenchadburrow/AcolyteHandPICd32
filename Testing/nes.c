@@ -2961,7 +2961,10 @@ void __attribute__((optimize("O2"))) nes_audio(unsigned long cycles)
 		}
 	}
 	else apu_dmc_o = (apu_dmc_d<<1);
-	 
+}
+
+void __attribute__((optimize("O2"))) nes_mixer()
+{
 	apu_mixer_output = 0x0000;
 	
 	apu_mixer_output += apu_pulse_1_o;	
@@ -3089,15 +3092,17 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 		}
 	}
 	
-	apu_sample_cycles += (cpu_current_cycles); // need to find what works best here
+	apu_sample_cycles += (cpu_current_cycles);
 	
-	if (apu_sample_cycles >= 228) // need to find what works best here
+	if (apu_sample_cycles >= 228) // two scanlines
 	{
 		apu_sample_cycles -= 228;
 		
 		if (nes_audio_flag > 0)
 		{
-			nes_audio(228); // need to find what works best here
+			nes_audio(228); // two scanlines
+			
+			nes_mixer(); // move this somewhere else?
 		}
 	}
 
@@ -3134,14 +3139,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 		ppu_scanline_count = -21;
 		//ppu_scanline_count = 0;
 		
-		ppu_reg_a = 0;
-		
-		/*
-		SendHex(map_mmc1_chr_mode);
-		SendHex(map_mmc1_chr_bank_0);
-		SendHex(map_mmc1_chr_bank_1);
-		SendChar('.');
-		*/
+		ppu_reg_a = 0;		
 		
 		// nmi
 		if (ppu_flag_e != 0x0000)
@@ -3250,8 +3248,8 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 						{
 							if (cart_rom[4] <= 0x10) // 256KB or less
 							{
-								if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i] != 0x00 ||
-									cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+8] != 0x00)
+								if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+									cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
 								{
 									ppu_status_s = i+1;
 
@@ -3269,8 +3267,8 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 							{
 								if (ppu_flag_s == 0)
 								{
-									if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i] != 0x00 ||
-										cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+8] != 0x00)
+									if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+										cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
 									{
 										ppu_status_s = i+1;
 
@@ -3279,8 +3277,8 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 								}
 								else
 								{
-									if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i] != 0x00 ||
-										cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+8] != 0x00)
+									if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+										cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
 									{
 										ppu_status_s = i+1;
 
@@ -3323,8 +3321,8 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 						{
 							if (cart_rom[4] <= 0x10) // 256KB or less
 							{
-								if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+8] != 0x00 ||
-									cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+16] != 0x00)
+								if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+									cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
 								{
 									ppu_status_s = i+1;
 
@@ -3342,8 +3340,8 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 							{
 								if (ppu_flag_s == 0)
 								{
-									if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+8] != 0x00 ||
-										cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+16] != 0x00)
+									if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+										cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
 									{
 										ppu_status_s = i+1;
 
@@ -3352,8 +3350,8 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 								}
 								else
 								{
-									if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+8] != 0x00 ||
-										cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+16] != 0x00)
+									if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+										cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
 									{
 										ppu_status_s = i+1;
 
