@@ -4,7 +4,7 @@ These files contain an NES emulator for the PIC32MZ.  It currently is running at
 
 Currently this works with NROM, UxROM, CxROM, and also MMC1 mappers.  Next up is MMC3 mappers.
 
-Well tested games for this system include:
+Highly tested games for this system include:
 
 Super Mario Bros<br>
 Tetris<br>
