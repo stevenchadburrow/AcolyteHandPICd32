@@ -6,10 +6,10 @@ Currently this works with NROM, UxROM, CxROM, and also MMC1 mappers.  Next up is
 
 Well tested games for this system include:
 
-Super Mario Bros
-Tetris
-Micro Mages
-Donkey Kong
+Super Mario Bros<br>
+Tetris<br>
+Micro Mages<br>
+Donkey Kong<br>
 Mario Bros
 Ballon Fight
 Ice Climber
