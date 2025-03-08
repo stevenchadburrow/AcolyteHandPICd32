@@ -713,8 +713,10 @@ int __attribute__((optimize("O0"))) main()
 	display_string(0x0010, 0x0098, "  Load Zelda\\");
 	display_string(0x0010, 0x00A0, "  Load Dragon Warrior 3\\");
 	display_string(0x0010, 0x00A8, "  Load Final Fantasy\\");
-	display_string(0x0010, 0x00B0, "  ???\\");
-	display_string(0x0010, 0x00B8, "  ???\\");
+	display_string(0x0010, 0x00B0, "  Load Tetris\\");
+	display_string(0x0010, 0x00B8, "  Load Ninja Gaiden\\");
+	display_string(0x0010, 0x00C0, "  Load Wizardry\\");
+	display_string(0x0010, 0x00C8, "  ???\\");
 	
 	DelayMS(1000);
 	
@@ -744,7 +746,7 @@ int __attribute__((optimize("O0"))) main()
 			
 			display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
 			
-			if (menu_pos < 21) menu_pos++;
+			if (menu_pos < 23) menu_pos++;
 		}
 		else
 		{
@@ -936,6 +938,21 @@ int __attribute__((optimize("O0"))) main()
 			case 0x13:
 			{
 				nes_load("FF.NES");
+				break;
+			}
+			case 0x14:
+			{
+				nes_load("TETRIS.NES");
+				break;
+			}
+			case 0x15:
+			{
+				nes_load("NINJA.NES");
+				break;
+			}
+			case 0x16:
+			{
+				nes_load("WIZARD.NES");
 				break;
 			}
 			default:

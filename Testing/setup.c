@@ -1,5 +1,5 @@
 
-void Setup()
+void __attribute__((optimize("O0"))) Setup()
 {
 	// turn off analog
 	ANSELA = 0x0;

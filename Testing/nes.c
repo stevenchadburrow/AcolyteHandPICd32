@@ -58,7 +58,7 @@ unsigned short map_mmc1_shift = 0x0000;
 unsigned short map_mmc1_count = 0x0000;
 unsigned short map_mmc1_prg_mode = 0x0003; // should be 0x0003
 unsigned short map_mmc1_chr_mode = 0x0000;
-unsigned short map_mmc1_chr_bank_0 = 0x0010;
+unsigned short map_mmc1_chr_bank_0 = 0x0010; // leave at 0x0010 for large PRG_ROM
 unsigned short map_mmc1_chr_bank_1 = 0x0000;
 unsigned short map_mmc1_prg_bank = 0x0000;
 unsigned short map_mmc1_ram = 0x0000;
@@ -339,6 +339,7 @@ void __attribute__((optimize("O2"))) nes_increment()
 	if (nes_interrupt_count > 60*262) nes_interrupt_count = 60*262;
 }
 
+
 unsigned char __attribute__((optimize("O0"))) nes_read_cpu_ram(unsigned long addr)
 {
 	return cpu_ram[(addr&2047)];
@@ -462,7 +463,39 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 				{
 					if (cart_rom[5] > 0) // chr_rom
 					{
-						if (map_number == 3) // cnrom
+						if (map_number == 1) // mmc1
+						{
+							if (map_mmc1_chr_mode == 0) // 8KB
+							{
+								if (cart_rom[4] <= 0x10) // 256KB or less
+								{
+									ppu_reg_b = cart_rom[(((chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+ppu_reg_v)))];
+								}
+								else
+								{
+									
+								}
+							}
+							else if (map_mmc1_chr_mode == 1) // 4KB banked
+							{
+								if (cart_rom[4] <= 0x10) // 256KB or less
+								{
+									if (ppu_reg_v < 0x1000)
+									{
+										ppu_reg_b = cart_rom[(((chr_offset+0x00001000*(map_mmc1_chr_bank_0)+ppu_reg_v)))];
+									}
+									else
+									{
+										ppu_reg_b = cart_rom[(((chr_offset+0x00001000*(map_mmc1_chr_bank_1)+ppu_reg_v-0x1000)))];
+									}
+								}
+								else
+								{
+									
+								}
+							}
+						}
+						else if (map_number == 3) // cnrom
 						{
 							ppu_reg_b = cart_rom[(((chr_offset+0x2000*map_cnrom_bank+ppu_reg_v)))];
 						}
@@ -1193,12 +1226,6 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 				if (map_mmc1_ram == 0)
 				{
 					nes_write_prg_ram(addr-0x6000, val);
-					
-					if (addr == 0x6A3D)
-					{
-						SendHex(val);
-						SendChar('#');
-					}
 				}
 			}
 			else
@@ -1217,7 +1244,7 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 				map_mmc1_count = 0x0000;
 				map_mmc1_prg_mode = 0x0003;
 				map_mmc1_chr_mode = 0x0000;
-				map_mmc1_chr_bank_0 = 0x0000;
+				map_mmc1_chr_bank_0 = 0x0010;
 				map_mmc1_chr_bank_1 = 0x0000;
 				map_mmc1_prg_bank = 0x0000;
 				map_mmc1_ram = 0x0000;
@@ -2076,14 +2103,7 @@ void __attribute__((optimize("O2"))) nes_border()
 {
 	unsigned char pixel_color = 0;
 
-	if (ppu_reg_v >= 0x3F00 && ppu_reg_v < 0x4000)
-	{
-		pixel_color = ppu_palette[pal_ram[(ppu_reg_v&0x001F)]];
-	}
-	else
-	{
-		pixel_color = ppu_palette[pal_ram[0]];
-	}
+	pixel_color = ppu_palette[pal_ram[0]];
 	
 	for (unsigned short y=8; y<232; y++) // remove overscan
 	{
@@ -2099,7 +2119,7 @@ void __attribute__((optimize("O2"))) nes_background(unsigned short line)
 	unsigned short scroll_x = 0, scroll_y = 0, scroll_n = 0;
 	unsigned short scroll_t = 0, scroll_l = 0;
 	
-	unsigned short pixel_lookup = 0, pixel_table = 0;
+	unsigned long pixel_lookup = 0, pixel_table = 0;
 	unsigned short pixel_x = 0, pixel_y = 0;
 	unsigned char pixel_high = 0, pixel_low = 0, pixel_color = 0;
 	
@@ -2267,12 +2287,45 @@ void __attribute__((optimize("O2"))) nes_background(unsigned short line)
 				
 				if (cart_rom[5] > 0)
 				{
-					pixel_lookup += chr_offset;
-					
-					if (map_number == 3) // cnrom
+					if (map_number == 1) // mmc1
+					{
+						if (map_mmc1_chr_mode == 0) // 8KB
+						{
+							if (cart_rom[4] <= 0x10) // 256KB or less
+							{
+								pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0&0x1E);
+							}
+							else
+							{
+								
+							}
+						}
+						else if (map_mmc1_chr_mode == 1) // 4KB banked
+						{
+							if (cart_rom[4] <= 0x10) // 256KB or less
+							{
+								if (pixel_lookup < 0x1000)
+								{
+									pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0);
+								}
+								else
+								{
+									pixel_lookup += 0x00001000*(map_mmc1_chr_bank_1);
+									pixel_lookup -= 0x00001000;
+								}
+							}
+							else
+							{
+
+							}
+						}
+					}
+					else if (map_number == 3) // cnrom
 					{
 						pixel_lookup += 0x2000*map_cnrom_bank;
 					}
+					
+					pixel_lookup += chr_offset;
 
 					pixel_low = cart_rom[(pixel_lookup)];
 					pixel_high = cart_rom[(pixel_lookup+8)];
@@ -2321,7 +2374,7 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground)
 	unsigned char sprite_flip_horz = 0, sprite_flip_vert = 0;
 	
 	unsigned short pixel_x = 0, pixel_y = 0;
-	unsigned short pixel_lookup = 0, pixel_table = 0;
+	unsigned long pixel_lookup = 0, pixel_table = 0;
 	unsigned char pixel_high = 0, pixel_low = 0, pixel_color = 0;
 	
 	if (ppu_flag_es > 0)
@@ -2348,12 +2401,47 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground)
 						{
 							if (cart_rom[5] > 0)
 							{
-								pixel_lookup = chr_offset+sprite_tile*16+0x1000*ppu_flag_s+(sprite_flip_vert==0x00?j:7-j);
+								pixel_lookup = sprite_tile*16+0x1000*ppu_flag_s+(sprite_flip_vert==0x00?j:7-j);
 								
-								if (map_number == 3) // cnrom
+								if (map_number == 1) // mmc1
+								{
+									if (map_mmc1_chr_mode == 0) // 8KB
+									{
+										if (cart_rom[4] <= 0x10) // 256KB or less
+										{
+											pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0&0x1E);
+										}
+										else
+										{
+
+										}
+									}
+									else if (map_mmc1_chr_mode == 1) // 4KB banked
+									{
+										if (cart_rom[4] <= 0x10) // 256KB or less
+										{
+											if (pixel_lookup < 0x1000)
+											{
+												pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0);
+											}
+											else
+											{
+												pixel_lookup += 0x00001000*(map_mmc1_chr_bank_1);
+												pixel_lookup -= 0x00001000;
+											}
+										}
+										else
+										{
+
+										}
+									}
+								}
+								else if (map_number == 3) // cnrom
 								{
 									pixel_lookup += 0x2000*map_cnrom_bank;
 								}
+								
+								pixel_lookup += chr_offset;
 
 								pixel_low = cart_rom[(pixel_lookup)];
 								pixel_high = cart_rom[(pixel_lookup+8)];
@@ -2413,12 +2501,47 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground)
 						{
 							if (cart_rom[5] > 0)
 							{
-								pixel_lookup = chr_offset+sprite_tile*16+0x1000*(oam_ram[((s<<2)+1)]&0x01)+(sprite_flip_vert==0x00?j:15-j);
+								pixel_lookup = sprite_tile*16+0x1000*(oam_ram[((s<<2)+1)]&0x01)+(sprite_flip_vert==0x00?j:15-j);
 
-								if (map_number == 3) // cnrom
+								if (map_number == 1) // mmc1
+								{
+									if (map_mmc1_chr_mode == 0) // 8KB
+									{
+										if (cart_rom[4] <= 0x10) // 256KB or less
+										{
+											pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0&0x1E);
+										}
+										else
+										{
+
+										}
+									}
+									else if (map_mmc1_chr_mode == 1) // 4KB banked
+									{
+										if (cart_rom[4] <= 0x10) // 256KB or less
+										{
+											if (pixel_lookup < 0x1000)
+											{
+												pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0);
+											}
+											else
+											{
+												pixel_lookup += 0x00001000*(map_mmc1_chr_bank_1);
+												pixel_lookup -= 0x00001000;
+											}
+										}
+										else
+										{
+
+										}
+									}
+								}
+								else if (map_number == 3) // cnrom
 								{
 									pixel_lookup += 0x2000*map_cnrom_bank;
 								}
+								
+								pixel_lookup += chr_offset;
 								
 								if ((sprite_flip_vert==0x00?j:15-j) < 8)
 								{
@@ -2860,8 +2983,6 @@ void __attribute__((optimize("O0"))) nes_wait(unsigned long loop_count)
 	nes_interrupt_count -= loop_count*261;
 }
 
-unsigned short prev_bank[10], prev_addr[10], prev_op[10];
-
 void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned long internal_interrupt)
 {	 
 	if (nes_init_flag == 0)
@@ -2873,7 +2994,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 		// offsets
 		prg_offset = 16; // length of header
 		chr_offset = 16 + cart_rom[4]*16384; // length of header + prg_rom
-		end_offset = 16 + cart_rom[4]*16384 + cart_rom[5]*8192; // end of cart rom
+		end_offset = 16 + cart_rom[4]*16384 + cart_rom[5]*8192; // end of cart rom (not used?)
 		
 		// mapper
 		map_number = ((cart_rom[6] & 0xF0) >> 4) + (cart_rom[7] & 0xF0);
@@ -2889,7 +3010,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 		}
 		
 		// prg ram
-		cpu_status_r = ((cart_rom[6] & 0x02) >> 1);
+		cpu_status_r = ((cart_rom[6] & 0x02) >> 1); // (not used?)
 		
 		// reset
 		cpu_reg_pc = cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFC] + (cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFD] << 8);
@@ -2898,14 +3019,12 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 	}
 	
 	/*
+	// For Dragon Warrior II
 	if (cpu_reg_pc == 0xC693) // last JSR before it blows up
 	{
 		SendHex(cpu_reg_a);
 		SendChar('*');
 	}
-	
-	// somewhere in there I think it does IRQ when it shouldn't?
-	
 	if (cpu_reg_pc == 0xC696) // this JSR is never reached!
 	{
 		SendHex(cpu_reg_a);
@@ -2920,32 +3039,10 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 	cpu_current_cycles += cpu_dma_cycles;
 	
 	cpu_dma_cycles = 0;
-	
-	for (unsigned short i=0; i<9; i++)
-	{
-		prev_bank[i] = prev_bank[i+1];
-		prev_addr[i] = prev_addr[i+1];
-		prev_op[i] = prev_op[i+1];
-	}
-	
-	prev_bank[9] = map_mmc1_prg_bank;
-	prev_addr[9] = cpu_reg_pc;
-	prev_op[9] = cpu_temp_opcode;
 
 	if (cpu_current_cycles == 0)
 	{
 		nes_error(0x00);
-		
-		for (unsigned short i=0; i<10; i++)
-		{
-			SendHex(prev_bank[i]);
-			SendChar('.');
-			SendLongHex(prev_addr[i]);
-			SendChar('.');
-			SendHex(prev_op[i]);
-			SendChar('\n');
-			SendChar('\r');
-		}
 
 		while (1) { }
 	}
@@ -3039,6 +3136,13 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 		
 		ppu_reg_a = 0;
 		
+		/*
+		SendHex(map_mmc1_chr_mode);
+		SendHex(map_mmc1_chr_bank_0);
+		SendHex(map_mmc1_chr_bank_1);
+		SendChar('.');
+		*/
+		
 		// nmi
 		if (ppu_flag_e != 0x0000)
 		{	
@@ -3062,7 +3166,57 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 		{
 			for (unsigned short i=0; i<8; i++)
 			{
-				if (map_number == 3) // cnrom
+				if (map_number == 1) // mmc1
+				{
+					if (map_mmc1_chr_mode == 0) // 8KB
+					{
+						if (cart_rom[4] <= 0x10) // 256KB or less
+						{
+							if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+								cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+							{
+								ppu_status_s = i+1;
+
+								break;
+							}
+						}
+						else
+						{
+
+						}
+					}
+					else if (map_mmc1_chr_mode == 1) // 4KB banked
+					{
+						if (cart_rom[4] <= 0x10) // 256KB or less
+						{
+							if (ppu_flag_s == 0)
+							{
+								if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+									cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+								{
+									ppu_status_s = i+1;
+
+									break;
+								}
+							}
+							else
+							{
+								if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+									cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+								{
+									ppu_status_s = i+1;
+
+									break;
+								}
+							}
+						}
+						else
+						{
+
+						}
+					}
+				}
+				else if (map_number == 3) // cnrom
 				{
 					if (cart_rom[chr_offset+0x2000*map_cnrom_bank+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
 						cart_rom[chr_offset+0x2000*map_cnrom_bank+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
@@ -3090,7 +3244,57 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 			{
 				if (i < 8)
 				{
-					if (map_number == 3) // cnrom
+					if (map_number == 1) // mmc1
+					{
+						if (map_mmc1_chr_mode == 0) // 8KB
+						{
+							if (cart_rom[4] <= 0x10) // 256KB or less
+							{
+								if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i] != 0x00 ||
+									cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+8] != 0x00)
+								{
+									ppu_status_s = i+1;
+
+									break;
+								}
+							}
+							else
+							{
+
+							}
+						}
+						else if (map_mmc1_chr_mode == 1) // 4KB banked
+						{
+							if (cart_rom[4] <= 0x10) // 256KB or less
+							{
+								if (ppu_flag_s == 0)
+								{
+									if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i] != 0x00 ||
+										cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+8] != 0x00)
+									{
+										ppu_status_s = i+1;
+
+										break;
+									}
+								}
+								else
+								{
+									if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i] != 0x00 ||
+										cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+8] != 0x00)
+									{
+										ppu_status_s = i+1;
+
+										break;
+									}
+								}
+							}
+							else
+							{
+
+							}
+						}
+					}
+					else if (map_number == 3) // cnrom
 					{
 						if (cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
 							cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
@@ -3113,7 +3317,57 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 				}
 				else
 				{
-					if (map_number == 3) // cnrom
+					if (map_number == 1) // mmc1
+					{
+						if (map_mmc1_chr_mode == 0) // 8KB
+						{
+							if (cart_rom[4] <= 0x10) // 256KB or less
+							{
+								if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+8] != 0x00 ||
+									cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+16] != 0x00)
+								{
+									ppu_status_s = i+1;
+
+									break;
+								}
+							}
+							else
+							{
+
+							}
+						}
+						else if (map_mmc1_chr_mode == 1) // 4KB banked
+						{
+							if (cart_rom[4] <= 0x10) // 256KB or less
+							{
+								if (ppu_flag_s == 0)
+								{
+									if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+8] != 0x00 ||
+										cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+16] != 0x00)
+									{
+										ppu_status_s = i+1;
+
+										break;
+									}
+								}
+								else
+								{
+									if (cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+8] != 0x00 ||
+										cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0x01)*16+0x1000*ppu_flag_s+i+16] != 0x00)
+									{
+										ppu_status_s = i+1;
+
+										break;
+									}
+								}
+							}
+							else
+							{
+
+							}
+						}
+					}
+					else if (map_number == 3) // cnrom
 					{
 						if (cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
 							cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
