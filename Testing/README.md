@@ -13,7 +13,7 @@ Donkey Kong
 Mario Bros
 Ballon Fight
 Ice Climber
-Excitebike - 'parallax scrolling' isn't on the right scanline
+Excitebike - the far background scrolling isn't on the right scanline
 Paperboy
 Gradius - some enemy sprites are from incorrect table?
 Contra
