@@ -10,30 +10,30 @@ Super Mario Bros<br>
 Tetris<br>
 Micro Mages<br>
 Donkey Kong<br>
-Mario Bros
-Ballon Fight
-Ice Climber
-Excitebike - the far background scrolling isn't on the right scanline
-Paperboy
-Gradius - some enemy sprites are from incorrect table?
-Contra
-1943: Battle for Midway
-Duck Tales - HUD displays from wrong table, vertical scrolling doesn't work well
-Castlevania
-Castlevania 2
-Legend of Zelda - vertical scrolling is shifted by some scanlines
-Zelda 2
-Metroid
-Ninja Gaiden - some cutscene tiles are wrong
-Bionic Commando
-Dragon Warrior 3
-Final Fantasy
+Mario Bros<br>
+Ballon Fight<br>
+Ice Climber<br>
+Excitebike - the far background scrolling isn't on the right scanline<br>
+Paperboy<br>
+Gradius - some enemy sprites are from incorrect table<br>
+Contra<br>
+1943: Battle for Midway<br>
+Duck Tales - HUD displays from wrong table, vertical scrolling doesn't work well<br>
+Castlevania<br>
+Castlevania 2<br>
+Legend of Zelda - vertical scrolling is shifted by some scanlines<br>
+Zelda 2<br>
+Metroid<br>
+Ninja Gaiden - some cutscene tiles are wrong<br>
+Bionic Commando<br>
+Dragon Warrior 3<br>
+Final Fantasy<br>
 
 Some games that do not work well:
 
-Rad Racer - scanlines are all over the place
-Nuts and Milk - background is missing most of the time
-Dragon Warrior 2 - locks up between intro screens
+Rad Racer - scanlines are all over the place<br>
+Nuts and Milk - background is missing most of the time<br>
+Dragon Warrior 2 - locks up between intro screens<br>
 
 The journey has been documented on the 6502.org Forum, here: http://forum.6502.org/viewtopic.php?f=1&t=8236
 
