@@ -2,7 +2,7 @@
 
 These files contain an NES emulator for the PIC32MZ.  It currently is running at 216 MHz, and if emulating the NES at 20 FPS with audio it is nearly at full speed.  The audio is a work in progress, as coordinating the microcontroller timers to the emulated cpu cycles isn't always perfect.
 
-Currently this works with NROM, UxROM, CxROM, and also MMC1 mappers.  Next up is MMC3 mappers.
+This currently works with NROM, UxROM, CxROM, and also MMC1 mappers.  Next up is the MMC3 mapper.
 
 Highly tested games for this system include:
 
@@ -15,7 +15,7 @@ Ballon Fight<br>
 Ice Climber<br>
 Excitebike - the far background scrolling isn't on the right scanline<br>
 Paperboy<br>
-Gradius - some enemy sprites are from incorrect table<br>
+Gradius - some enemy sprites are from wrong table<br>
 Contra<br>
 1943: Battle for Midway<br>
 Duck Tales - HUD displays from wrong table, vertical scrolling doesn't work well<br>
