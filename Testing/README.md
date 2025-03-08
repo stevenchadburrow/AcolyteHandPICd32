@@ -1,6 +1,6 @@
 *** These are just backups of files that are not fully implemented yet. ***
 
-These files contain an NES emulator for the PIC32MZ.  It currently is running at 216 MHz, and if emulating the NES at 20 FPS with audio it is nearly at full speed.
+These files contain an NES emulator for the PIC32MZ.  It currently is running at 216 MHz, and if emulating the NES at 20 FPS with audio it is nearly at full speed.  The audio is a work in progress, as coordinating the microcontroller timers to the emulated cpu cycles isn't always perfect.
 
 Currently this works with NROM, UxROM, CxROM, and also MMC1 mappers.  Next up is MMC3 mappers.
 
