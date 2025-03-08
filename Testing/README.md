@@ -19,7 +19,7 @@ Gradius - some enemy sprites are from wrong table<br>
 Contra<br>
 1943: Battle for Midway<br>
 Duck Tales - HUD displays from wrong table, vertical scrolling doesn't work well<br>
-Castlevania<br>
+Castlevania - sprite priority isn't right when entering the castle or going through doors<br>
 Castlevania 2<br>
 Legend of Zelda - vertical scrolling is shifted by some scanlines<br>
 Zelda 2<br>
