@@ -298,7 +298,7 @@ void __attribute__((optimize("O2"))) nes_sound(unsigned char sample)
 	
 	audio_write = audio_write + 1;
 	
-	if (audio_write >= AUDIO_LEN)
+	if (audio_write >= audio_length)
 	{
 		audio_write = 0;
 	}
@@ -517,7 +517,7 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 						{
 							ppu_reg_b = nes_read_ppu_ram(ppu_reg_v-0x2000);
 						}
-						else if (ppu_status_m = 0x0003)
+						else if (ppu_status_m == 0x0003)
 						{
 							ppu_reg_b = nes_read_ppu_ram(ppu_reg_v-0x2000+0x0400);
 						}
@@ -763,6 +763,8 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 	{
 		return cpu_read((addr & 0x0000FFFF));
 	}
+	
+	return 0xFF;
 }
 
 void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char val)
@@ -2374,7 +2376,7 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground)
 	unsigned char sprite_flip_horz = 0, sprite_flip_vert = 0;
 	
 	unsigned short pixel_x = 0, pixel_y = 0;
-	unsigned long pixel_lookup = 0, pixel_table = 0;
+	unsigned long pixel_lookup = 0;
 	unsigned char pixel_high = 0, pixel_low = 0, pixel_color = 0;
 	
 	if (ppu_flag_es > 0)
@@ -2981,9 +2983,9 @@ void __attribute__((optimize("O2"))) nes_mixer()
 void __attribute__((optimize("O0"))) nes_wait(unsigned long loop_count)
 {
 	// wait for interrupts to catch up
-	while (nes_interrupt_count < (loop_count*261)) { }
+	while (nes_interrupt_count < (loop_count)) { }
 	
-	nes_interrupt_count -= loop_count*261;
+	nes_interrupt_count -= loop_count;
 }
 
 void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned long internal_interrupt)
@@ -3075,7 +3077,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 	
 	ppu_scanline_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);
 	
-	if (ppu_scanline_cycles >= 341) // 114 cycles per scanline
+	if (ppu_scanline_cycles >= 341) // 113.667 cycles per scanline
 	{		
 		ppu_scanline_cycles -= 341;
 
@@ -3094,13 +3096,13 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count, unsigned
 	
 	apu_sample_cycles += (cpu_current_cycles);
 	
-	if (apu_sample_cycles >= 228) // two scanlines
+	if (apu_sample_cycles >= 341) // three scanlines
 	{
-		apu_sample_cycles -= 228;
+		apu_sample_cycles -= 341;
 		
 		if (nes_audio_flag > 0)
 		{
-			nes_audio(228); // two scanlines
+			nes_audio(341); // three scanlines
 			
 			nes_mixer(); // move this somewhere else?
 		}

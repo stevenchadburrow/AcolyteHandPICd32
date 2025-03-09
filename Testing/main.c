@@ -110,6 +110,8 @@ Pin126,RK7,EXT-BUTTON
 // ffmpeg -i input.mp4 -vf scale=320:-1 -r 10 -f image2pipe -vcodec ppm - | convert -delay 10 -loop 0 - output.gif
 
 
+// When connecting with the UART, use:
+// sudo picocom /dev/ttyUSB0
 
 
 // PIC32MZ2048EFM144 Configuration Bit Settings
@@ -277,12 +279,13 @@ unsigned char screen_frame = 0;
 unsigned int screen_scanline = 1025; // start of vertical sync
 unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 
-#define AUDIO_LEN 4096
+#define AUDIO_LEN 1024
 
 // audio
 volatile unsigned char __attribute__((address(0x8004D000))) audio_buffer[AUDIO_LEN];
 unsigned int audio_read = 0;
-unsigned int audio_write = (AUDIO_LEN >> 4);
+unsigned int audio_write = 0;
+unsigned int audio_length = AUDIO_LEN;
 unsigned int audio_enable = 0;
 
 // controllers
@@ -591,10 +594,7 @@ void display_string(unsigned int x, unsigned int y, char *value)
 void __attribute__((optimize("O2"),vector(_TIMER_8_VECTOR), interrupt(ipl1srs))) t8_handler()
 {		
 	IFS1bits.T8IF = 0;  // clear interrupt flag
-   
-	nes_increment(); // two scanlines at a time
-	nes_increment();
-   
+	
 	if (audio_enable > 0)
 	{
 		// 8-bit signed audio add 0x80, unsigned add 0x00
@@ -603,11 +603,18 @@ void __attribute__((optimize("O2"),vector(_TIMER_8_VECTOR), interrupt(ipl1srs)))
 
 		audio_read = audio_read + 1;
 
-		if (audio_read >= AUDIO_LEN)
+		if (audio_read >= audio_length)
 		{
 			audio_read = 0;
 		}
 	}
+}
+
+void __attribute__((optimize("O2"),vector(_TIMER_9_VECTOR), interrupt(ipl2srs))) t9_handler()
+{		
+	IFS1bits.T9IF = 0;  // clear interrupt flag
+	
+	nes_increment();
 }
 
 
@@ -617,6 +624,9 @@ int __attribute__((optimize("O0"))) main()
 	unsigned long menu_wait = 0;
 	
 	unsigned long rate = 3; // default of 3:1 frame rate
+	
+	audio_length = 262 * rate / 3;
+	if (audio_length > 1024) audio_length = 1024;
 	
 	audio_enable = 0;
 	
@@ -650,15 +660,26 @@ int __attribute__((optimize("O0"))) main()
 	T8CON = 0x0000; // reset
 	T8CON = 0x0000; // prescale of 1:1, 16-bit
 	TMR8 = 0x0000; // zero out counter
-	PR8 = 0x7180; //0x6B7C; // approx two scanlines (minus one)
+	PR8 = 0xA0C5; // approx three scanlines (minus one)
 	
 	IPC9bits.T8IP = 0x1; // interrupt priority 1
 	IPC9bits.T8IS = 0x0; // interrupt sub-priority 0
 	IFS1bits.T8IF = 0; // T8 clear flag
 	IEC1bits.T8IE = 1; // T8 interrupt on
 	
-	// turn on timer
+	T9CON = 0x0000; // reset
+	T9CON = 0x0060; // prescale of 1:64, 16-bit
+	TMR9 = 0x0000; // zero out counter
+	PR9 = 0xDB5E;  // one whole frame (minus one)
+	
+	IPC10bits.T9IP = 0x1; // interrupt priority 1
+	IPC10bits.T9IS = 0x0; // interrupt sub-priority 0
+	IFS1bits.T9IF = 0; // T9 clear flag
+	IEC1bits.T9IE = 1; // T9 interrupt on
+	
+	// turn on timers
 	T8CONbits.ON = 1;
+	T9CONbits.ON = 1;
 	
 	for (unsigned short i=0; i<AUDIO_LEN; i++)
 	{
@@ -752,7 +773,6 @@ int __attribute__((optimize("O0"))) main()
 		
 		while (1)
 		{ 
-			
 			if (PORTKbits.RK7 == 0)
 			{
 				while (PORTKbits.RK7 == 0) { }
@@ -827,6 +847,10 @@ int __attribute__((optimize("O0"))) main()
 				else if (menu_pos == 1) { audio_enable = 1; nes_audio_flag = 1; }
 				else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
 				else if (menu_pos > 2) rate = (unsigned long)(menu_pos - 2);
+				
+				audio_length = 262 * rate / 3;
+				
+				if (audio_length > 1024) audio_length = 1024;
 			}
 			
 			nes_loop(rate, 0); // frame rate divider and external interrupt
