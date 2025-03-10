@@ -291,6 +291,8 @@ unsigned int audio_enable = 0;
 // controllers
 unsigned char controller_status_1 = 0x00;
 unsigned char controller_status_2 = 0x00;
+unsigned char controller_status_3 = 0x00;
+unsigned char controller_status_4 = 0x00;
 unsigned char controller_enable = 0;
 
 
@@ -569,6 +571,200 @@ void display_string(unsigned int x, unsigned int y, char *value)
 		
 		pos++;
 	}
+};
+
+
+
+
+// PS/2 keyboard variables
+volatile char __attribute__((coherent)) ps2_state_array[2][256];
+volatile unsigned int __attribute__((coherent)) ps2_cursor_x[2][256];
+volatile unsigned int __attribute__((coherent)) ps2_cursor_y[2][256];
+volatile unsigned char __attribute__((coherent)) ps2_mode[2] = { 0x00, 0x00 };
+volatile unsigned char __attribute__((coherent)) ps2_writepos[2] = { 0x00, 0x00 };
+volatile unsigned char __attribute__((coherent)) ps2_readpos[2] = { 0x00, 0x00 };
+
+volatile unsigned char ps2_counter[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_buffer[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_sequence[2] = { 0xFF, 0xFF }; // starts with 0xFA acknowledge byte
+volatile unsigned char ps2_shift[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_release[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_extended[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_ready[2] = { 0x00, 0x00 };
+volatile unsigned char ps2_check[2] = { 0x00, 0x00 };
+volatile unsigned int ps2_port = 0x0000;
+volatile unsigned int ps2_flags = 0x0000;
+
+void ps2_command(unsigned char command, unsigned char port)
+{
+	CNCONDbits.ON = 0; // turn off interrupt-on-change
+	
+	unsigned char copy = command;
+	
+	unsigned char parity_count = 0x00;
+	
+	for (unsigned char i=0; i<8; i++)
+	{
+		if ((copy & 0x01) == 0x01) parity_count++;
+		
+		copy = (copy >> 1);
+	}
+	
+	if (port == 0) // primary port
+	{
+		PORTDbits.RD9 = 0; // when not floating, ground them
+		PORTDbits.RD10 = 0;
+		TRISDbits.TRISD9 = 1; // normally they are both floating though
+		TRISDbits.TRISD10 = 1; 
+
+		DelayMS(1000); // wait a while for mouse to send it's initial code
+
+		TRISDbits.TRISD9 = 0; // ground clock
+
+		DelayMS(1000); // delay for at least 100 ms
+
+		TRISDbits.TRISD10 = 0; // ground data
+		TRISDbits.TRISD9 = 1; // release clock
+
+		while (PORTDbits.RD9 == 0) { } // wait until clock is high
+
+		while (PORTDbits.RD9 == 1) { } // wait until clock is low
+
+		for (unsigned char i=0; i<8; i++)
+		{
+			if ((command & 0x01) == 0x00)
+			{
+				TRISDbits.TRISD10 = 0; // ground data
+			}
+			else
+			{
+				TRISDbits.TRISD10 = 1; // float data to high
+			}
+
+			command = (command >> 1);
+
+			while (PORTDbits.RD9 == 0) { } // wait until clock is high
+
+			while (PORTDbits.RD9 == 1) { } // wait until clock is low
+		}
+
+		if (parity_count % 2 == 1) TRISDbits.TRISD10 = 0; // ground data (for parity)
+		else TRISDbits.TRISD10 = 1; // float data high (for parity)
+
+		while (PORTDbits.RD9 == 0) { } // wait until clock is high
+
+		while (PORTDbits.RD9 == 1) { } // wait until clock is low
+
+		TRISDbits.TRISD10 = 1; // release data line
+
+		while (PORTDbits.RD10 == 0) { } // wait until data is high
+
+		while (PORTDbits.RD10 == 1) { } // wait until data is low
+
+		while (PORTDbits.RD9 == 1) { } // wait until clock is low
+
+		while (PORTDbits.RD10 == 0) { } // wait until data is high
+
+		while (PORTDbits.RD9 == 0) { } // wait until clock is high
+	}
+	else if (port == 1) // secondary port (from splitter)
+	{
+		PORTDbits.RD12 = 0; // when not floating, ground them
+		PORTDbits.RD13 = 0;
+		TRISDbits.TRISD12 = 1; // normally they are both floating though
+		TRISDbits.TRISD13 = 1; 
+
+		DelayMS(1000); // wait a while for mouse to send it's initial code
+
+		TRISDbits.TRISD12 = 0; // ground clock
+
+		DelayMS(1000); // delay for at least 100 ms
+
+		TRISDbits.TRISD13 = 0; // ground data
+		TRISDbits.TRISD12 = 1; // release clock
+
+		while (PORTDbits.RD12 == 0) { } // wait until clock is high
+
+		while (PORTDbits.RD12 == 1) { } // wait until clock is low
+
+		for (unsigned char i=0; i<8; i++)
+		{
+			if ((command & 0x01) == 0x00)
+			{
+				TRISDbits.TRISD13 = 0; // ground data
+			}
+			else
+			{
+				TRISDbits.TRISD13 = 1; // float data to high
+			}
+
+			command = (command >> 1);
+
+			while (PORTDbits.RD12 == 0) { } // wait until clock is high
+
+			while (PORTDbits.RD12 == 1) { } // wait until clock is low
+		}
+		
+		if (parity_count % 2 == 1) TRISDbits.TRISD13 = 0; // ground data (for parity)
+		else TRISDbits.TRISD13 = 1; // float data high (for parity)
+
+		while (PORTDbits.RD12 == 0) { } // wait until clock is high
+
+		while (PORTDbits.RD12 == 1) { } // wait until clock is low
+
+		TRISDbits.TRISD13 = 1; // release data line
+
+		while (PORTDbits.RD13 == 0) { } // wait until data is high
+
+		while (PORTDbits.RD13 == 1) { } // wait until data is low
+
+		while (PORTDbits.RD12 == 1) { } // wait until clock is low
+
+		while (PORTDbits.RD13 == 0) { } // wait until data is high
+
+		while (PORTDbits.RD12 == 0) { } // wait until clock is high
+	}
+	
+	CNCONDbits.ON = 1; // turn on interrupt-on-change
+	
+	return;
+}
+
+unsigned char ps2_conversion[256] = 
+{
+  	0x00,0x16,0x0C,0x0E,0x1E,0x1C,0x1D,0x15,
+	0x00,0x18,0x07,0x0F,0x1F,0x09,0x60,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x71,0x31,0x00,
+	0x00,0x00,0x7A,0x73,0x61,0x77,0x32,0x00,
+	0x00,0x63,0x78,0x64,0x65,0x34,0x33,0x00,
+	0x00,0x20,0x76,0x66,0x74,0x72,0x35,0x00,
+	0x00,0x6E,0x62,0x68,0x67,0x79,0x36,0x00,
+	0x00,0x00,0x6D,0x6A,0x75,0x37,0x38,0x00,
+	0x00,0x2C,0x6B,0x69,0x6F,0x30,0x39,0x00,
+	0x00,0x2E,0x2F,0x6C,0x3B,0x70,0x2D,0x00,
+	0x00,0x00,0x27,0x00,0x5B,0x3D,0x00,0x00,
+	0x00,0x00,0x0D,0x5D,0x00,0x5C,0x00,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x08,0x00,
+	0x00,0x31,0x00,0x34,0x37,0x00,0x00,0x00,
+	0x30,0x2E,0x32,0x35,0x36,0x38,0x1B,0x00,
+	0x19,0x2B,0x33,0x2D,0x2A,0x39,0x00,0x00,
+
+	0x00,0x16,0x0C,0x0E,0x1E,0x1C,0x1D,0x15,
+	0x00,0x18,0x07,0x0F,0x1F,0x09,0x7E,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x51,0x21,0x00,
+	0x00,0x00,0x5A,0x53,0x41,0x57,0x40,0x00,
+	0x00,0x43,0x58,0x44,0x45,0x24,0x23,0x00,
+	0x00,0x20,0x56,0x46,0x54,0x52,0x25,0x00,
+	0x00,0x4E,0x42,0x48,0x47,0x59,0x5E,0x00,
+	0x00,0x00,0x4D,0x4A,0x55,0x26,0x2A,0x00,
+	0x00,0x3C,0x4B,0x49,0x4F,0x29,0x28,0x00,
+	0x00,0x3E,0x3F,0x4C,0x3A,0x50,0x5F,0x00,
+	0x00,0x00,0x22,0x00,0x7B,0x2B,0x00,0x00,
+	0x00,0x00,0x0D,0x7D,0x00,0x7C,0x00,0x00,
+	0x00,0x00,0x00,0x00,0x00,0x00,0x08,0x00,
+	0x00,0x03,0x00,0x13,0x02,0x00,0x00,0x00,
+	0x1A,0x7F,0x12,0x35,0x14,0x11,0x1B,0x00,
+	0x19,0x2B,0x04,0x2D,0x2A,0x01,0x00,0x00
 };
 
 

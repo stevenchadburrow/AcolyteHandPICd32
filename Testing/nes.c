@@ -88,8 +88,8 @@ unsigned short ppu_flag_eb = 0x0000, ppu_flag_es = 0x0000;
 unsigned short ppu_status_0 = 0x0000, ppu_status_s = 0x0000, ppu_status_m = 0x0000;
 
 unsigned short ctl_flag_s = 0x0000;
-unsigned short ctl_value_1 = 0x0000, ctl_value_2 = 0x0000;
-unsigned short ctl_latch_1 = 0x0000, ctl_latch_2 = 0x0000;
+unsigned long ctl_value_1 = 0x0000, ctl_value_2 = 0x0000;
+unsigned long ctl_latch_1 = 0x0000, ctl_latch_2 = 0x0000;
 
 unsigned short apu_pulse_1_d = 0x0000, apu_pulse_2_d = 0x0000;
 unsigned short apu_pulse_1_u = 0x0000, apu_pulse_2_u = 0x0000;
@@ -307,8 +307,8 @@ void __attribute__((optimize("O2"))) nes_sound(unsigned char sample)
 // change for platform
 void __attribute__((optimize("O2"))) nes_buttons()
 {
-	ctl_value_1 = controller_status_1;
-	ctl_value_2 = controller_status_2;
+	ctl_value_1 = 0xFF080000 | (controller_status_3 << 8) | controller_status_1;
+	ctl_value_2 = 0xFF040000 | (controller_status_4 << 8) | controller_status_2;
 }
 
 // change for platform
