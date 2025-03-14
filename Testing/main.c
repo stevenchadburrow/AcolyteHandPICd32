@@ -275,24 +275,24 @@ void _general_exception_handler(void)
 // video
 volatile unsigned char __attribute__((coherent,address(0x8004F800))) screen_line[SCREEN_X*2];
 volatile unsigned char __attribute__((coherent,address(0x80010000))) screen_buffer[SCREEN_X*SCREEN_Y*2]; // visible portion of screen
-unsigned char screen_frame = 0;
-unsigned int screen_scanline = 1025; // start of vertical sync
-unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
+volatile unsigned char screen_frame = 0;
+volatile unsigned int screen_scanline = 1025; // start of vertical sync
+volatile unsigned char __attribute__((coherent)) screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 
 #define AUDIO_LEN 256
 
 // audio
-volatile unsigned char __attribute__((address(0x8004D000))) audio_buffer[AUDIO_LEN];
-unsigned int audio_read = 0;
-unsigned int audio_write = 0;
-unsigned int audio_enable = 0;
+volatile unsigned char __attribute__((coherent,address(0x8004D000))) audio_buffer[AUDIO_LEN];
+volatile unsigned int audio_read = 0;
+volatile unsigned int audio_write = 0;
+volatile unsigned int audio_enable = 0;
 
 // controllers
-unsigned char controller_status_1 = 0x00;
-unsigned char controller_status_2 = 0x00;
-unsigned char controller_status_3 = 0x00;
-unsigned char controller_status_4 = 0x00;
-unsigned char controller_enable = 0;
+volatile unsigned char controller_status_1 = 0x00;
+volatile unsigned char controller_status_2 = 0x00;
+volatile unsigned char controller_status_3 = 0x00;
+volatile unsigned char controller_status_4 = 0x00;
+volatile unsigned char controller_enable = 0;
 
 
 const unsigned char text_bitmap[64*96] = { 

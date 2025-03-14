@@ -8,7 +8,9 @@
 
 
 // if using for other platforms, adjust variable types here
-unsigned char *cart_rom = (unsigned char *)0x9D100000;
+// 'volatile' seems to keep it from getting general exception errors
+// but it also slows down the whole system!
+volatile unsigned char *cart_rom = (volatile unsigned char *)0x9D100000;
 
 volatile unsigned char __attribute__((address(0x8004E000))) cpu_ram[2048]; // only cpu ram from 0x0000 to 0x07FF
 volatile unsigned char __attribute__((address(0x80050000))) ppu_ram[2048]; // ppu ram from 0x2000 to 0x2FFF (halved, mirrored)
@@ -59,8 +61,10 @@ unsigned short map_mmc3_bank_r6 = 0x0000;
 unsigned short map_mmc3_bank_r7 = 0x0000;
 unsigned short map_mmc3_ram = 0x0000;
 unsigned short map_mmc3_irq_latch = 0x007F;
-unsigned short map_mmc3_irq_counter = 0x007F; // start at something above 0
+unsigned short map_mmc3_irq_counter = 0x007F; // start at something above 0??
 unsigned short map_mmc3_irq_enable = 0x0000;
+unsigned short map_mmc3_irq_previous = 0x0000;
+unsigned short map_mmc3_irq_interrupt = 0x0000;
 
 unsigned short cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
 unsigned short cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
@@ -186,7 +190,7 @@ volatile unsigned short apu_period[16] = {
 	4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
 };
 
-void __attribute__((optimize("O2"),vector(_TIMER_8_VECTOR), interrupt(ipl1srs))) t8_handler()
+volatile void __attribute__((optimize("O2"),vector(_TIMER_8_VECTOR), interrupt(ipl1srs))) t8_handler()
 {		
 	IFS1bits.T8IF = 0;  // clear interrupt flag
 	
@@ -205,7 +209,7 @@ void __attribute__((optimize("O2"),vector(_TIMER_8_VECTOR), interrupt(ipl1srs)))
 	}
 }
 
-void __attribute__((optimize("O2"),vector(_TIMER_9_VECTOR), interrupt(ipl2srs))) t9_handler()
+volatile void __attribute__((optimize("O2"),vector(_TIMER_9_VECTOR), interrupt(ipl2srs))) t9_handler()
 {		
 	IFS1bits.T9IF = 0;  // clear interrupt flag
 	
@@ -422,6 +426,27 @@ unsigned char __attribute__((optimize("O0"))) nes_read_pal_ram(unsigned long add
 void __attribute__((optimize("O0"))) nes_write_pal_ram(unsigned long addr, unsigned char val)
 {
 	pal_ram[(addr&31)] = val;
+}
+
+void __attribute__((optimize("O0"))) nes_irq_decrement()
+{
+	if (map_mmc3_irq_counter == 0)
+	{
+		map_mmc3_irq_counter = map_mmc3_irq_latch;
+		
+		if (map_mmc3_irq_latch == 0)
+		{
+			map_mmc3_irq_interrupt = 1;
+		}
+	}
+	else
+	{
+		map_mmc3_irq_counter = map_mmc3_irq_counter - 1;
+
+		if (map_mmc3_irq_counter == 0 && map_mmc3_irq_previous == 1) map_mmc3_irq_interrupt = 1;
+	}
+
+	map_mmc3_irq_previous = map_mmc3_irq_counter;
 }
 
 unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
@@ -1030,10 +1055,10 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 					ppu_reg_w = 0x0000;
 				}
 				
-				if (map_number == 0x0004) // mmc3
-				{
-					map_mmc3_irq_counter = map_mmc3_irq_counter - 1; // is this right???
-				}
+				//if (map_number == 0x0004) // mmc3
+				//{
+				//	nes_irq_decrement(); // is this right???
+				//}
 				
 				break;
 			}
@@ -1914,12 +1939,13 @@ unsigned short __attribute__((optimize("O2"))) cpu_run()
 		// BRK
 		case 0x00:
 		{
+			//SendLongHex(cpu_reg_pc);
 			//SendString("BRK\n\r\\");
 			
 			cpu_temp_cycles = 0x0007;
-			cpu_temp_memory = ((cpu_reg_pc+1)>>8);
+			cpu_temp_memory = ((cpu_reg_pc+1)>>8); // add one to PC
 			CPU_PUSH;
-			cpu_temp_memory = ((cpu_reg_pc+1)&0x00FF);
+			cpu_temp_memory = ((cpu_reg_pc+1)&0x00FF); // add one to PC
 			CPU_PUSH;
 			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
 				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
@@ -2246,7 +2272,11 @@ unsigned short __attribute__((optimize("O2"))) cpu_run()
 			CPU_PULL;
 			cpu_reg_pc = cpu_temp_memory;
 			CPU_PULL;
-			cpu_reg_pc += (cpu_temp_memory<<8);
+			cpu_reg_pc += (cpu_temp_memory<<8);	
+			
+			//SendLongHex(cpu_reg_pc);
+			//SendString("RTI\n\r\\");
+			
 			break;
 		}
 		
@@ -3594,6 +3624,7 @@ void __attribute__((optimize("O0"))) nes_wait(unsigned long loop_count)
 	nes_interrupt_count -= loop_count;
 }
 
+
 void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 {	 
 	if (nes_init_flag == 0)
@@ -3650,11 +3681,13 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		// reset
 		cpu_reg_pc = cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFC] + (cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFD] << 8);
 		
+		//SendLongHex(cpu_reg_pc);
 		//SendString("Reset\n\r\\");
 	}
 	
 	/*
 	// For Dragon Warrior II
+	// MIGHT BE FIXED BECAUSE IRQ WAS CHANGED!!!
 	if (cpu_reg_pc == 0xC693) // last JSR before it blows up
 	{
 		SendHex(cpu_reg_a);
@@ -3680,30 +3713,6 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		nes_error(0x00);
 	}
 	
-	// irq
-	if (cpu_flag_i == 0 && !(cpu_temp_opcode == 0x58 || cpu_temp_opcode == 0x78 || cpu_temp_opcode == 0x28))
-	{
-		if (apu_flag_i == 1 || apu_flag_f == 1 || 
-			(map_number == 4 && map_mmc3_irq_enable > 0 && map_mmc3_irq_counter == 0 && map_mmc3_irq_latch != 0))
-		{	
-			//SendString("IRQ\n\r\\");
-			
-			cpu_temp_memory = ((cpu_reg_pc+1)>>8);
-			CPU_PUSH;
-			cpu_temp_memory = ((cpu_reg_pc+1)&0x00FF);
-			CPU_PUSH;
-			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
-			CPU_PUSH;
-			cpu_reg_pc = cpu_read(0xFFFE);
-			cpu_reg_pc += (cpu_read(0xFFFF)<<8);
-			
-			cpu_current_cycles += 7;
-			
-			cpu_flag_i = 1;
-		}
-	}
-	
 	ppu_scanline_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);
 	
 	if (ppu_scanline_cycles >= 341) // 113.667 cycles per scanline
@@ -3719,14 +3728,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		{
 			if (ppu_scanline_count > 0)
 			{	
-				if (map_mmc3_irq_counter == 0)
-				{
-					map_mmc3_irq_counter = map_mmc3_irq_latch;
-				}
-				else
-				{
-					map_mmc3_irq_counter = map_mmc3_irq_counter - 1;
-				}
+				nes_irq_decrement();
 			}
 		}
 		
@@ -3746,6 +3748,46 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 			nes_mixer(); // move this somewhere else?
 		}
 	}
+	
+	// irq
+	if (cpu_flag_i == 0 && !(cpu_temp_opcode == 0x58 || cpu_temp_opcode == 0x78 || cpu_temp_opcode == 0x28))
+	{
+		if (apu_flag_i == 1 || apu_flag_f == 1 || 
+			(map_number == 4 && map_mmc3_irq_enable > 0 && map_mmc3_irq_interrupt > 0))
+		{	
+			//SendLongHex(cpu_reg_pc);
+			//SendString("IRQ\n\r\\");
+			
+			/*
+			// Super Mario Bros 3 has an IRQ timing issue, it triggers too early
+			// It should always and only trigger if at 0xA81C or 0xA81E
+			if (cpu_reg_pc == 0xA81C || cpu_reg_pc == 0xA81E)
+			{
+				SendChar('!');
+			}
+			else
+			{
+				SendChar('?');
+			}
+			*/
+			
+			cpu_temp_memory = ((cpu_reg_pc)>>8);
+			CPU_PUSH;
+			cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
+			CPU_PUSH;
+			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
+				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
+			CPU_PUSH;
+			cpu_reg_pc = cpu_read(0xFFFE);
+			cpu_reg_pc += (cpu_read(0xFFFF)<<8);
+			
+			cpu_current_cycles += 7;
+			
+			cpu_flag_i = 1;
+		}
+	}
+	
+	if (map_number == 4 && map_mmc3_irq_interrupt > 0) map_mmc3_irq_interrupt = 0;
 
 	ppu_frame_cycles += (cpu_current_cycles<<1);
 	
@@ -3785,6 +3827,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		// nmi
 		if (ppu_flag_e != 0x0000)
 		{	
+			//SendLongHex(cpu_reg_pc);
 			//SendString("NMI\n\r\\");
 			
 			cpu_temp_memory = ((cpu_reg_pc)>>8);
