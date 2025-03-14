@@ -15,10 +15,9 @@ Ballon Fight<br>
 Ice Climber<br>
 Excitebike - the far background scrolling isn't on the right scanline<br>
 Paperboy<br>
-Gradius - some enemy sprites are from wrong table<br>
+Gradius<br>
 Contra<br>
 1943: Battle for Midway<br>
-Duck Tales - HUD displays from wrong table, vertical scrolling doesn't work well<br>
 Castlevania - sprite priority isn't right when entering the castle or going through doors<br>
 Castlevania 2<br>
 Legend of Zelda - vertical scrolling is shifted by some scanlines<br>
@@ -32,8 +31,9 @@ Super Mario Bros 2<br>
 
 Some games that are currently in development:
 
-Super Mario Bros 3 - IRQ timing is wrong, as well as sprite priority
-Kirby's Adventure - IRQ timing is wrong
+Super Mario Bros 3 - wrong sprite tables, as well as sprite priority
+Kirby's Adventure - wrong sprite tables
+Crystalis - wrong sprite tables
 
 Some games that do not work well:
 
