@@ -1578,7 +1578,7 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 					map_mmc3_ram = ((val & 0x80) >> 7);
 				}
 			}
-			else if (addr < 0x0000E0000) // irq values
+			else if (addr < 0x0000E000) // irq values
 			{
 				if ((addr & 0x00000001) == 0x00000000) // even
 				{
@@ -3718,7 +3718,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		if (map_number == 4) // mmc3
 		{
 			if (ppu_scanline_count > 0)
-			{
+			{	
 				if (map_mmc3_irq_counter == 0)
 				{
 					map_mmc3_irq_counter = map_mmc3_irq_latch;
