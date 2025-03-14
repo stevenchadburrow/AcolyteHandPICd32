@@ -2,7 +2,7 @@
 
 These files contain an NES emulator for the PIC32MZ.  It currently is running at 216 MHz, and if emulating the NES at 20 FPS with audio it is nearly at full speed.  The audio is a work in progress, as coordinating the microcontroller timers to the emulated cpu cycles isn't always perfect.
 
-This currently works with NROM, UNROM, CNROM, and also MMC1 mappers.  Next up is the MMC3 mapper.
+This currently works with NROM, UNROM, CNROM, MMC1, and MMC3 (in progress).
 
 Highly tested games for this system include:
 
@@ -28,6 +28,12 @@ Ninja Gaiden - some cutscene tiles are wrong<br>
 Bionic Commando<br>
 Dragon Warrior 3<br>
 Final Fantasy<br>
+Super Mario Bros 2<br>
+
+Some games that are currently in development:
+
+Super Mario Bros 3 - IRQ timing is wrong, as well as sprite priority
+Kirby's Adventure - IRQ timing is wrong
 
 Some games that do not work well:
 
