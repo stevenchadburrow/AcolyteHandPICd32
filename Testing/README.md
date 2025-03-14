@@ -31,9 +31,9 @@ Super Mario Bros 2<br>
 
 Some games that are currently in development:
 
-Super Mario Bros 3 - wrong sprite tables, as well as sprite priority
-Kirby's Adventure - wrong sprite tables
-Crystalis - wrong sprite tables
+Super Mario Bros 3 - wrong sprite tables, as well as sprite priority<br>
+Kirby's Adventure - wrong sprite tables<br>
+Crystalis - wrong sprite tables<br>
 
 The journey has been documented on the 6502.org Forum, here: http://forum.6502.org/viewtopic.php?f=1&t=8236
 
