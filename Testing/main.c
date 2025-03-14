@@ -279,13 +279,12 @@ unsigned char screen_frame = 0;
 unsigned int screen_scanline = 1025; // start of vertical sync
 unsigned char screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 
-#define AUDIO_LEN 1024
+#define AUDIO_LEN 256
 
 // audio
 volatile unsigned char __attribute__((address(0x8004D000))) audio_buffer[AUDIO_LEN];
 unsigned int audio_read = 0;
 unsigned int audio_write = 0;
-unsigned int audio_length = AUDIO_LEN;
 unsigned int audio_enable = 0;
 
 // controllers
@@ -786,34 +785,6 @@ unsigned char ps2_conversion[256] =
 
 
 
-
-void __attribute__((optimize("O2"),vector(_TIMER_8_VECTOR), interrupt(ipl1srs))) t8_handler()
-{		
-	IFS1bits.T8IF = 0;  // clear interrupt flag
-	
-	if (audio_enable > 0)
-	{
-		// 8-bit signed audio add 0x80, unsigned add 0x00
-		PORTJ = (unsigned short)(((audio_buffer[audio_read]) + 0x00) + 
-			(((audio_buffer[audio_read]) + 0x00) << 8));
-
-		audio_read = audio_read + 1;
-
-		if (audio_read >= audio_length)
-		{
-			audio_read = 0;
-		}
-	}
-}
-
-void __attribute__((optimize("O2"),vector(_TIMER_9_VECTOR), interrupt(ipl2srs))) t9_handler()
-{		
-	IFS1bits.T9IF = 0;  // clear interrupt flag
-	
-	nes_increment();
-}
-
-
 int __attribute__((optimize("O0"))) main()
 {
 	unsigned short menu_pos = 0;
@@ -821,75 +792,14 @@ int __attribute__((optimize("O0"))) main()
 	
 	unsigned long rate = 3; // default of 3:1 frame rate
 	
-	audio_length = 262 * rate / 3;
-	if (audio_length > 1024) audio_length = 1024;
-	
 	audio_enable = 0;
 	
 	Setup();
 	
-	// for debug purposes
-	TRISKbits.TRISK7 = 1;
-	while (PORTKbits.RK7 == 0) { }
-	
 	DelayMS(1000);
 	
 	SendChar('$'); // just a 'hello world' over the UART
-	
-	PORTKbits.RK6 = 0; // ground when not floating
-	TRISKbits.TRISK6 = 1; // high when floating
-	
-	TRISKbits.TRISK0 = 1;
-	TRISKbits.TRISK1 = 1;
-	TRISKbits.TRISK2 = 1;
-	TRISKbits.TRISK3 = 1;
-	TRISKbits.TRISK4 = 1;
-	TRISKbits.TRISK5 = 1;
-	
-	TRISFbits.TRISF0 = 1;
-	TRISFbits.TRISF1 = 1;
-	TRISFbits.TRISF2 = 1;
-	TRISFbits.TRISF4 = 1;
-	TRISFbits.TRISF5 = 1;
-	TRISFbits.TRISF8 = 1;
 
-	T8CON = 0x0000; // reset
-	T8CON = 0x0000; // prescale of 1:1, 16-bit
-	TMR8 = 0x0000; // zero out counter
-	PR8 = 0xA0C5; // approx three scanlines (minus one)
-	
-	IPC9bits.T8IP = 0x1; // interrupt priority 1
-	IPC9bits.T8IS = 0x0; // interrupt sub-priority 0
-	IFS1bits.T8IF = 0; // T8 clear flag
-	IEC1bits.T8IE = 1; // T8 interrupt on
-	
-	T9CON = 0x0000; // reset
-	T9CON = 0x0060; // prescale of 1:64, 16-bit
-	TMR9 = 0x0000; // zero out counter
-	PR9 = 0xDB5E;  // one whole frame (minus one)
-	
-	IPC10bits.T9IP = 0x1; // interrupt priority 1
-	IPC10bits.T9IS = 0x0; // interrupt sub-priority 0
-	IFS1bits.T9IF = 0; // T9 clear flag
-	IEC1bits.T9IE = 1; // T9 interrupt on
-	
-	// turn on timers
-	T8CONbits.ON = 1;
-	T9CONbits.ON = 1;
-	
-	for (unsigned short i=0; i<AUDIO_LEN; i++)
-	{
-		audio_buffer[i] = 0x00;
-	}
-	
-	for (unsigned short y=0; y<SCREEN_Y*2; y++)
-	{
-		for (unsigned short x=0; x<SCREEN_X; x++)
-		{
-			screen_buffer[y*SCREEN_X+x] = 0x00;
-			screen_buffer[y*SCREEN_X+x] = 0x00;
-		}
-	}
 	
 	controller_enable = 0;
 	screen_frame = 0;
@@ -897,6 +807,7 @@ int __attribute__((optimize("O0"))) main()
 	DelayMS(1000);
 	
 	display_string(0x0010, 0x0010, "  Play Current Game\\");
+	
 	display_string(0x0010, 0x0018, "  Load Super Mario Bros\\");
 	display_string(0x0010, 0x0020, "  Load Tetris\\");
 	display_string(0x0010, 0x0028, "  Load Micro Mages\\");
@@ -911,20 +822,21 @@ int __attribute__((optimize("O0"))) main()
 	display_string(0x0010, 0x0060, "  Load Gradius\\");
 	display_string(0x0010, 0x0068, "  Load Contra\\");
 	display_string(0x0010, 0x0070, "  Load 1943: Midway\\");
-	display_string(0x0010, 0x0078, "  Load Duck Tales\\");
-	display_string(0x0010, 0x0080, "  Load Castlevania\\");
+	display_string(0x0010, 0x0078, "  Load Castlevania\\");
 	
-	display_string(0x0010, 0x0088, "  Load Castlevania 2\\");
-	display_string(0x0010, 0x0090, "  Load Zelda\\");
-	display_string(0x0010, 0x0098, "  Load Zelda 2\\");
-	display_string(0x0010, 0x00A0, "  Load Metroid\\");
-	display_string(0x0010, 0x00A8, "  Load Ninja Gaiden\\");
-	display_string(0x0010, 0x00B0, "  Load Bionic Commando\\");
-	display_string(0x0010, 0x00B8, "  Load Mega Man 2\\");
-	display_string(0x0010, 0x00C0, "  Load Dragon Warrior 3\\");
-	display_string(0x0010, 0x00C8, "  Load Final Fantasy\\");
-	display_string(0x0010, 0x00D0, "  Load ???\\");
-	display_string(0x0010, 0x00D8, "  Load ???\\");
+	display_string(0x0010, 0x0080, "  Load Castlevania 2\\");
+	display_string(0x0010, 0x0088, "  Load Zelda\\");
+	display_string(0x0010, 0x0090, "  Load Zelda 2\\");
+	display_string(0x0010, 0x0098, "  Load Metroid\\");
+	display_string(0x0010, 0x00A0, "  Load Ninja Gaiden\\");
+	display_string(0x0010, 0x00A8, "  Load Bionic Commando\\");
+	display_string(0x0010, 0x00B0, "  Load Mega Man 2\\");
+	display_string(0x0010, 0x00B8, "  Load Dragon Warrior 3\\");
+	display_string(0x0010, 0x00C0, "  Load Final Fantasy\\");
+	
+	display_string(0x0010, 0x00C8, "  Load Super Mario Bros 2\\");
+	display_string(0x0010, 0x00D0, "  Load Super Mario Bros 3\\");
+	display_string(0x0010, 0x00D8, "  Load Kirby's Adventure\\");
 	
 	DelayMS(1000);
 	
@@ -1043,13 +955,9 @@ int __attribute__((optimize("O0"))) main()
 				else if (menu_pos == 1) { audio_enable = 1; nes_audio_flag = 1; }
 				else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
 				else if (menu_pos > 2) rate = (unsigned long)(menu_pos - 2);
-				
-				audio_length = 262 * rate / 3;
-				
-				if (audio_length > 1024) audio_length = 1024;
 			}
 			
-			nes_loop(rate, 0); // frame rate divider and external interrupt
+			nes_loop(rate); // frame rate divider and external interrupt
 		}
 	}
 	else
@@ -1118,57 +1026,67 @@ int __attribute__((optimize("O0"))) main()
 			}
 			case 0x0D:
 			{
-				nes_load("DUCKTALE.NES");
+				nes_load("CASTLE.NES");
 				break;
 			}
 			case 0x0E:
 			{
-				nes_load("CASTLE.NES");
+				nes_load("CASTLE2.NES");
 				break;
 			}
 			case 0x0F:
 			{
-				nes_load("CASTLE2.NES");
+				nes_load("ZELDA.NES");
 				break;
 			}
 			case 0x10:
 			{
-				nes_load("ZELDA.NES");
+				nes_load("ZELDA2.NES");
 				break;
 			}
 			case 0x11:
 			{
-				nes_load("ZELDA2.NES");
+				nes_load("METROID.NES");
 				break;
 			}
 			case 0x12:
 			{
-				nes_load("METROID.NES");
+				nes_load("NINJA.NES");
 				break;
 			}
 			case 0x13:
 			{
-				nes_load("NINJA.NES");
+				nes_load("BIOCOM.NES");
 				break;
 			}
 			case 0x14:
 			{
-				nes_load("BIOCOM.NES");
+				nes_load("MEGAMAN2.NES");
 				break;
 			}
 			case 0x15:
 			{
-				nes_load("MEGAMAN2.NES");
+				nes_load("DW3.NES");
 				break;
 			}
 			case 0x16:
 			{
-				nes_load("DW3.NES");
+				nes_load("FF.NES");
 				break;
 			}
 			case 0x17:
 			{
-				nes_load("FF.NES");
+				nes_load("SMB2.NES");
+				break;
+			}
+			case 0x18:
+			{
+				nes_load("SMB3.NES");
+				break;
+			}
+			case 0x19:
+			{
+				nes_load("KIRBY.NES");
 				break;
 			}
 			default:

@@ -75,6 +75,24 @@ void __attribute__((optimize("O0"))) Setup()
 	TRISK = 0x00BF; // JOY-A and BUTTON
 	TRISF = 0x01FF; // JOY-B (and USBID)
 	CNPUD = 0xC000; // pull-ups for UART
+	
+	// probably just repeating
+	PORTKbits.RK6 = 0; // ground when not floating
+	TRISKbits.TRISK6 = 1; // high when floating
+	
+	TRISKbits.TRISK0 = 1;
+	TRISKbits.TRISK1 = 1;
+	TRISKbits.TRISK2 = 1;
+	TRISKbits.TRISK3 = 1;
+	TRISKbits.TRISK4 = 1;
+	TRISKbits.TRISK5 = 1;
+	
+	TRISFbits.TRISF0 = 1;
+	TRISFbits.TRISF1 = 1;
+	TRISFbits.TRISF2 = 1;
+	TRISFbits.TRISF4 = 1;
+	TRISFbits.TRISF5 = 1;
+	TRISFbits.TRISF8 = 1;
 
 	// set oscillator and timers
 	SYSKEY = 0x0; // reset
@@ -305,28 +323,18 @@ void __attribute__((optimize("O0"))) Setup()
 	
 	for (unsigned short i=0; i<SCREEN_X*2; i++) screen_line[i] = 0x00;
 
-
-/*	
-	// set display buffer
-	for (unsigned int y=0; y<SCREEN_Y; y++)
+	for (unsigned short i=0; i<AUDIO_LEN; i++)
 	{
-		for (unsigned int x=0; x<SCREEN_X; x++)
-		{
-#ifdef SPLASH
-			screen_buffer[y*SCREEN_X+x] = splash_default[y * SCREEN_X + x];
-#else
-			screen_buffer[y*SCREEN_X+x] = 0x25; // blue-grey
-			//screen_buffer[y*SCREEN_X+x] = (unsigned char)((x + y) % 256); // test pattern
-			//if (x % 2 == 0) screen_buffer[y*SCREEN_X+x] = 0xFF; // white
-			//else screen_buffer[y*SCREEN_X+x] = 0x1F; // cyan
-#endif
-		}
+		audio_buffer[i] = 0x00;
 	}
-*/
-/*	
-	for (unsigned int i=0; i<2; i++)
+	
+	for (unsigned short y=0; y<SCREEN_Y*2; y++)
 	{
-		for (unsigned int j=0; j<8192; j++) audio_buffer[i][j] = 0x00;
+		for (unsigned short x=0; x<SCREEN_X; x++)
+		{
+			screen_buffer[y*SCREEN_X+x] = 0x00;
+			screen_buffer[y*SCREEN_X+x] = 0x00;
+		}
 	}
 	
 	// clear ps2 buffers
@@ -339,11 +347,12 @@ void __attribute__((optimize("O0"))) Setup()
 		ps2_cursor_y[0][i] = 0x0000;
 		ps2_cursor_y[1][i] = 0x0000;
 		
+		/*
 		usb_state_array[i] = 0x00;
 		usb_cursor_x[i] = 0x0000;
 		usb_cursor_y[i] = 0x0000;
+		*/
 	}	
-*/
 	
 	// turn on video timers
 	T5CONbits.ON = 1; // turn on TMR5 horizontal sync (cycle offset pre-calculated above)
@@ -351,6 +360,9 @@ void __attribute__((optimize("O0"))) Setup()
 	T4CONbits.ON = 1; // turn on TMR4 scanline end (independent of others)
 	T6CONbits.ON = 1; // turn on TMR6 vertical sync (cycle offset pre-calculated above)
 	
+	// for debug purposes
+	TRISKbits.TRISK7 = 1;
+	while (PORTKbits.RK7 == 0) { }
 	
 	return;
 }
