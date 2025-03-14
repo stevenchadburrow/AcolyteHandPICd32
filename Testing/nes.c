@@ -337,7 +337,7 @@ void __attribute__((optimize("O2"))) nes_buttons()
 
 // change for platform
 void __attribute__((optimize("O0"))) nes_error(unsigned char code)
-{		
+{			
 	SendChar('\n');
 	SendChar('\r');
 	
@@ -441,9 +441,12 @@ void __attribute__((optimize("O0"))) nes_irq_decrement()
 	}
 	else
 	{
-		map_mmc3_irq_counter = map_mmc3_irq_counter - 1;
+		if (ppu_flag_s != ppu_flag_b) // only if using different nametables
+		{
+			map_mmc3_irq_counter = map_mmc3_irq_counter - 1;
 
-		if (map_mmc3_irq_counter == 0 && map_mmc3_irq_previous == 1) map_mmc3_irq_interrupt = 1;
+			if (map_mmc3_irq_counter == 0 && map_mmc3_irq_previous == 1) map_mmc3_irq_interrupt = 1;
+		}
 	}
 
 	map_mmc3_irq_previous = map_mmc3_irq_counter;
@@ -3758,19 +3761,6 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 			//SendLongHex(cpu_reg_pc);
 			//SendString("IRQ\n\r\\");
 			
-			/*
-			// Super Mario Bros 3 has an IRQ timing issue, it triggers too early
-			// It should always and only trigger if at 0xA81C or 0xA81E
-			if (cpu_reg_pc == 0xA81C || cpu_reg_pc == 0xA81E)
-			{
-				SendChar('!');
-			}
-			else
-			{
-				SendChar('?');
-			}
-			*/
-			
 			cpu_temp_memory = ((cpu_reg_pc)>>8);
 			CPU_PUSH;
 			cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
@@ -3802,6 +3792,11 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 	}
 	else if (ppu_frame_cycles < 59565) // 29780.5 cycles per frame
 	{
+		if (ppu_frame_count == loop_count && ppu_flag_v == 0x0001)
+		{
+			nes_sprites(1);
+		}
+		
 		// v-sync
 		ppu_flag_v = 0x0000;
 		
@@ -4139,8 +4134,6 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		if (ppu_frame_count >= loop_count)
 		{
 			nes_border();
-		
-			nes_sprites(1);
 		}
 		
 		nes_buttons();

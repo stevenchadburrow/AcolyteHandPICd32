@@ -806,37 +806,39 @@ int __attribute__((optimize("O0"))) main()
 	
 	DelayMS(1000);
 	
-	display_string(0x0010, 0x0010, "  Play Current Game\\");
+	display_string(0x0000, 0x0000, "  Play Current Game\\");
 	
-	display_string(0x0010, 0x0018, "  Load Super Mario Bros\\");
-	display_string(0x0010, 0x0020, "  Load Tetris\\");
-	display_string(0x0010, 0x0028, "  Load Micro Mages\\");
+	display_string(0x0000, 0x0008, "  Load Super Mario Bros\\");
+	display_string(0x0000, 0x0010, "  Load Tetris\\");
+	display_string(0x0000, 0x0018, "  Load Micro Mages\\");
 	
-	display_string(0x0010, 0x0030, "  Load Donkey Kong\\");
-	display_string(0x0010, 0x0038, "  Load Mario Bros\\");
-	display_string(0x0010, 0x0040, "  Load Balloon Fight\\");
-	display_string(0x0010, 0x0048, "  Load Ice Climber\\");
-	display_string(0x0010, 0x0050, "  Load Excitebike\\");
+	display_string(0x0000, 0x0020, "  Load Donkey Kong\\");
+	display_string(0x0000, 0x0028, "  Load Mario Bros\\");
+	display_string(0x0000, 0x0030, "  Load Balloon Fight\\");
+	display_string(0x0000, 0x0038, "  Load Ice Climber\\");
+	display_string(0x0000, 0x0040, "  Load Excitebike\\");
 	
-	display_string(0x0010, 0x0058, "  Load Paperboy\\");
-	display_string(0x0010, 0x0060, "  Load Gradius\\");
-	display_string(0x0010, 0x0068, "  Load Contra\\");
-	display_string(0x0010, 0x0070, "  Load 1943: Midway\\");
-	display_string(0x0010, 0x0078, "  Load Castlevania\\");
+	display_string(0x0000, 0x0048, "  Load Paperboy\\");
+	display_string(0x0000, 0x0050, "  Load Gradius\\");
+	display_string(0x0000, 0x0058, "  Load Contra\\");
+	display_string(0x0000, 0x0060, "  Load 1943: Midway\\");
+	display_string(0x0000, 0x0068, "  Load Castlevania\\");
+
+	display_string(0x0000, 0x0070, "  Load Castlevania 2\\");
+	display_string(0x0000, 0x0078, "  Load Zelda\\");
+	display_string(0x0000, 0x0080, "  Load Zelda 2\\");
+	display_string(0x0000, 0x0088, "  Load Metroid\\");
+	display_string(0x0000, 0x0090, "  Load Ninja Gaiden\\");
+	display_string(0x0000, 0x0098, "  Load Bionic Commando\\");
+	display_string(0x0000, 0x00A0, "  Load Mega Man 2\\");
+	display_string(0x0000, 0x00A8, "  Load Dragon Warrior 3\\");
+	display_string(0x0000, 0x00B0, "  Load Final Fantasy\\");
 	
-	display_string(0x0010, 0x0080, "  Load Castlevania 2\\");
-	display_string(0x0010, 0x0088, "  Load Zelda\\");
-	display_string(0x0010, 0x0090, "  Load Zelda 2\\");
-	display_string(0x0010, 0x0098, "  Load Metroid\\");
-	display_string(0x0010, 0x00A0, "  Load Ninja Gaiden\\");
-	display_string(0x0010, 0x00A8, "  Load Bionic Commando\\");
-	display_string(0x0010, 0x00B0, "  Load Mega Man 2\\");
-	display_string(0x0010, 0x00B8, "  Load Dragon Warrior 3\\");
-	display_string(0x0010, 0x00C0, "  Load Final Fantasy\\");
-	
-	display_string(0x0010, 0x00C8, "  Load Super Mario Bros 2\\");
-	display_string(0x0010, 0x00D0, "  Load Super Mario Bros 3\\");
-	display_string(0x0010, 0x00D8, "  Load Kirby's Adventure\\");
+	display_string(0x0000, 0x00B8, "  Load Super Mario Bros 2\\");
+	display_string(0x0000, 0x00C0, "  Load Super Mario Bros 3\\");
+	display_string(0x0000, 0x00C8, "  Load Crystalis\\");
+	display_string(0x0000, 0x00D0, "  Load Kirby's Adventure\\");
+	display_string(0x0000, 0x00D8, "  Load ???\\");
 	
 	DelayMS(1000);
 	
@@ -845,13 +847,13 @@ int __attribute__((optimize("O0"))) main()
 	
 	while (PORTKbits.RK4 == 1 && PORTKbits.RK5 == 1)
 	{	
-		display_character(0x0010, 0x0010+0x0008*menu_pos, '>');
+		display_character(0x0000, 0x0008*menu_pos, '>');
 		
 		if (PORTKbits.RK0 == 0 && menu_wait == 0)
 		{
 			menu_wait = 0x00003FFF;
 			
-			display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
+			display_character(0x0000, 0x0008*menu_pos, ' ');
 			
 			if (menu_pos > 0) menu_pos--;
 		}
@@ -864,9 +866,9 @@ int __attribute__((optimize("O0"))) main()
 		{
 			menu_wait = 0x00003FFF;
 			
-			display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
+			display_character(0x0000, 0x0008*menu_pos, ' ');
 			
-			if (menu_pos < 25) menu_pos++;
+			if (menu_pos < 27) menu_pos++;
 		}
 		else
 		{
@@ -876,6 +878,20 @@ int __attribute__((optimize("O0"))) main()
 	
 	if (menu_pos == 0)
 	{
+		for (unsigned short i=0; i<AUDIO_LEN; i++)
+		{
+			audio_buffer[i] = 0x00;
+		}
+		
+		for (unsigned short y=0; y<SCREEN_Y*2; y++)
+		{
+			for (unsigned short x=0; x<SCREEN_X; x++)
+			{
+				screen_buffer[y*SCREEN_X+x] = 0x00;
+				screen_buffer[y*SCREEN_X+x] = 0x00;
+			}
+		}
+		
 		audio_enable = 1; // audio on by default
 		controller_enable = 1; // must be on to play games
 		
@@ -1085,6 +1101,11 @@ int __attribute__((optimize("O0"))) main()
 				break;
 			}
 			case 0x19:
+			{
+				nes_load("CRYST.NES");
+				break;
+			}
+			case 0x1A:
 			{
 				nes_load("KIRBY.NES");
 				break;
