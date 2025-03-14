@@ -35,11 +35,5 @@ Super Mario Bros 3 - wrong sprite tables, as well as sprite priority
 Kirby's Adventure - wrong sprite tables
 Crystalis - wrong sprite tables
 
-Some games that do not work well:
-
-Rad Racer - scanlines are all over the place<br>
-Nuts and Milk - background is missing most of the time<br>
-Dragon Warrior 2 - locks up between intro screens<br>
-
 The journey has been documented on the 6502.org Forum, here: http://forum.6502.org/viewtopic.php?f=1&t=8236
 
