@@ -18,12 +18,12 @@ Paperboy<br>
 Gradius<br>
 Contra<br>
 1943: Battle for Midway<br>
-Castlevania - sprite priority isn't right when entering the castle or going through doors<br>
+Castlevania - wrong sprite priority <br>
 Castlevania 2<br>
 Legend of Zelda - vertical scrolling is shifted by some scanlines<br>
 Zelda 2<br>
 Metroid<br>
-Ninja Gaiden - some cutscene tiles are wrong<br>
+Ninja Gaiden - background shifted down too low, some cutscene tiles are wrong<br>
 Bionic Commando<br>
 Dragon Warrior 3<br>
 Final Fantasy<br>
@@ -31,9 +31,8 @@ Super Mario Bros 2<br>
 
 Some games that are currently in development:
 
-Super Mario Bros 3 - wrong sprite tables, as well as sprite priority<br>
-Kirby's Adventure - wrong sprite tables<br>
-Crystalis - wrong sprite tables<br>
+Super Mario Bros 3 - wrong sprite priority, very slow<br>
+Kirby's Adventure - intro screen has wrong nametable<br>
 
 The journey has been documented on the 6502.org Forum, here: http://forum.6502.org/viewtopic.php?f=1&t=8236
 
