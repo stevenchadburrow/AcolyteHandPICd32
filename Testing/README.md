@@ -31,7 +31,7 @@ Super Mario Bros 2<br>
 
 Some games that are currently in development:
 
-Super Mario Bros 3 - wrong sprite priority, very slow<br>
+Super Mario Bros 3 - wrong sprite priority, HUD doesn't stay when scrolling vertically, very slow<br>
 Kirby's Adventure - intro screen has wrong nametable<br>
 
 The journey has been documented on the 6502.org Forum, here: http://forum.6502.org/viewtopic.php?f=1&t=8236
