@@ -13,26 +13,27 @@ Donkey Kong<br>
 Mario Bros<br>
 Ballon Fight<br>
 Ice Climber<br>
-Excitebike - the far background scrolling isn't on the right scanline<br>
+Excitebike - the far background scrolling isn't on the right scanline (minimal)<br>
 Paperboy<br>
 Gradius<br>
 Contra<br>
 1943: Battle for Midway<br>
-Castlevania - wrong sprite priority <br>
+Castlevania - wrong sprite priority (minimal) <br>
 Castlevania 2<br>
-Legend of Zelda - vertical scrolling is shifted by some scanlines<br>
+Legend of Zelda - vertical scrolling is shifted by some scanlines (moderate)<br>
 Zelda 2<br>
 Metroid<br>
-Ninja Gaiden - background shifted down too low, some cutscene tiles are wrong<br>
+Ninja Gaiden - background shifted down too low, some cutscene tiles are wrong (moderate)<br>
 Bionic Commando<br>
 Dragon Warrior 3<br>
 Final Fantasy<br>
 Super Mario Bros 2<br>
+Kirby's Adventure - intro screen has wrong nametable (minimal)<br>
 
 Some games that are currently in development:
 
-Super Mario Bros 3 - wrong sprite priority, HUD doesn't stay when scrolling vertically, very slow<br>
-Kirby's Adventure - intro screen has wrong nametable<br>
+Super Mario Bros 3 - wrong sprite priority, HUD doesn't stay when scrolling vertically, very slow (major)<br>
+
 
 The journey has been documented on the 6502.org Forum, here: http://forum.6502.org/viewtopic.php?f=1&t=8236
 
