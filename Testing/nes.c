@@ -2432,10 +2432,13 @@ void __attribute__((optimize("O2"))) nes_border()
 	}
 }
 
-void __attribute__((optimize("O2"))) nes_background(unsigned short line)
+void __attribute__((optimize("O2"))) nes_background(signed short line)
 {
-	unsigned short scroll_x = 0, scroll_y = 0, scroll_n = 0;
+	unsigned short scroll_x = 0, scroll_y = 0;
+	unsigned short scroll_n = 0;
 	unsigned short scroll_t = 0, scroll_l = 0;
+	
+	unsigned short add_t = 0, add_l = 0;
 	
 	unsigned long pixel_lookup = 0, pixel_table = 0;
 	unsigned short pixel_x = 0, pixel_y = 0;
@@ -2448,9 +2451,11 @@ void __attribute__((optimize("O2"))) nes_background(unsigned short line)
 		if (pixel_y >= 8 && pixel_y < 232) // remove overscan above and below
 		{
 			for (unsigned char w=0; w<33; w++) // go one more than 32
-			{	
-				scroll_x = w + (ppu_reg_t & 0x001F);
-				scroll_y = (line>>3) + ((ppu_reg_t & 0x03E0) >> 5);
+			{					
+				scroll_x = (ppu_reg_t & 0x001F) + w;
+				
+				scroll_y = ((ppu_reg_t & 0x03E0) >> 5) + (line>>3);
+				
 				scroll_n = ((ppu_reg_t & 0x0C00) >> 10);
 
 				switch (scroll_n)
@@ -2521,86 +2526,90 @@ void __attribute__((optimize("O2"))) nes_background(unsigned short line)
 					}
 				}
 				
-				scroll_t = (scroll_n<<10)+((scroll_y&0xFC)<<1)+((scroll_x&0xFC)>>2);
-
+				scroll_t = (scroll_n<<10)+0x03C0+((scroll_y&0xFC)<<1)+((scroll_x&0xFC)>>2);
+				
+				scroll_l = (scroll_n<<10)+(scroll_y<<5)+(scroll_x);
+				
+				add_t = (((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1);
+				
+				add_l = 0x1000*ppu_flag_b+(line&0x07);			
+				
 				if (ppu_status_m == 0x0001) // horizontal scrolling
 				{
 					if (scroll_t < 0x0800)
 					{
-						pixel_table = (ppu_ram[(scroll_t+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+						pixel_table = (ppu_ram[(scroll_t)]>>add_t);
 					}
 					else
 					{
-						pixel_table = (ppu_ram[(scroll_t-0x0800+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+						pixel_table = (ppu_ram[(scroll_t-0x0800)]>>add_t);
 					}
 				}
 				else if (ppu_status_m == 0x0000) // vertical scrolling
 				{
 					if (scroll_t < 0x0400)
 					{
-						pixel_table = (ppu_ram[(scroll_t+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+						pixel_table = (ppu_ram[(scroll_t)]>>add_t);
 					}
 					else if (scroll_t < 0x0800)
 					{
-						pixel_table = (ppu_ram[(scroll_t-0x0400+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+						pixel_table = (ppu_ram[(scroll_t-0x0400)]>>add_t);
 					}
 					else if (scroll_t < 0x0C00)
 					{
-						pixel_table = (ppu_ram[(scroll_t-0x0400+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+						pixel_table = (ppu_ram[(scroll_t-0x0400)]>>add_t);
 					}
 					else
 					{
-						pixel_table = (ppu_ram[(scroll_t-0x0800+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+						pixel_table = (ppu_ram[(scroll_t-0x0800)]>>add_t);
 					}
 				}
 				else if (ppu_status_m == 0x0002) // single, first bank
 				{
-					pixel_table = (ppu_ram[((scroll_t&0x03FF)+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+					pixel_table = (ppu_ram[((scroll_t&0x03FF))]>>add_t);
 				}
 				else if (ppu_status_m == 0x0003) // single, second bank
 				{
-					pixel_table = (ppu_ram[((scroll_t&0x03FF)+0x0400+0x03C0)]>>(((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1));
+					pixel_table = (ppu_ram[((scroll_t&0x03FF)+0x0400)]>>add_t);
 				}
-					
-				scroll_l = (scroll_n<<10)+(scroll_y<<5)+(scroll_x);
 				
 				if (ppu_status_m == 0x0001) // horizontal scrolling
 				{
 					if (scroll_l < 0x0800)
 					{
-						pixel_lookup = (ppu_ram[(scroll_l)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+						pixel_lookup = (ppu_ram[(scroll_l)]<<4)+add_l;
 					}
 					else
 					{
-						pixel_lookup = (ppu_ram[(scroll_l-0x0800)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+						pixel_lookup = (ppu_ram[(scroll_l-0x0800)]<<4)+add_l;
 					}
 				}
 				else if (ppu_status_m == 0x0000) // vertical scrolling
 				{
 					if (scroll_l < 0x0400)
 					{
-						pixel_lookup = (ppu_ram[(scroll_l)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+						pixel_lookup = (ppu_ram[(scroll_l)]<<4)+add_l;
 					}
 					else if (scroll_l < 0x0800)
 					{
-						pixel_lookup = (ppu_ram[(scroll_l-0x0400)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+						pixel_lookup = (ppu_ram[(scroll_l-0x0400)]<<4)+add_l;
 					}
 					else if (scroll_l < 0x0C00)
 					{
-						pixel_lookup = (ppu_ram[(scroll_l-0x0400)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+						pixel_lookup = (ppu_ram[(scroll_l-0x0400)]<<4)+add_l;
 					}
 					else
 					{
-						pixel_lookup = (ppu_ram[(scroll_l-0x0800)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+						pixel_lookup = (ppu_ram[(scroll_l-0x0800)]<<4)+add_l;
 					}
 				}
 				else if (ppu_status_m == 0x0002) // single, first bank
 				{
-					pixel_lookup = (ppu_ram[((scroll_l&0x03FF))]<<4)+0x1000*ppu_flag_b+(line&0x07);
+					pixel_lookup = (ppu_ram[((scroll_l&0x03FF))]<<4)+add_l;
 				}
 				else if (ppu_status_m == 0x0003) // single, second bank
 				{
-					pixel_lookup = (ppu_ram[((scroll_l&0x03FF)+0x0400)]<<4)+0x1000*ppu_flag_b+(line&0x07);
+					pixel_lookup = (ppu_ram[((scroll_l&0x03FF)+0x0400)]<<4)+add_l;
 				}
 				
 				if (cart_rom[5] > 0)

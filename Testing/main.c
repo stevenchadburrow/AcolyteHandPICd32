@@ -836,8 +836,8 @@ int __attribute__((optimize("O0"))) main()
 	
 	display_string(0x0000, 0x00B8, "  Load Super Mario Bros 2\\");
 	display_string(0x0000, 0x00C0, "  Load Super Mario Bros 3\\");
-	display_string(0x0000, 0x00C8, "  Load Crystalis\\");
-	display_string(0x0000, 0x00D0, "  Load Kirby's Adventure\\");
+	display_string(0x0000, 0x00C8, "  Load Kirby's Adventure\\");
+	display_string(0x0000, 0x00D0, "  Load Rampage\\");
 	display_string(0x0000, 0x00D8, "  Load ???\\");
 	
 	DelayMS(1000);
@@ -1102,12 +1102,12 @@ int __attribute__((optimize("O0"))) main()
 			}
 			case 0x19:
 			{
-				nes_load("CRYST.NES");
+				nes_load("KIRBY.NES");
 				break;
 			}
 			case 0x1A:
 			{
-				nes_load("KIRBY.NES");
+				nes_load("RAMPAGE.NES");
 				break;
 			}
 			default:
