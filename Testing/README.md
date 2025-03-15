@@ -27,6 +27,7 @@ Gradius<br>
 
 Highly tested MMC1 games:
 
+Tetris<br>
 Legend of Zelda - vertical scrolling is shifted by some scanlines (moderate)<br>
 Zelda 2<br>
 Metroid<br>
