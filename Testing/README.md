@@ -39,6 +39,7 @@ Bionic Commando<br>
 Dragon Warrior 4<br>
 Final Fantasy<br>
 Master Blaster - wrong sprite priority (minimal)<br>
+Championship Rally<br>
 
 Highly tested MMC3 games:
 
