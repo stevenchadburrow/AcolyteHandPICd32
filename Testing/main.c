@@ -808,37 +808,43 @@ int __attribute__((optimize("O0"))) main()
 	
 	display_string(0x0000, 0x0000, "  Play Current Game\\");
 	
-	display_string(0x0000, 0x0008, "  Load Super Mario Bros\\");
-	display_string(0x0000, 0x0010, "  Load Tetris\\");
-	display_string(0x0000, 0x0018, "  Load Micro Mages\\");
+	// popular games
+	display_string(0x0000, 0x0008, "  Burn Super Mario Bros\\");
+	display_string(0x0000, 0x0010, "  Burn Tetris\\");
+	display_string(0x0000, 0x0018, "  Burn Micro Mages\\");
 	
-	display_string(0x0000, 0x0020, "  Load Donkey Kong\\");
-	display_string(0x0000, 0x0028, "  Load Mario Bros\\");
-	display_string(0x0000, 0x0030, "  Load Balloon Fight\\");
-	display_string(0x0000, 0x0038, "  Load Ice Climber\\");
-	display_string(0x0000, 0x0040, "  Load Excitebike\\");
+	// nrom games
+	display_string(0x0000, 0x0020, "  Burn Donkey Kong\\");
+	display_string(0x0000, 0x0028, "  Burn Mario Bros\\");
+	display_string(0x0000, 0x0030, "  Burn Balloon Fight\\");
+	display_string(0x0000, 0x0038, "  Burn Ice Climber\\");
+	display_string(0x0000, 0x0040, "  Burn Excitebike\\");
 	
-	display_string(0x0000, 0x0048, "  Load Paperboy\\");
-	display_string(0x0000, 0x0050, "  Load Gradius\\");
-	display_string(0x0000, 0x0058, "  Load Contra\\");
-	display_string(0x0000, 0x0060, "  Load 1943: Midway\\");
-	display_string(0x0000, 0x0068, "  Load Castlevania\\");
+	// cnrom and unrom games
+	display_string(0x0000, 0x0048, "  Burn Paperboy\\");
+	display_string(0x0000, 0x0050, "  Burn Gradius\\");
+	display_string(0x0000, 0x0058, "  Burn Contra\\");
+	display_string(0x0000, 0x0060, "  Burn 1943: Midway\\");
+	display_string(0x0000, 0x0068, "  Burn Castlevania\\");
 
-	display_string(0x0000, 0x0070, "  Load Castlevania 2\\");
-	display_string(0x0000, 0x0078, "  Load Zelda\\");
-	display_string(0x0000, 0x0080, "  Load Zelda 2\\");
-	display_string(0x0000, 0x0088, "  Load Metroid\\");
-	display_string(0x0000, 0x0090, "  Load Ninja Gaiden\\");
-	display_string(0x0000, 0x0098, "  Load Bionic Commando\\");
-	display_string(0x0000, 0x00A0, "  Load Mega Man 2\\");
-	display_string(0x0000, 0x00A8, "  Load Dragon Warrior 4\\");
-	display_string(0x0000, 0x00B0, "  Load Final Fantasy\\");
+	// mmc1 games
+	display_string(0x0000, 0x0070, "  Burn Castlevania 2\\");
+	display_string(0x0000, 0x0078, "  Burn Zelda\\");
+	display_string(0x0000, 0x0080, "  Burn Zelda 2\\");
+	display_string(0x0000, 0x0088, "  Burn Metroid\\");
+	display_string(0x0000, 0x0090, "  Burn Ninja Gaiden\\");
+	display_string(0x0000, 0x0098, "  Burn Bionic Commando\\");
+	display_string(0x0000, 0x00A0, "  Burn Mega Man 2\\");
+	display_string(0x0000, 0x00A8, "  Burn Dragon Warrior 4\\");
+	display_string(0x0000, 0x00B0, "  Burn Final Fantasy\\");
+	display_string(0x0000, 0x00B8, "  Burn Blaster Master\\");
 	
-	display_string(0x0000, 0x00B8, "  Load Super Mario Bros 2\\");
-	display_string(0x0000, 0x00C0, "  Load Super Mario Bros 3\\");
-	display_string(0x0000, 0x00C8, "  Load Kirby's Adventure\\");
-	display_string(0x0000, 0x00D0, "  Load Blaster Master\\");
-	display_string(0x0000, 0x00D8, "  Load Castlevania 3\\");
+	// mmc3 games
+	display_string(0x0000, 0x00C0, "  Burn Super Mario Bros 2\\");
+	display_string(0x0000, 0x00C8, "  Burn Super Mario Bros 3\\");
+	display_string(0x0000, 0x00D0, "  Burn Kirby's Adventure\\");
+	
+	display_string(0x0000, 0x00D8, "  ???\\");
 	
 	DelayMS(1000);
 	
@@ -876,22 +882,22 @@ int __attribute__((optimize("O0"))) main()
 		}
 	}
 	
-	if (menu_pos == 0)
+	for (unsigned short i=0; i<AUDIO_LEN; i++)
 	{
-		for (unsigned short i=0; i<AUDIO_LEN; i++)
+		audio_buffer[i] = 0x00;
+	}
+
+	for (unsigned short y=0; y<SCREEN_Y*2; y++)
+	{
+		for (unsigned short x=0; x<SCREEN_X; x++)
 		{
-			audio_buffer[i] = 0x00;
+			screen_buffer[y*SCREEN_X+x] = 0x00;
+			screen_buffer[y*SCREEN_X+x] = 0x00;
 		}
-		
-		for (unsigned short y=0; y<SCREEN_Y*2; y++)
-		{
-			for (unsigned short x=0; x<SCREEN_X; x++)
-			{
-				screen_buffer[y*SCREEN_X+x] = 0x00;
-				screen_buffer[y*SCREEN_X+x] = 0x00;
-			}
-		}
-		
+	}
+	
+	if (menu_pos == 0)
+	{		
 		audio_enable = 1; // audio on by default
 		controller_enable = 1; // must be on to play games
 		
@@ -920,15 +926,25 @@ int __attribute__((optimize("O0"))) main()
 				
 				DelayMS(1000);
 
-				display_string(0x0010, 0x0010, "  Return to Game\\");
-				display_string(0x0010, 0x0018, "  Audio Enable\\");
-				display_string(0x0010, 0x0020, "  Audio Disable\\");
-				display_string(0x0010, 0x0028, "  Frames 1:1\\");
-				display_string(0x0010, 0x0030, "  Frames 2:1\\");
-				display_string(0x0010, 0x0038, "  Frames 3:1\\");
-				display_string(0x0010, 0x0040, "  Frames 4:1\\");
-				display_string(0x0010, 0x0048, "  Frames 5:1\\");
-
+				display_string(0x0000, 0x0000, "  Return to Game\\");
+				display_string(0x0000, 0x0008, "  Audio Enable\\");
+				display_string(0x0000, 0x0010, "  Audio Disable\\");
+				display_string(0x0000, 0x0018, "  Hacks Enable\\");
+				display_string(0x0000, 0x0020, "  Hacks Disable\\");
+				display_string(0x0000, 0x0028, "  Frames 1:1\\");
+				display_string(0x0000, 0x0030, "  Frames 2:1\\");
+				display_string(0x0000, 0x0038, "  Frames 3:1\\");
+				display_string(0x0000, 0x0040, "  Frames 4:1\\");
+				display_string(0x0000, 0x0048, "  Frames 5:1\\");
+				display_string(0x0000, 0x0050, "  Load Game A\\");
+				display_string(0x0000, 0x0058, "  Load Game B\\");
+				display_string(0x0000, 0x0060, "  Load Game C\\");
+				display_string(0x0000, 0x0068, "  Load Game D\\");
+				display_string(0x0000, 0x0070, "  Save Game A\\");
+				display_string(0x0000, 0x0078, "  Save Game B\\");
+				display_string(0x0000, 0x0080, "  Save Game C\\");
+				display_string(0x0000, 0x0088, "  Save Game D\\");
+				
 				DelayMS(1000);
 				
 				menu_pos = 0;
@@ -936,13 +952,13 @@ int __attribute__((optimize("O0"))) main()
 				
 				while (PORTKbits.RK4 == 1 && PORTKbits.RK5 == 1)
 				{	
-					display_character(0x0010, 0x0010+0x0008*menu_pos, '>');
+					display_character(0x0000, 0x0008*menu_pos, '>');
 
 					if (PORTKbits.RK0 == 0 && menu_wait == 0)
 					{
 						menu_wait = 0x00003FFF;
 
-						display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
+						display_character(0x0000, 0x0008*menu_pos, ' ');
 
 						if (menu_pos > 0) menu_pos--;
 					}
@@ -955,13 +971,27 @@ int __attribute__((optimize("O0"))) main()
 					{
 						menu_wait = 0x00003FFF;
 
-						display_character(0x0010, 0x0010+0x0008*menu_pos, ' ');
+						display_character(0x0000, 0x0008*menu_pos, ' ');
 
-						if (menu_pos < 7) menu_pos++;
+						if (menu_pos < 17) menu_pos++;
 					}
 					else
 					{
 						if (menu_wait > 0) menu_wait--;
+					}
+				}
+				
+				for (unsigned short i=0; i<AUDIO_LEN; i++)
+				{
+					audio_buffer[i] = 0x00;
+				}
+
+				for (unsigned short y=0; y<SCREEN_Y*2; y++)
+				{
+					for (unsigned short x=0; x<SCREEN_X; x++)
+					{
+						screen_buffer[y*SCREEN_X+x] = 0x00;
+						screen_buffer[y*SCREEN_X+x] = 0x00;
 					}
 				}
 				
@@ -970,7 +1000,49 @@ int __attribute__((optimize("O0"))) main()
 				if (menu_pos == 0) { }
 				else if (menu_pos == 1) { audio_enable = 1; nes_audio_flag = 1; }
 				else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
-				else if (menu_pos > 2) rate = (unsigned long)(menu_pos - 2);
+				else if (menu_pos == 3) { nes_hack_mmc3_bottom_hud = 1; nes_hack_mmc3_sprite_priority = 1; }
+				else if (menu_pos == 4) { nes_hack_mmc3_bottom_hud = 0; nes_hack_mmc3_sprite_priority = 0; }
+				else if (menu_pos > 4 && menu_pos <= 9) rate = (unsigned long)(menu_pos - 4);
+				else if (menu_pos == 10)
+				{
+					nes_load("GAME-A.SAV");
+					
+					nes_reset_flag = 0;
+				}
+				else if (menu_pos == 11)
+				{
+					nes_load("GAME-B.SAV");
+					
+					nes_reset_flag = 0;
+				}
+				else if (menu_pos == 12)
+				{
+					nes_load("GAME-C.SAV");
+					
+					nes_reset_flag = 0;
+				}
+				else if (menu_pos == 13)
+				{
+					nes_load("GAME-D.SAV");
+					
+					nes_reset_flag = 0;
+				}
+				else if (menu_pos == 14)
+				{
+					nes_save("GAME-A.SAV");
+				}
+				else if (menu_pos == 15)
+				{
+					nes_save("GAME-B.SAV");
+				}
+				else if (menu_pos == 16)
+				{
+					nes_save("GAME-C.SAV");
+				}
+				else if (menu_pos == 17)
+				{
+					nes_save("GAME-D.SAV");
+				}
 			}
 			
 			nes_loop(rate); // frame rate divider and external interrupt
@@ -982,137 +1054,137 @@ int __attribute__((optimize("O0"))) main()
 		{
 			case 0x01:
 			{
-				nes_load("SMB.NES");
+				nes_burn("SMB.NES");
 				break;
 			}
 			case 0x02:
 			{
-				nes_load("TETRIS.NES");
+				nes_burn("TETRIS.NES");
 				break;
 			}
 			case 0x03:
 			{
-				nes_load("MM.NES");
+				nes_burn("MM.NES");
 				break;
 			}
 			case 0x04:
 			{
-				nes_load("DK.NES");
+				nes_burn("DK.NES");
 				break;
 			}
 			case 0x05:
 			{
-				nes_load("MB.NES");
+				nes_burn("MB.NES");
 				break;
 			}
 			case 0x06:
 			{
-				nes_load("BALLOON.NES");
+				nes_burn("BALLOON.NES");
 				break;
 			}
 			case 0x07:
 			{
-				nes_load("ICECLIMB.NES");
+				nes_burn("ICECLIMB.NES");
 				break;
 			}
 			case 0x08:
 			{
-				nes_load("EXBIKE.NES");
+				nes_burn("EXBIKE.NES");
 				break;
 			}
 			case 0x09:
 			{
-				nes_load("PAPERBOY.NES");
+				nes_burn("PAPERBOY.NES");
 				break;
 			}
 			case 0x0A:
 			{
-				nes_load("GRADIUS.NES");
+				nes_burn("GRADIUS.NES");
 				break;
 			}
 			case 0x0B:
 			{
-				nes_load("CONTRA.NES");
+				nes_burn("CONTRA.NES");
 				break;
 			}
 			case 0x0C:
 			{
-				nes_load("1943.NES");
+				nes_burn("1943.NES");
 				break;
 			}
 			case 0x0D:
 			{
-				nes_load("CASTLE.NES");
+				nes_burn("CASTLE.NES");
 				break;
 			}
 			case 0x0E:
 			{
-				nes_load("CASTLE2.NES");
+				nes_burn("CASTLE2.NES");
 				break;
 			}
 			case 0x0F:
 			{
-				nes_load("ZELDA.NES");
+				nes_burn("ZELDA.NES");
 				break;
 			}
 			case 0x10:
 			{
-				nes_load("ZELDA2.NES");
+				nes_burn("ZELDA2.NES");
 				break;
 			}
 			case 0x11:
 			{
-				nes_load("METROID.NES");
+				nes_burn("METROID.NES");
 				break;
 			}
 			case 0x12:
 			{
-				nes_load("NINJA.NES");
+				nes_burn("NINJA.NES");
 				break;
 			}
 			case 0x13:
 			{
-				nes_load("BIOCOM.NES");
+				nes_burn("BIOCOM.NES");
 				break;
 			}
 			case 0x14:
 			{
-				nes_load("MEGAMAN2.NES");
+				nes_burn("MEGAMAN2.NES");
 				break;
 			}
 			case 0x15:
 			{
-				nes_load("DW4.NES");
+				nes_burn("DW4.NES");
 				break;
 			}
 			case 0x16:
 			{
-				nes_load("FF.NES");
+				nes_burn("FF.NES");
 				break;
 			}
 			case 0x17:
 			{
-				nes_load("SMB2.NES");
+				nes_burn("BLASTER.NES");
 				break;
 			}
 			case 0x18:
 			{
-				nes_load("SMB3.NES");
+				nes_burn("SMB2.NES");
 				break;
 			}
 			case 0x19:
 			{
-				nes_load("KIRBY.NES");
+				nes_burn("SMB3.NES");
 				break;
 			}
 			case 0x1A:
 			{
-				nes_load("BLASTER.NES");
+				nes_burn("KIRBY.NES");
 				break;
 			}
 			case 0x1B:
 			{
-				nes_load("CASTLE3.NES");
+				
 				break;
 			}
 			default:

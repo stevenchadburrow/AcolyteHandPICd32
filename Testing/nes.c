@@ -24,9 +24,13 @@ unsigned long chr_offset = 0x00000000;
 unsigned long end_offset = 0x00000000;
 
 unsigned char nes_init_flag = 0;
+unsigned char nes_reset_flag = 0;
 unsigned char nes_audio_flag = 1;
 unsigned long nes_pixel_location = 0;
 unsigned long nes_interrupt_count = 0;
+
+unsigned short nes_hack_mmc3_bottom_hud = 1;
+unsigned short nes_hack_mmc3_sprite_priority = 1;
 
 unsigned long cpu_current_cycles = 0, cpu_dma_cycles = 0;
 unsigned long ppu_scanline_cycles = 0;
@@ -221,8 +225,108 @@ volatile void __attribute__((optimize("O2"),vector(_TIMER_9_VECTOR), interrupt(i
 	if (nes_interrupt_count > 60*262) nes_interrupt_count = 60*262;
 }
 
+unsigned char __attribute__((optimize("O0"))) nes_save(char *filename)
+{
+	// Global variables
+	FIL file; // File handle for the file we open
+	DIR dir; // Directory information for the current directory
+	FATFS fso; // File System Object for the file system we are reading from
+	
+	//SendString("Initializing disk\n\r\\");
+	
+	// Wait for the disk to initialise
+    while(disk_initialize(0));
+    // Mount the disk
+    f_mount(&fso, "", 0);
+    // Change dir to the root directory
+    f_chdir("/");
+    // Open the directory
+    f_opendir(&dir, ".");
+ 
+	unsigned char buffer[1];
+	unsigned int bytes;
+	unsigned int result;
+	unsigned char flag;
+	
+	result = f_open(&file, filename, FA_CREATE_ALWAYS | FA_WRITE);
+	if (result == 0)
+	{		
+		for (unsigned int i=0; i<8192; i++)
+		{
+			buffer[0] = prg_ram[i];
+			
+			while (f_write(&file, buffer, 1, &bytes) != 0) { }
+		}
+		
+		while (f_sync(&file) != 0) { }
+		while (f_close(&file) != 0) { }
+		
+		//SendString("Wrote cart ram to file\n\r\\");
+		
+		flag = 1;
+	}
+	else
+	{
+		//SendString("Could not write cart ram to file\n\r\\");
+		
+		flag = 0;
+	}	
+	
+	return flag;
+}
+
+unsigned char __attribute__((optimize("O0"))) nes_load(char *filename)
+{
+	// Global variables
+	FIL file; // File handle for the file we open
+	DIR dir; // Directory information for the current directory
+	FATFS fso; // File System Object for the file system we are reading from
+	
+	//SendString("Initializing disk\n\r\\");
+	
+	// Wait for the disk to initialise
+    while(disk_initialize(0));
+    // Mount the disk
+    f_mount(&fso, "", 0);
+    // Change dir to the root directory
+    f_chdir("/");
+    // Open the directory
+    f_opendir(&dir, ".");
+ 
+	unsigned char buffer[1];
+	unsigned int bytes;
+	unsigned int result;
+	unsigned char flag;
+	
+	result = f_open(&file, filename, FA_READ);
+	if (result == 0)
+	{		
+		for (unsigned int i=0; i<8192; i++)
+		{
+			while (f_read(&file, &buffer[0], 1, &bytes) != 0) { } // MUST READ ONE BYTE AT A TIME!!!
+			
+			prg_ram[i] = buffer[0];
+		}
+		
+		while (f_sync(&file) != 0) { }
+		while (f_close(&file) != 0) { }
+		
+		//SendString("Read cart ram to file\n\r\\");
+		
+		flag = 1;
+	}
+	else
+	{		
+		//SendString("Could not read cart ram to file\n\r\\");
+		
+		flag = 0;
+	}	
+	
+	return flag;
+}
+
 // change for platform
-unsigned char __attribute__((optimize("O2"))) nes_load(char *filename)
+unsigned char __attribute__((optimize("O0"))) nes_burn(char *filename)
 {
 	for (unsigned long i=0x1D100000; i<0x1D200000; i+=0x00001000) // pages are 0x1000
 	{
@@ -286,7 +390,7 @@ unsigned char __attribute__((optimize("O2"))) nes_load(char *filename)
 	else
 	{
 		//SendString("Read failure\n\r\\");
-		//unsigned long temp_cycles = 0;
+		
 		flag = 0;
 	}
 	
@@ -2461,9 +2565,12 @@ void __attribute__((optimize("O2"))) nes_background(signed short line)
 		ppu_reg_r = ((ppu_reg_r & 0x7BE0) | (ppu_reg_t & 0x041F));
 	}
 	
-	if (ppu_scanline_interrupt > 0)
+	if (map_number == 4 && nes_hack_mmc3_bottom_hud > 0)
 	{
-		ppu_reg_r = 0x0800; // hack for Mario 3 and Kirby
+		if (ppu_scanline_interrupt > 0)
+		{
+			ppu_reg_r = 0x0800; // hack for Mario 3 and Kirby
+		}
 	}
 	
 	if (ppu_flag_eb > 0)
@@ -4002,6 +4109,17 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		cpu_reg_pc = cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFC] + (cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFD] << 8);
 		
 		//SendLongHex(cpu_reg_pc);
+		//SendString("Initialized\n\r\\");
+	}
+	
+	if (nes_reset_flag == 0)
+	{
+		nes_reset_flag = 1;
+		
+		// reset
+		cpu_reg_pc = cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFC] + (cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFD] << 8);
+		
+		//SendLongHex(cpu_reg_pc);
 		//SendString("Reset\n\r\\");
 	}
 	
@@ -4094,13 +4212,13 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 			
 			ppu_scanline_interrupt = ppu_scanline_count;
 			
-			if (map_number == 4)
+			if (map_number == 4 && nes_hack_mmc3_sprite_priority > 0)
 			{
 				nes_sprites(2, 0, ppu_scanline_count); // hack for Mario 3
 			}
 			else
 			{
-				nes_sprites(1, 0, ppu_scanline_count);
+				nes_sprites(0, 0, ppu_scanline_count);
 			}
 		}
 	}
