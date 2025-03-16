@@ -13,6 +13,7 @@ Mario Bros<br>
 Ballon Fight<br>
 Ice Climber<br>
 Excitebike - the far background scrolling isn't on the right scanline (minimal)<br>
+Road Fighter<br>
 
 Highly tested UNROM games:
 
