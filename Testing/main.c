@@ -831,14 +831,14 @@ int __attribute__((optimize("O0"))) main()
 	display_string(0x0000, 0x0090, "  Load Ninja Gaiden\\");
 	display_string(0x0000, 0x0098, "  Load Bionic Commando\\");
 	display_string(0x0000, 0x00A0, "  Load Mega Man 2\\");
-	display_string(0x0000, 0x00A8, "  Load Dragon Warrior 3\\");
+	display_string(0x0000, 0x00A8, "  Load Dragon Warrior 4\\");
 	display_string(0x0000, 0x00B0, "  Load Final Fantasy\\");
 	
 	display_string(0x0000, 0x00B8, "  Load Super Mario Bros 2\\");
 	display_string(0x0000, 0x00C0, "  Load Super Mario Bros 3\\");
 	display_string(0x0000, 0x00C8, "  Load Kirby's Adventure\\");
-	display_string(0x0000, 0x00D0, "  Load Rampage\\");
-	display_string(0x0000, 0x00D8, "  Load ???\\");
+	display_string(0x0000, 0x00D0, "  Load Blaster Master\\");
+	display_string(0x0000, 0x00D8, "  Load Castlevania 3\\");
 	
 	DelayMS(1000);
 	
@@ -1082,7 +1082,7 @@ int __attribute__((optimize("O0"))) main()
 			}
 			case 0x15:
 			{
-				nes_load("DW3.NES");
+				nes_load("DW4.NES");
 				break;
 			}
 			case 0x16:
@@ -1107,7 +1107,12 @@ int __attribute__((optimize("O0"))) main()
 			}
 			case 0x1A:
 			{
-				nes_load("RAMPAGE.NES");
+				nes_load("BLASTER.NES");
+				break;
+			}
+			case 0x1B:
+			{
+				nes_load("CASTLE3.NES");
 				break;
 			}
 			default:

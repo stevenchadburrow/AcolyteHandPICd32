@@ -80,6 +80,7 @@ unsigned short cpu_status_r = 0x0000;
 unsigned short ppu_reg_v = 0x0000, ppu_reg_t = 0x0000, ppu_reg_w = 0x0000;
 unsigned short ppu_reg_a = 0x0000, ppu_reg_b = 0x0000;
 unsigned short ppu_reg_x = 0x0000;
+unsigned short ppu_reg_r = 0x0000;
 
 // flag_e and flag_v were 0x0001;
 unsigned short ppu_flag_e = 0x0000, ppu_flag_p = 0x0000, ppu_flag_h = 0x0000;
@@ -90,6 +91,7 @@ unsigned short ppu_flag_g = 0x0000, ppu_flag_lb = 0x0000, ppu_flag_ls = 0x0000;
 unsigned short ppu_flag_eb = 0x0000, ppu_flag_es = 0x0000;
 
 unsigned short ppu_status_0 = 0x0000, ppu_status_s = 0x0000, ppu_status_m = 0x0000;
+unsigned short ppu_status_d = 0x0000;
 
 unsigned short ctl_flag_s = 0x0000;
 unsigned long ctl_value_1 = 0x0000, ctl_value_2 = 0x0000;
@@ -722,6 +724,8 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 					ppu_reg_v += 0x0020;
 				}
 				
+				//ppu_reg_r = ppu_reg_v;
+				
 				return val;
 				
 				break;
@@ -1057,6 +1061,8 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 					ppu_reg_t = ((ppu_reg_t & 0x7F00) | val);
 					ppu_reg_v = ppu_reg_t;
 					ppu_reg_w = 0x0000;
+					
+					ppu_reg_r = ppu_reg_v;
 				}
 				
 				//if (map_number == 0x0004) // mmc3
@@ -1137,6 +1143,8 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 				{
 					ppu_reg_v += 0x0020;
 				}
+				
+				//ppu_reg_r = ppu_reg_v;
 				
 				break;
 			}
@@ -2444,19 +2452,33 @@ void __attribute__((optimize("O2"))) nes_background(signed short line)
 	unsigned short pixel_x = 0, pixel_y = 0;
 	unsigned char pixel_high = 0, pixel_low = 0, pixel_color = 0;
 	
+	if (line >= 0 && line < 8)
+	{
+		ppu_reg_r = ppu_reg_t;
+	}
+	else
+	{
+		ppu_reg_r = ((ppu_reg_r & 0x7BE0) | (ppu_reg_t & 0x041F));
+	}
+	
+	if (ppu_scanline_interrupt > 0)
+	{
+		ppu_reg_r = 0x0800; // hack for Mario 3 and Kirby
+	}
+	
 	if (ppu_flag_eb > 0)
 	{
-		pixel_y = line - ((ppu_reg_t & 0x7000) >> 12);
+		pixel_y = line - ((ppu_reg_r & 0x7000) >> 12);
 		
 		if (pixel_y >= 8 && pixel_y < 232) // remove overscan above and below
 		{
 			for (unsigned char w=0; w<33; w++) // go one more than 32
 			{					
-				scroll_x = (ppu_reg_t & 0x001F) + w;
+				scroll_x = (ppu_reg_r & 0x001F) + w;
 				
-				scroll_y = ((ppu_reg_t & 0x03E0) >> 5) + (line>>3);
+				scroll_y = ((ppu_reg_r & 0x03E0) >> 5) + (line>>3);
 				
-				scroll_n = ((ppu_reg_t & 0x0C00) >> 10);
+				scroll_n = ((ppu_reg_r & 0x0C00) >> 10);
 
 				switch (scroll_n)
 				{
@@ -2823,7 +2845,7 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground, unsigned 
 			{
 				sprite_attr = oam_ram[((s<<2)+2)];
 
-				if (((sprite_attr&0x20)>>5) == ground) // foreground/background
+				if (((sprite_attr&0x20)>>5) == ground || ground > 1) // foreground/background
 				{
 					sprite_flip_horz = ((sprite_attr>>6)&0x01);
 					sprite_flip_vert = (sprite_attr>>7);
@@ -3633,6 +3655,8 @@ void __attribute__((optimize("O2"))) nes_sprite_0_calc()
 	// sprite 0
 	if (ppu_flag_h == 0) // 8x8 sprites
 	{
+		//ppu_status_s = 8;
+		
 		for (unsigned short i=0; i<8; i++)
 		{
 			if (map_number == 1) // mmc1
@@ -3725,6 +3749,8 @@ void __attribute__((optimize("O2"))) nes_sprite_0_calc()
 	}
 	else // 8x16 sprites
 	{
+		//ppu_status_s = 16;
+		
 		for (unsigned short i=0; i<16; i++)
 		{
 			if (i < 8)
@@ -4068,7 +4094,14 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 			
 			ppu_scanline_interrupt = ppu_scanline_count;
 			
-			nes_sprites(0, 0, ppu_scanline_count);
+			if (map_number == 4)
+			{
+				nes_sprites(2, 0, ppu_scanline_count); // hack for Mario 3
+			}
+			else
+			{
+				nes_sprites(1, 0, ppu_scanline_count);
+			}
 		}
 	}
 	
