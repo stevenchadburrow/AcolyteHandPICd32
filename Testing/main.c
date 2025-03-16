@@ -784,6 +784,117 @@ unsigned char ps2_conversion[256] =
 
 
 
+volatile char list_name[256][12];
+volatile unsigned short list_total = 1; // start at 1
+
+void list_generate()
+{
+	// Global variables
+	DIR dir; // Directory information for the current directory
+	FATFS fso; // File System Object for the file system we are reading from
+	FILINFO fno;
+
+	// Wait for the disk to initialise
+	while(disk_initialize(0));
+	// Mount the disk
+	f_mount(&fso, "", 0);
+	// Change dir to the root directory
+	f_chdir("/");
+	// Open the directory
+	f_opendir(&dir, ".");
+	
+	unsigned int result;
+	
+	while (1)
+	{
+		for (int i=0; i<12; i++)
+		{
+			fno.fname[i] = 0;
+			list_name[list_total][i] = ' ';
+		}
+		
+		f_readdir(&dir, &fno);
+		
+		if (fno.fname[0] == 0) break;
+		else
+		{
+			for (int i=0; i<12; i++)
+			{
+				if (fno.fname[i] > 0x20 && fno.fname[i] < 0x80)
+				{
+					list_name[list_total][i] = fno.fname[i];
+				}
+				else
+				{
+					list_name[list_total][i] = ' ';
+					fno.fname[i] = ' ';
+				}
+			}
+			
+			result = 0;
+			
+			for (int i=0; i<9; i++)
+			{
+				if (list_name[list_total][i] == '.' &&
+					list_name[list_total][i+1] == 'N' &&
+					list_name[list_total][i+2] == 'E' &&
+					list_name[list_total][i+3] == 'S')
+				{
+					result = 1;
+							
+					break;
+				}
+			}
+			
+			if (result == 1)
+			{
+				list_total++;
+			}
+			
+			if (list_total >= 256) break;
+		}
+	}
+	
+	f_rewinddir(&dir);
+}
+	
+void list_display(unsigned short pos)
+{
+	unsigned short start = 0;
+	
+	if (pos >= 14) start = pos - 14;
+	
+	for (unsigned short i=0; i<28; i++)
+	{
+		if (start+i >= list_total)
+		{
+			display_character(0x0000, 0x0008 * i, ' ');
+		
+			for (unsigned short j=0; j<12; j++)
+			{
+				display_character(0x0008 * j + 0x0008, 0x0008 * i, ' ');
+			}
+			
+			break;
+		}
+		
+		display_character(0x0000, 0x0008 * i, ' ');
+		
+		for (unsigned short j=0; j<12; j++)
+		{
+			display_character(0x0008 * j + 0x0008, 0x0008 * i, list_name[start+i][j]);
+		}
+	}
+	
+	if (pos >= 14)
+	{
+		display_character(0x0000, 0x0008 * 14, '>');
+	}
+	else
+	{
+		display_character(0x0000, 0x0008 * pos, '>');
+	}
+}
 
 int __attribute__((optimize("O0"))) main()
 {
@@ -799,69 +910,42 @@ int __attribute__((optimize("O0"))) main()
 	DelayMS(1000);
 	
 	SendChar('$'); // just a 'hello world' over the UART
-
 	
 	controller_enable = 0;
 	screen_frame = 0;
 	
 	DelayMS(1000);
 	
-	display_string(0x0000, 0x0000, "  Play Current Game\\");
+	list_name[0][0] = 'P';
+	list_name[0][1] = 'L';
+	list_name[0][2] = 'A';
+	list_name[0][3] = 'Y';
+	list_name[0][4] = ' ';
+	list_name[0][5] = 'G';
+	list_name[0][6] = 'A';
+	list_name[0][7] = 'M';
+	list_name[0][8] = 'E';
+	list_name[0][9] = ' ';
+	list_name[0][10] = ' ';
+	list_name[0][11] = ' ';
 	
-	// popular games
-	display_string(0x0000, 0x0008, "  Burn Super Mario Bros\\");
-	display_string(0x0000, 0x0010, "  Burn Tetris\\");
-	display_string(0x0000, 0x0018, "  Burn Micro Mages\\");
+	list_generate();
 	
-	// nrom games
-	display_string(0x0000, 0x0020, "  Burn Donkey Kong\\");
-	display_string(0x0000, 0x0028, "  Burn Mario Bros\\");
-	display_string(0x0000, 0x0030, "  Burn Balloon Fight\\");
-	display_string(0x0000, 0x0038, "  Burn Ice Climber\\");
-	display_string(0x0000, 0x0040, "  Burn Excitebike\\");
-	
-	// cnrom and unrom games
-	display_string(0x0000, 0x0048, "  Burn Paperboy\\");
-	display_string(0x0000, 0x0050, "  Burn Gradius\\");
-	display_string(0x0000, 0x0058, "  Burn Contra\\");
-	display_string(0x0000, 0x0060, "  Burn 1943: Midway\\");
-	display_string(0x0000, 0x0068, "  Burn Castlevania\\");
-
-	// mmc1 games
-	display_string(0x0000, 0x0070, "  Burn Castlevania 2\\");
-	display_string(0x0000, 0x0078, "  Burn Zelda\\");
-	display_string(0x0000, 0x0080, "  Burn Zelda 2\\");
-	display_string(0x0000, 0x0088, "  Burn Metroid\\");
-	display_string(0x0000, 0x0090, "  Burn Ninja Gaiden\\");
-	display_string(0x0000, 0x0098, "  Burn Bionic Commando\\");
-	display_string(0x0000, 0x00A0, "  Burn Mega Man 2\\");
-	display_string(0x0000, 0x00A8, "  Burn Dragon Warrior 4\\");
-	display_string(0x0000, 0x00B0, "  Burn Final Fantasy\\");
-	display_string(0x0000, 0x00B8, "  Burn Blaster Master\\");
-	
-	// mmc3 games
-	display_string(0x0000, 0x00C0, "  Burn Super Mario Bros 2\\");
-	display_string(0x0000, 0x00C8, "  Burn Super Mario Bros 3\\");
-	display_string(0x0000, 0x00D0, "  Burn Kirby's Adventure\\");
-	
-	display_string(0x0000, 0x00D8, "  ???\\");
-	
-	DelayMS(1000);
 	
 	menu_pos = 0;
 	menu_wait = 0;
 	
+	list_display(menu_pos);
+	
 	while (PORTKbits.RK4 == 1 && PORTKbits.RK5 == 1)
 	{	
-		display_character(0x0000, 0x0008*menu_pos, '>');
-		
 		if (PORTKbits.RK0 == 0 && menu_wait == 0)
 		{
-			menu_wait = 0x00003FFF;
-			
-			display_character(0x0000, 0x0008*menu_pos, ' ');
+			menu_wait = 0x0005FFFF;
 			
 			if (menu_pos > 0) menu_pos--;
+			
+			list_display(menu_pos);
 		}
 		else
 		{
@@ -870,11 +954,11 @@ int __attribute__((optimize("O0"))) main()
 		
 		if (PORTKbits.RK1 == 0 && menu_wait == 0)
 		{
-			menu_wait = 0x00003FFF;
+			menu_wait = 0x0005FFFF;
 			
-			display_character(0x0000, 0x0008*menu_pos, ' ');
+			if (menu_pos < list_total-1) menu_pos++;
 			
-			if (menu_pos < 27) menu_pos++;
+			list_display(menu_pos);
 		}
 		else
 		{
@@ -956,7 +1040,7 @@ int __attribute__((optimize("O0"))) main()
 
 					if (PORTKbits.RK0 == 0 && menu_wait == 0)
 					{
-						menu_wait = 0x00003FFF;
+						menu_wait = 0x00013FFF;
 
 						display_character(0x0000, 0x0008*menu_pos, ' ');
 
@@ -969,7 +1053,7 @@ int __attribute__((optimize("O0"))) main()
 
 					if (PORTKbits.RK1 == 0 && menu_wait == 0)
 					{
-						menu_wait = 0x00003FFF;
+						menu_wait = 0x00013FFF;
 
 						display_character(0x0000, 0x0008*menu_pos, ' ');
 
@@ -1050,148 +1134,7 @@ int __attribute__((optimize("O0"))) main()
 	}
 	else
 	{
-		switch (menu_pos)
-		{
-			case 0x01:
-			{
-				nes_burn("SMB.NES");
-				break;
-			}
-			case 0x02:
-			{
-				nes_burn("TETRIS.NES");
-				break;
-			}
-			case 0x03:
-			{
-				nes_burn("MM.NES");
-				break;
-			}
-			case 0x04:
-			{
-				nes_burn("DK.NES");
-				break;
-			}
-			case 0x05:
-			{
-				nes_burn("MB.NES");
-				break;
-			}
-			case 0x06:
-			{
-				nes_burn("BALLOON.NES");
-				break;
-			}
-			case 0x07:
-			{
-				nes_burn("ICECLIMB.NES");
-				break;
-			}
-			case 0x08:
-			{
-				nes_burn("EXBIKE.NES");
-				break;
-			}
-			case 0x09:
-			{
-				nes_burn("PAPERBOY.NES");
-				break;
-			}
-			case 0x0A:
-			{
-				nes_burn("GRADIUS.NES");
-				break;
-			}
-			case 0x0B:
-			{
-				nes_burn("CONTRA.NES");
-				break;
-			}
-			case 0x0C:
-			{
-				nes_burn("1943.NES");
-				break;
-			}
-			case 0x0D:
-			{
-				nes_burn("CASTLE.NES");
-				break;
-			}
-			case 0x0E:
-			{
-				nes_burn("CASTLE2.NES");
-				break;
-			}
-			case 0x0F:
-			{
-				nes_burn("ZELDA.NES");
-				break;
-			}
-			case 0x10:
-			{
-				nes_burn("ZELDA2.NES");
-				break;
-			}
-			case 0x11:
-			{
-				nes_burn("METROID.NES");
-				break;
-			}
-			case 0x12:
-			{
-				nes_burn("NINJA.NES");
-				break;
-			}
-			case 0x13:
-			{
-				nes_burn("BIOCOM.NES");
-				break;
-			}
-			case 0x14:
-			{
-				nes_burn("MEGAMAN2.NES");
-				break;
-			}
-			case 0x15:
-			{
-				nes_burn("DW4.NES");
-				break;
-			}
-			case 0x16:
-			{
-				nes_burn("FF.NES");
-				break;
-			}
-			case 0x17:
-			{
-				nes_burn("BLASTER.NES");
-				break;
-			}
-			case 0x18:
-			{
-				nes_burn("SMB2.NES");
-				break;
-			}
-			case 0x19:
-			{
-				nes_burn("SMB3.NES");
-				break;
-			}
-			case 0x1A:
-			{
-				nes_burn("KIRBY.NES");
-				break;
-			}
-			case 0x1B:
-			{
-				
-				break;
-			}
-			default:
-			{
-				break;
-			}
-		}
+		nes_burn((char *)list_name[menu_pos]);
 	}
 	
 	while (1)
