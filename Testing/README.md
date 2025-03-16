@@ -44,9 +44,9 @@ Championship Rally<br>
 Highly tested MMC3 games:
 
 Super Mario Bros 2<br>
-Super Mario Bros 3 - wrong sprite priority*, status bar incorrect*, very slow (major)<br>
-Kirby's Adventure - status bar incorrect*, intro screen has wrong nametable (minimal)<br>
-* = hacks included to correct these graphical glitches
+Super Mario Bros 3 - wrong sprite priority+, status bar incorrect+, very slow (major)<br>
+Kirby's Adventure - status bar incorrect+, intro screen has wrong nametable (minimal)<br>
++ = hacks included to correct these graphical glitches
 
 The journey has been documented on the 6502.org Forum, here: http://forum.6502.org/viewtopic.php?f=1&t=8236
 
