@@ -32,6 +32,7 @@ Tetris<br>
 Legend of Zelda - vertical scrolling is shifted by some scanlines (moderate)<br>
 Zelda 2<br>
 Metroid<br>
+Kid Icarus<br>
 Castlevania 2<br>
 Ninja Gaiden - some cutscene tiles are wrong (minimal)<br>
 Bionic Commando<br>
