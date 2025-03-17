@@ -4300,25 +4300,11 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 			
 			if (nes_hack_sprite_priority > 0)
 			{
-				//if (ppu_scanline_sprite_0 > 0)
-				//{
-				//	nes_sprites(2, ppu_scanline_sprite_0, ppu_scanline_count); // hack for Mario 3
-				//}
-				//else
-				//{
-					nes_sprites(2, 0, ppu_scanline_count); // hack for Mario 3
-				//}
+				nes_sprites(2, 0, ppu_scanline_count); // hack for Mario 3
 			}
 			else
 			{
-				if (ppu_scanline_sprite_0 > 0)
-				{
-					nes_sprites(0, ppu_scanline_sprite_0, ppu_scanline_count);
-				}
-				else
-				{
-					nes_sprites(0, 0, ppu_scanline_count);
-				}
+				nes_sprites(0, 0, ppu_scanline_count);
 			}
 		}
 	}
@@ -4356,19 +4342,9 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 			
 			if (nes_hack_top_hud > 0)
 			{
-				if (ppu_scanline_count > 0)
-				{
-					ppu_scanline_sprite_0 = ppu_scanline_count;
+				ppu_scanline_sprite_0 = ppu_scanline_count;
 				
-					if (ppu_scanline_interrupt > 0)
-					{
-						nes_sprites(0, ppu_scanline_interrupt, ppu_scanline_count);
-					}
-					else
-					{
-						nes_sprites(0, 0, ppu_scanline_count);
-					}
-				}
+				nes_sprites(0, 0, ppu_scanline_count); // hack for Duck Tales
 			}
 		}
 	}
@@ -4405,17 +4381,13 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		{
 			ppu_frame_count = 0;
 			
-			if (ppu_scanline_interrupt > ppu_scanline_sprite_0)
-			{
-				nes_sprites(0, ppu_scanline_interrupt, 255);
-			}
-			else if (ppu_scanline_interrupt < ppu_scanline_sprite_0)
+			if (nes_hack_top_hud > 0)
 			{
 				nes_sprites(0, ppu_scanline_sprite_0, 255);
 			}
 			else
 			{
-				nes_sprites(0, 0, 255);
+				nes_sprites(0, ppu_scanline_interrupt, 255);
 			}
 
 			nes_frame();
