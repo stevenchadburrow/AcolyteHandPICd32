@@ -29,16 +29,17 @@ unsigned char nes_audio_flag = 1;
 unsigned long nes_pixel_location = 0;
 unsigned long nes_interrupt_count = 0;
 
-unsigned short nes_hack_mmc3_bottom_hud = 0;
-unsigned short nes_hack_mmc3_sprite_priority = 0;
+unsigned short nes_hack_top_hud = 0; // Duck Tales
+unsigned short nes_hack_bottom_hud = 0; // Mario 3 and Kirby
+unsigned short nes_hack_sprite_priority = 0; // Mario 3
 
 unsigned long cpu_current_cycles = 0, cpu_dma_cycles = 0;
 unsigned long ppu_scanline_cycles = 0;
 unsigned long ppu_frame_cycles = 0;
 unsigned long ppu_frame_count = 0;
 signed long ppu_scanline_count = 0; // needs to be signed
-unsigned long ppu_scanline_interrupt = 0;
-unsigned long ppu_scanline_sprite_0 = 0;
+signed long ppu_scanline_interrupt = 0;
+signed long ppu_scanline_sprite_0 = 0;
 unsigned long apu_sample_cycles = 0;
 
 unsigned short map_number = 0x0000;
@@ -2593,7 +2594,7 @@ void __attribute__((optimize("O2"))) nes_background(signed short line)
 		ppu_reg_r = ((ppu_reg_r & 0x7BE0) | (ppu_reg_t & 0x041F));
 	}
 	
-	if (map_number == 4 && nes_hack_mmc3_bottom_hud > 0)
+	if (map_number == 4 && nes_hack_bottom_hud > 0)
 	{
 		if (ppu_scanline_interrupt > 0)
 		{
@@ -2960,7 +2961,7 @@ void __attribute__((optimize("O2"))) nes_background(signed short line)
 	}
 }
 	
-void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground, unsigned char min_y, unsigned char max_y)
+void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground, signed long min_y, signed long max_y)
 {
 	unsigned char sprite_x = 0, sprite_y = 0, sprite_attr = 0, sprite_tile = 0;
 	unsigned char sprite_flip_horz = 0, sprite_flip_vert = 0;
@@ -4137,10 +4138,36 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		cpu_reg_pc = cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFC] + (cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFD] << 8);
 		
 		// hacks
-		if (map_number == 4)
+		nes_hack_top_hud = 0;
+		nes_hack_bottom_hud = 0;
+		nes_hack_sprite_priority = 0;
+		
+		unsigned long loc = prg_offset+0x4000*(cart_rom[4]-1)+0x3FE0;
+		
+		if (map_number == 2) // unrom
 		{
-			unsigned long loc = prg_offset+0x4000*(cart_rom[4]-1)+0x3FE0;
-			
+			if (cart_rom[loc+0] == 0xAA && // Duck Tales
+				cart_rom[loc+1] == 0x9D &&
+				cart_rom[loc+2] == 0xE5 &&
+				cart_rom[loc+3] == 0xFF &&
+				cart_rom[loc+4] == 0x60 &&
+				cart_rom[loc+5] == 0x00 &&
+				cart_rom[loc+6] == 0x01 &&
+				cart_rom[loc+7] == 0x02 &&
+				cart_rom[loc+8] == 0x03 &&
+				cart_rom[loc+9] == 0x04 &&
+				cart_rom[loc+10] == 0x05 &&
+				cart_rom[loc+11] == 0x06 &&
+				cart_rom[loc+12] == 0x00 &&
+				cart_rom[loc+13] == 0x00 &&
+				cart_rom[loc+14] == 0x00 &&
+				cart_rom[loc+15] == 0x00)
+			{
+				nes_hack_top_hud = 1;
+			}
+		}
+		else if (map_number == 4) // mmc3
+		{
 			if (cart_rom[loc+0] == 0xFF && // Mario 3
 				cart_rom[loc+1] == 0xFF &&
 				cart_rom[loc+2] == 0xFF &&
@@ -4158,8 +4185,8 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 				cart_rom[loc+14] == ' ' &&
 				cart_rom[loc+15] == '3')
 			{
-				nes_hack_mmc3_bottom_hud = 1;
-				nes_hack_mmc3_sprite_priority = 1;
+				nes_hack_bottom_hud = 1;
+				nes_hack_sprite_priority = 1;
 			}
 			else if (cart_rom[loc+0] == 0x00 && // Kirby
 				cart_rom[loc+1] == 0x52 &&
@@ -4178,19 +4205,8 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 				cart_rom[loc+14] == 'X' &&
 				cart_rom[loc+15] == 0x00)
 			{
-				nes_hack_mmc3_bottom_hud = 1;
-				nes_hack_mmc3_sprite_priority = 0;
+				nes_hack_bottom_hud = 1;
 			}
-			else
-			{
-				nes_hack_mmc3_bottom_hud = 0;
-				nes_hack_mmc3_sprite_priority = 0;
-			}
-		}
-		else
-		{
-			nes_hack_mmc3_bottom_hud = 0;
-			nes_hack_mmc3_sprite_priority = 0;
 		}
 		
 		//SendLongHex(cpu_reg_pc);
@@ -4282,7 +4298,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 			
 			ppu_scanline_interrupt = ppu_scanline_count;
 			
-			if (map_number == 4 && nes_hack_mmc3_sprite_priority > 0)
+			if (nes_hack_sprite_priority > 0)
 			{
 				//if (ppu_scanline_sprite_0 > 0)
 				//{
@@ -4338,15 +4354,21 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 			
 			ppu_flag_0 = 1;
 			
-			ppu_scanline_sprite_0 = ppu_scanline_count;
-			
-			if (ppu_scanline_interrupt > 0)
+			if (nes_hack_top_hud > 0)
 			{
-				nes_sprites(0, ppu_scanline_interrupt, ppu_scanline_count);
-			}
-			else
-			{
-				nes_sprites(0, 0, ppu_scanline_count);
+				if (ppu_scanline_count > 0)
+				{
+					ppu_scanline_sprite_0 = ppu_scanline_count;
+				
+					if (ppu_scanline_interrupt > 0)
+					{
+						nes_sprites(0, ppu_scanline_interrupt, ppu_scanline_count);
+					}
+					else
+					{
+						nes_sprites(0, 0, ppu_scanline_count);
+					}
+				}
 			}
 		}
 	}
@@ -4356,9 +4378,6 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		
 		// v-sync
 		ppu_flag_v = 0x0001;
-		
-		ppu_scanline_count = -21;
-		//ppu_scanline_count = 0;
 		
 		ppu_reg_a = 0;	
 		
@@ -4406,6 +4425,9 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		
 		ppu_scanline_interrupt = 0;
 		ppu_scanline_sprite_0 = 0;
+		
+		ppu_scanline_count = -21;
+		//ppu_scanline_count = 0;
 		
 		ppu_frame_count++;
 		
