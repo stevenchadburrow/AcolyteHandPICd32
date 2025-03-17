@@ -45,7 +45,7 @@ Super Mario Bros 3 - MMC3 - Good, (hacked bottom status bar and sprite priority)
 Tetris - MMC1 - Perfect<br>
 Wizardry: Proving Grounds - MMC1 - Perfect<br>
 Zelda - MMC1 - Good, vertical scrolling is off<br>
-Zelda 2 - MMC1 - Great, occasional slowdowns<br>
+Zelda 2 - MMC1 - Good, occasional slowdowns<br>
 
 The journey has been documented on the 6502.org Forum, here: http://forum.6502.org/viewtopic.php?f=1&t=8236
 
