@@ -1204,8 +1204,8 @@ int __attribute__((optimize("O0"))) main()
 				if (menu_pos == 0) { }
 				else if (menu_pos == 1) { audio_enable = 1; nes_audio_flag = 1; }
 				else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
-				else if (menu_pos == 3) { nes_hack_top_hud = 1; nes_hack_bottom_hud = 1; nes_hack_sprite_priority = 1; }
-				else if (menu_pos == 4) { nes_hack_top_hud = 0; nes_hack_bottom_hud = 0; nes_hack_sprite_priority = 0; }
+				else if (menu_pos == 3) { nes_hack_bottom_hud = 1; nes_hack_sprite_priority = 1; }
+				else if (menu_pos == 4) { nes_hack_bottom_hud = 0; nes_hack_sprite_priority = 0; }
 				else if (menu_pos > 4 && menu_pos <= 9) rate = (unsigned long)(menu_pos - 4);
 				else if (menu_pos == 10)
 				{
