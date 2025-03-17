@@ -21,7 +21,7 @@ Dragon Warrior - MMC1 - Perfect<br>
 Dragon Warrior 2 - MMC1 - Perfect<br>
 Dragon Warrior 3 - MMC1 - Perfect<br>
 Dragon Warrior 4 - MMC1 - Perfect<br>
-Duck Tales - UNROM - Good, top status horizontal scroll is off, vertical scrolling is off (hacked top status bar sprites)<br>
+Duck Tales - UNROM - Good, top status horizontal scroll is off, vertical scrolling is off, (hacked top status bar sprites)<br>
 Excitebike - NROM - Good, horizontal scrolling split on wrong scanline<br>
 Final Fantasy - MMC1 - Perfect<br>
 Gradius - CNROM - Great, single scanline in status bar missing<br>
