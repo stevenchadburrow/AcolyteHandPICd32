@@ -21,7 +21,6 @@ Dragon Warrior - MMC1 - Perfect<br>
 Dragon Warrior 2 - MMC1 - Perfect<br>
 Dragon Warrior 3 - MMC1 - Perfect<br>
 Dragon Warrior 4 - MMC1 - Perfect<br>
-Duck Tales - UNROM - Good, single scanline in status bar scrolls wrong, vertical scrolling is off, (hacked top status bar sprites)<br>
 Excitebike - NROM - Good, horizontal scrolling split on wrong scanline<br>
 Final Fantasy - MMC1 - Perfect<br>
 Gradius - CNROM - Great, single scanline in status bar missing<br>
@@ -30,6 +29,7 @@ Kid Icarus - MMC1 - Perfect<br>
 Kirby's Adventure - MMC3 - Great, (hacked bottom status bar)<br>
 Kung Fu - NROM - Perfect<br>
 Mario Bros - NROM - Perfect<br>
+Mega Man - UNROM - Perfect<br>
 Mega Man 2 - MMC1 - Perfect<br>
 Metroid - MMC1 - Perfect<br>
 Micro Mages - NROM - Perfect<br>
