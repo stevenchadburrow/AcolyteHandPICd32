@@ -10,7 +10,7 @@ The default 40 games chosen for this system include:
 1943: Midway - UNROM - Perfect<br>
 Ballon Fight - NROM - Perfect<br>
 Battle Kid - UNROM - Perfect<br>
-Bionic Commando - MMC1 - Great, occasional slowdown<br>
+Bionic Commando - MMC1 - Perfect<br>
 Blaster Master - MMC1 - Great, minor sprite priority issues<br>
 Castlevania - UNROM - Great, minor sprite priority issues<br>
 Castlevania 2 - MMC1 - Great, minor sprite priority issues<br>
