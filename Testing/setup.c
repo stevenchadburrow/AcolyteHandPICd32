@@ -248,7 +248,7 @@ void __attribute__((optimize("O0"))) Setup()
 	CNNED = 0x1200; // negative edge on RD9 and RD12
 	CNFD = 0x0000; // clear flags
 	
-	IPC30bits.CNDIP = 0x4; // interrupt priority 4
+	IPC30bits.CNDIP = 0x5; // interrupt priority 5
 	IPC30bits.CNDIS = 0x0; // interrupt sub-priority 0
 	IFS3bits.CNDIF = 0;  // clear interrupt flag
 	IEC3bits.CNDIE = 1; // enable interrupts
@@ -272,10 +272,10 @@ void __attribute__((optimize("O0"))) Setup()
 	U3STAbits.URXEN = 1; // enable RX
 	U3STAbits.UTXEN = 1; // enable TX
 	
-	IPC39bits.U3RXIP = 0x3; // U3RX interrupt priority level 3
+	IPC39bits.U3RXIP = 0x4; // U3RX interrupt priority level 4
 	IPC39bits.U3RXIS = 0x0; // U3RX interrupt sub-priority level 0
-	//IPC39bits.U3EIP = 0x5; // U3E interrupt priority level 5
-	//IPC39bits.U3EIS = 0x3; // U3E interrupt sub-priority level 3
+	//IPC39bits.U3EIP = 0x4; // U3E interrupt priority level 4
+	//IPC39bits.U3EIS = 0x1; // U3E interrupt sub-priority level 1
 	IFS4bits.U3RXIF = 0;  // clear interrupt flag
 	IEC4bits.U3RXIE = 1; // U3RX interrupt on (set priority here?)
 	

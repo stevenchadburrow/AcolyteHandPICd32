@@ -29,8 +29,8 @@ unsigned char nes_audio_flag = 1;
 unsigned long nes_pixel_location = 0;
 unsigned long nes_interrupt_count = 0;
 
-unsigned short nes_hack_mmc3_bottom_hud = 1;
-unsigned short nes_hack_mmc3_sprite_priority = 1;
+unsigned short nes_hack_mmc3_bottom_hud = 0;
+unsigned short nes_hack_mmc3_sprite_priority = 0;
 
 unsigned long cpu_current_cycles = 0, cpu_dma_cycles = 0;
 unsigned long ppu_scanline_cycles = 0;
@@ -38,6 +38,7 @@ unsigned long ppu_frame_cycles = 0;
 unsigned long ppu_frame_count = 0;
 signed long ppu_scanline_count = 0; // needs to be signed
 unsigned long ppu_scanline_interrupt = 0;
+unsigned long ppu_scanline_sprite_0 = 0;
 unsigned long apu_sample_cycles = 0;
 
 unsigned short map_number = 0x0000;
@@ -197,15 +198,15 @@ volatile unsigned short apu_period[16] = {
 	4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
 };
 
-volatile void __attribute__((optimize("O2"),vector(_TIMER_8_VECTOR), interrupt(ipl1srs))) t8_handler()
+volatile void __attribute__((optimize("O2"),vector(_TIMER_8_VECTOR), interrupt(ipl2srs))) t8_handler()
 {		
 	IFS1bits.T8IF = 0;  // clear interrupt flag
 	
 	if (audio_enable > 0)
 	{
 		// 8-bit signed audio add 0x80, unsigned add 0x00
-		PORTJ = (unsigned short)(((audio_buffer[audio_read]) + 0x00) + 
-			(((audio_buffer[audio_read]) + 0x00) << 8));
+		PORTJ = (unsigned short)(((audio_buffer[(audio_read)%AUDIO_LEN]) + 0x00) + 
+			(((audio_buffer[(audio_read)%AUDIO_LEN]) + 0x00) << 8));
 
 		audio_read = audio_read + 1;
 
@@ -216,13 +217,67 @@ volatile void __attribute__((optimize("O2"),vector(_TIMER_8_VECTOR), interrupt(i
 	}
 }
 
-volatile void __attribute__((optimize("O2"),vector(_TIMER_9_VECTOR), interrupt(ipl2srs))) t9_handler()
+volatile void __attribute__((optimize("O2"),vector(_TIMER_9_VECTOR), interrupt(ipl3srs))) t9_handler()
 {		
 	IFS1bits.T9IF = 0;  // clear interrupt flag
 	
 	nes_interrupt_count = nes_interrupt_count + 1;
 	
 	if (nes_interrupt_count > 60*262) nes_interrupt_count = 60*262;
+}
+
+// change for platform
+void __attribute__((optimize("O0"))) nes_error(unsigned char code)
+{			
+	SendChar('\n');
+	SendChar('\r');
+	
+	SendString("Error \\");
+	SendHex(code);
+	SendString("\n\r\\");
+	
+	DelayMS(1000);
+	
+	if (code == 0x00)
+	{
+		SendString("File Issue \\");
+		SendString("\n\r\\");
+		
+		screen_frame = 0;
+		
+		for (unsigned int i=0; i<28; i++)
+		{
+			display_string(0, 0x0008*i, "File Issue\\");
+		}
+	}
+	else if (code == 0x01)
+	{
+		SendString("Unknown Opcode \\");
+		SendLongHex(cpu_reg_pc);
+		SendChar(':');
+		SendHex(cpu_temp_opcode);
+		SendString("\n\r\\");
+		
+		screen_frame = 0;
+		
+		for (unsigned int i=0; i<28; i++)
+		{
+			display_string(0, 0x0008*i, "Unknown Opcode\\");
+		}
+	}
+	
+	while (PORTKbits.RK4 == 1 && PORTKbits.RK5 == 1) { }
+	
+	DelayMS(1000);
+	
+	// soft reset system
+	SYSKEY = 0x0; // reset
+	SYSKEY = 0xAA996655; // unlock key #1
+	SYSKEY = 0x556699AA; // unlock key #2
+	RSWRST = 1; // set bit to reset of system
+	SYSKEY = 0x0; // re-lock
+	RSWRST; // read from register to reset
+	while (1) { } // wait until reset occurs
 }
 
 unsigned char __attribute__((optimize("O0"))) nes_save(char *filename)
@@ -270,6 +325,8 @@ unsigned char __attribute__((optimize("O0"))) nes_save(char *filename)
 		//SendString("Could not write cart ram to file\n\r\\");
 		
 		flag = 0;
+		
+		nes_error(0x00);
 	}	
 	
 	return flag;
@@ -311,15 +368,17 @@ unsigned char __attribute__((optimize("O0"))) nes_load(char *filename)
 		while (f_sync(&file) != 0) { }
 		while (f_close(&file) != 0) { }
 		
-		//SendString("Read cart ram to file\n\r\\");
+		//SendString("Read cart ram from file\n\r\\");
 		
 		flag = 1;
 	}
 	else
 	{		
-		//SendString("Could not read cart ram to file\n\r\\");
+		//SendString("Could not read cart ram from file\n\r\\");
 		
 		flag = 0;
+		
+		nes_error(0x00);
 	}	
 	
 	return flag;
@@ -392,6 +451,8 @@ unsigned char __attribute__((optimize("O0"))) nes_burn(char *filename)
 		//SendString("Read failure\n\r\\");
 		
 		flag = 0;
+		
+		nes_error(0x00);
 	}
 	
 	DelayMS(1000);
@@ -412,8 +473,8 @@ unsigned char __attribute__((optimize("O0"))) nes_burn(char *filename)
 void __attribute__((optimize("O2"))) nes_pixel(unsigned short pos_x, unsigned short pos_y, unsigned char color)
 {
 	nes_pixel_location = ((pos_y))*SCREEN_X+((pos_x<<1))+(1-screen_frame)*SCREEN_XY;
-	screen_buffer[nes_pixel_location] = color;
-	screen_buffer[nes_pixel_location+1] = color;
+	screen_buffer[(nes_pixel_location)] = color;
+	screen_buffer[(nes_pixel_location+1)] = color;
 }
 
 // change for platform
@@ -425,7 +486,7 @@ void __attribute__((optimize("O2"))) nes_frame()
 // change for platform
 void __attribute__((optimize("O2"))) nes_sound(unsigned char sample)
 {
-	audio_buffer[audio_write] = sample;
+	audio_buffer[(audio_write)%AUDIO_LEN] = sample;
 	
 	audio_write = audio_write + 1;
 	
@@ -440,39 +501,6 @@ void __attribute__((optimize("O2"))) nes_buttons()
 {
 	ctl_value_1 = 0xFF080000 | (controller_status_3 << 8) | controller_status_1;
 	ctl_value_2 = 0xFF040000 | (controller_status_4 << 8) | controller_status_2;
-}
-
-// change for platform
-void __attribute__((optimize("O0"))) nes_error(unsigned char code)
-{			
-	SendChar('\n');
-	SendChar('\r');
-	
-	SendString("Error \\");
-	SendHex(code);
-	SendString("\n\r\\");
-	
-	DelayMS(1000);
-	
-	if (code == 0x00)
-	{
-		SendString("Unknown Opcode \\");
-		SendLongHex(cpu_reg_pc);
-		SendChar(':');
-		SendHex(cpu_temp_opcode);
-		SendString("\n\r\\");
-	}
-	
-	DelayMS(1000);
-	
-	// soft reset system
-	SYSKEY = 0x0; // reset
-	SYSKEY = 0xAA996655; // unlock key #1
-	SYSKEY = 0x556699AA; // unlock key #2
-	RSWRST = 1; // set bit to reset of system
-	SYSKEY = 0x0; // re-lock
-	RSWRST; // read from register to reset
-	while (1) { } // wait until reset occurs
 }
 
 unsigned char __attribute__((optimize("O0"))) nes_read_cpu_ram(unsigned long addr)
@@ -4063,7 +4091,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		TMR8 = 0x0000; // zero out counter
 		PR8 = 0xA0C5; // approx three scanlines (minus one)
 
-		IPC9bits.T8IP = 0x1; // interrupt priority 1
+		IPC9bits.T8IP = 0x2; // interrupt priority 2
 		IPC9bits.T8IS = 0x0; // interrupt sub-priority 0
 		IFS1bits.T8IF = 0; // T8 clear flag
 		IEC1bits.T8IE = 1; // T8 interrupt on
@@ -4073,7 +4101,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		TMR9 = 0x0000; // zero out counter
 		PR9 = 0xDB5E;  // one whole frame (minus one)
 
-		IPC10bits.T9IP = 0x1; // interrupt priority 1
+		IPC10bits.T9IP = 0x3; // interrupt priority 3
 		IPC10bits.T9IS = 0x0; // interrupt sub-priority 0
 		IFS1bits.T9IF = 0; // T9 clear flag
 		IEC1bits.T9IE = 1; // T9 interrupt on
@@ -4108,6 +4136,63 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		// reset
 		cpu_reg_pc = cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFC] + (cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFD] << 8);
 		
+		// hacks
+		if (map_number == 4)
+		{
+			unsigned long loc = prg_offset+0x4000*(cart_rom[4]-1)+0x3FE0;
+			
+			if (cart_rom[loc+0] == 0xFF && // Mario 3
+				cart_rom[loc+1] == 0xFF &&
+				cart_rom[loc+2] == 0xFF &&
+				cart_rom[loc+3] == 'S' &&
+				cart_rom[loc+4] == 'U' &&
+				cart_rom[loc+5] == 'P' &&
+				cart_rom[loc+6] == 'E' &&
+				cart_rom[loc+7] == 'R' &&
+				cart_rom[loc+8] == ' ' &&
+				cart_rom[loc+9] == 'M' &&
+				cart_rom[loc+10] == 'A' &&
+				cart_rom[loc+11] == 'R' &&
+				cart_rom[loc+12] == 'I' &&
+				cart_rom[loc+13] == 'O' &&
+				cart_rom[loc+14] == ' ' &&
+				cart_rom[loc+15] == '3')
+			{
+				nes_hack_mmc3_bottom_hud = 1;
+				nes_hack_mmc3_sprite_priority = 1;
+			}
+			else if (cart_rom[loc+0] == 0x00 && // Kirby
+				cart_rom[loc+1] == 0x52 &&
+				cart_rom[loc+2] == 0x47 &&
+				cart_rom[loc+3] == 0x4B &&
+				cart_rom[loc+4] == 0x4B &&
+				cart_rom[loc+5] == 0x5F &&
+				cart_rom[loc+6] == 'S' &&
+				cart_rom[loc+7] == 'e' &&
+				cart_rom[loc+8] == 't' &&
+				cart_rom[loc+9] == 'S' &&
+				cart_rom[loc+10] == 't' &&
+				cart_rom[loc+11] == 'i' &&
+				cart_rom[loc+12] == 'l' &&
+				cart_rom[loc+13] == 'l' &&
+				cart_rom[loc+14] == 'X' &&
+				cart_rom[loc+15] == 0x00)
+			{
+				nes_hack_mmc3_bottom_hud = 1;
+				nes_hack_mmc3_sprite_priority = 0;
+			}
+			else
+			{
+				nes_hack_mmc3_bottom_hud = 0;
+				nes_hack_mmc3_sprite_priority = 0;
+			}
+		}
+		else
+		{
+			nes_hack_mmc3_bottom_hud = 0;
+			nes_hack_mmc3_sprite_priority = 0;
+		}
+		
 		//SendLongHex(cpu_reg_pc);
 		//SendString("Initialized\n\r\\");
 	}
@@ -4123,21 +4208,6 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		//SendString("Reset\n\r\\");
 	}
 	
-	/*
-	// For Dragon Warrior II
-	// MIGHT BE FIXED BECAUSE IRQ WAS CHANGED!!!
-	if (cpu_reg_pc == 0xC693) // last JSR before it blows up
-	{
-		SendHex(cpu_reg_a);
-		SendChar('*');
-	}
-	if (cpu_reg_pc == 0xC696) // this JSR is never reached!
-	{
-		SendHex(cpu_reg_a);
-		SendChar('?');
-	}
-	*/
-	
 	cpu_current_cycles = 0;
 
 	cpu_current_cycles += cpu_run();
@@ -4148,7 +4218,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 
 	if (cpu_current_cycles == 0)
 	{
-		nes_error(0x00);
+		nes_error(0x01);
 	}
 	
 	ppu_scanline_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);
@@ -4214,11 +4284,25 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 			
 			if (map_number == 4 && nes_hack_mmc3_sprite_priority > 0)
 			{
-				nes_sprites(2, 0, ppu_scanline_count); // hack for Mario 3
+				//if (ppu_scanline_sprite_0 > 0)
+				//{
+				//	nes_sprites(2, ppu_scanline_sprite_0, ppu_scanline_count); // hack for Mario 3
+				//}
+				//else
+				//{
+					nes_sprites(2, 0, ppu_scanline_count); // hack for Mario 3
+				//}
 			}
 			else
 			{
-				nes_sprites(0, 0, ppu_scanline_count);
+				if (ppu_scanline_sprite_0 > 0)
+				{
+					nes_sprites(0, ppu_scanline_sprite_0, ppu_scanline_count);
+				}
+				else
+				{
+					nes_sprites(0, 0, ppu_scanline_count);
+				}
 			}
 		}
 	}
@@ -4248,11 +4332,22 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		// v-sync
 		ppu_flag_v = 0x0000;
 		
-		if (ppu_scanline_count >= (oam_ram[0]+ppu_status_s) && ppu_scanline_cycles >= (oam_ram[3])) // very rough math
+		if (ppu_scanline_count >= (oam_ram[0]+ppu_status_s) && ppu_scanline_cycles >= (oam_ram[3]) && ppu_status_0 == 0) // very rough math
 		{
-			if (ppu_status_0 == 0) ppu_flag_0 = 1;
-
 			ppu_status_0 = 1;
+			
+			ppu_flag_0 = 1;
+			
+			ppu_scanline_sprite_0 = ppu_scanline_count;
+			
+			if (ppu_scanline_interrupt > 0)
+			{
+				nes_sprites(0, ppu_scanline_interrupt, ppu_scanline_count);
+			}
+			else
+			{
+				nes_sprites(0, 0, ppu_scanline_count);
+			}
 		}
 	}
 	else
@@ -4291,7 +4386,18 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		{
 			ppu_frame_count = 0;
 			
-			nes_sprites(0, ppu_scanline_interrupt, 255);
+			if (ppu_scanline_interrupt > ppu_scanline_sprite_0)
+			{
+				nes_sprites(0, ppu_scanline_interrupt, 255);
+			}
+			else if (ppu_scanline_interrupt < ppu_scanline_sprite_0)
+			{
+				nes_sprites(0, ppu_scanline_sprite_0, 255);
+			}
+			else
+			{
+				nes_sprites(0, 0, 255);
+			}
 
 			nes_frame();
 			
@@ -4299,6 +4405,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		}
 		
 		ppu_scanline_interrupt = 0;
+		ppu_scanline_sprite_0 = 0;
 		
 		ppu_frame_count++;
 		

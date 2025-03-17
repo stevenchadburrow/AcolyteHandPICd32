@@ -180,7 +180,7 @@ Pin126,RK7,EXT-BUTTON
 
 #include <xc.h>
 
-// keeps program code from being written here, reserved for Gameboy
+// keeps program code from being written here, reserved for NES
 #pragma region name="game_rom" origin=0x9D100000 size=0x00100000
 
 #define SYS_FREQ 200000000 // Running at 200MHz
@@ -250,11 +250,11 @@ void SendLongHex(unsigned long value)
 void _general_exception_handler(void)
 {
 	SendString("General Exception\n\r\\");
-	SendLongHex((_CP0_GET_CAUSE() & 0x0000007C) >> 2);
+	SendLongHex(((_CP0_GET_CAUSE() & 0x0000007C) >> 2));
 	SendString("\n\r\\");
     SendLongHex(_CP0_GET_EPC());
 	SendString("\n\r\\");
-   
+	
 	DelayMS(1000);
 	
 	// soft reset system
@@ -269,12 +269,14 @@ void _general_exception_handler(void)
 
 
 #define SCREEN_X 512
+#define SCREEN_X2 1024
 #define SCREEN_Y 240
 #define SCREEN_XY 122880
+#define SCREEN_XY2 245760
 
 // video
-volatile unsigned char __attribute__((coherent,address(0x8004F800))) screen_line[SCREEN_X*2];
-volatile unsigned char __attribute__((coherent,address(0x80010000))) screen_buffer[SCREEN_X*SCREEN_Y*2]; // visible portion of screen
+volatile unsigned char __attribute__((coherent,address(0x8004F800))) screen_line[SCREEN_X2];
+volatile unsigned char __attribute__((coherent,address(0x80010000))) screen_buffer[SCREEN_XY2]; // visible portion of screen
 volatile unsigned char screen_frame = 0;
 volatile unsigned int screen_scanline = 1025; // start of vertical sync
 volatile unsigned char __attribute__((coherent)) screen_zero[2] = { 0x00, 0x00 }; // zero value for black
@@ -729,7 +731,7 @@ void ps2_command(unsigned char command, unsigned char port)
 	return;
 }
 
-unsigned char ps2_conversion[256] = 
+volatile unsigned char ps2_conversion[256] = 
 {
   	0x00,0x16,0x0C,0x0E,0x1E,0x1C,0x1D,0x15,
 	0x00,0x18,0x07,0x0F,0x1F,0x09,0x60,0x00,
@@ -784,10 +786,10 @@ unsigned char ps2_conversion[256] =
 
 
 
-volatile char list_name[256][12];
+volatile char __attribute__((coherent)) list_name[100*12];
 volatile unsigned short list_total = 1; // start at 1
 
-void list_generate()
+void __attribute__((optimize("O0"))) list_generate()
 {
 	// Global variables
 	DIR dir; // Directory information for the current directory
@@ -810,7 +812,7 @@ void list_generate()
 		for (int i=0; i<12; i++)
 		{
 			fno.fname[i] = 0;
-			list_name[list_total][i] = ' ';
+			list_name[list_total*12+i] = ' ';
 		}
 		
 		f_readdir(&dir, &fno);
@@ -822,11 +824,11 @@ void list_generate()
 			{
 				if (fno.fname[i] > 0x20 && fno.fname[i] < 0x80)
 				{
-					list_name[list_total][i] = fno.fname[i];
+					list_name[list_total*12+i] = fno.fname[i];
 				}
 				else
 				{
-					list_name[list_total][i] = ' ';
+					list_name[list_total*12+i] = ' ';
 					fno.fname[i] = ' ';
 				}
 			}
@@ -835,10 +837,10 @@ void list_generate()
 			
 			for (int i=0; i<9; i++)
 			{
-				if (list_name[list_total][i] == '.' &&
-					list_name[list_total][i+1] == 'N' &&
-					list_name[list_total][i+2] == 'E' &&
-					list_name[list_total][i+3] == 'S')
+				if (list_name[list_total*12+i] == '.' &&
+					list_name[list_total*12+i+1] == 'N' &&
+					list_name[list_total*12+i+2] == 'E' &&
+					list_name[list_total*12+i+3] == 'S')
 				{
 					result = 1;
 							
@@ -851,14 +853,14 @@ void list_generate()
 				list_total++;
 			}
 			
-			if (list_total >= 256) break;
+			if (list_total >= 100) break;
 		}
 	}
 	
 	f_rewinddir(&dir);
 }
-	
-void list_display(unsigned short pos)
+
+void __attribute__((optimize("O0"))) list_display(unsigned short pos)
 {
 	unsigned short start = 0;
 	
@@ -882,7 +884,7 @@ void list_display(unsigned short pos)
 		
 		for (unsigned short j=0; j<12; j++)
 		{
-			display_character(0x0008 * j + 0x0008, 0x0008 * i, list_name[start+i][j]);
+			display_character(0x0008 * j + 0x0008, 0x0008 * i, list_name[(start+i)*12+j]);
 		}
 	}
 	
@@ -894,6 +896,122 @@ void list_display(unsigned short pos)
 	{
 		display_character(0x0000, 0x0008 * pos, '>');
 	}
+}
+
+void __attribute__((optimize("O0"))) list_picture(unsigned short pos)
+{
+	char filename[16];
+	unsigned char dot = 0;
+	
+	for (int i=0; i<16; i++)
+	{
+		filename[i] = 0;
+	}
+	
+	if (pos > 0)
+	{
+		for (int i=0; i<12; i++)
+		{
+			filename[i] = list_name[pos*12+i];
+
+			if (filename[i] == '.')
+			{
+				dot = i;
+				break;
+			}
+		}
+
+		filename[dot+1] = 'B';
+		filename[dot+2] = 'M';
+		filename[dot+3] = 'P';
+	}
+	else
+	{
+		filename[0] = 'P';
+		filename[1] = 'L';
+		filename[2] = 'A';
+		filename[3] = 'Y';
+		filename[4] = 'N';
+		filename[5] = 'E';
+		filename[6] = 'S';
+		filename[7] = '.';
+		filename[8] = 'B';
+		filename[9] = 'M';
+		filename[10] = 'P';
+	}
+	
+	// Global variables
+	FIL file; // File handle for the file we open
+	DIR dir; // Directory information for the current directory
+	FATFS fso; // File System Object for the file system we are reading from
+	
+	//SendString("Initializing disk\n\r\\");
+	
+	// Wait for the disk to initialise
+    while(disk_initialize(0));
+    // Mount the disk
+    f_mount(&fso, "", 0);
+    // Change dir to the root directory
+    f_chdir("/");
+    // Open the directory
+    f_opendir(&dir, ".");
+ 
+	unsigned char buffer[1];
+	unsigned int bytes;
+	unsigned int result;
+	unsigned char color;
+	
+	result = f_open(&file, filename, FA_READ);
+	if (result == 0)
+	{		
+		for (unsigned int i=0; i<54; i++) // header
+		{
+			while (f_read(&file, &buffer[0], 1, &bytes) != 0) { } // MUST READ ONE BYTE AT A TIME!!!
+		}
+		
+		for (unsigned int i=0; i<120; i++)
+		{
+			for (unsigned int j=0; j<128; j++)
+			{
+				color = 0x00;
+				
+				// blue first?
+				while (f_read(&file, &buffer[0], 1, &bytes) != 0) { } // MUST READ ONE BYTE AT A TIME!!!
+				
+				color = (color | ((buffer[0] & 0xC0) >> 6));
+				
+				// green second?
+				while (f_read(&file, &buffer[0], 1, &bytes) != 0) { } // MUST READ ONE BYTE AT A TIME!!!
+				
+				color = (color | ((buffer[0] & 0xE0) >> 3));
+				
+				// red third?
+				while (f_read(&file, &buffer[0], 1, &bytes) != 0) { } // MUST READ ONE BYTE AT A TIME!!!
+				
+				color = (color | ((buffer[0] & 0xE0)));
+				
+				screen_buffer[(180-i)*SCREEN_X + 256 + j*2] = color;
+				screen_buffer[(180-i)*SCREEN_X + 256 + j*2 + 1] = color;
+			}
+		}
+		
+		while (f_sync(&file) != 0) { }
+		while (f_close(&file) != 0) { }
+		
+		//SendString("Read cart picture from file\n\r\\");
+	}
+	else
+	{		
+		for (unsigned int i=0; i<240; i++)
+		{
+			for (unsigned int j=0; j<256; j++)
+			{
+				screen_buffer[(240-i)*SCREEN_X + 256 + j] = 0x00;
+			}
+		}
+		
+		//SendString("Could not read cart picture from file\n\r\\");
+	}	
 }
 
 int __attribute__((optimize("O0"))) main()
@@ -916,36 +1034,37 @@ int __attribute__((optimize("O0"))) main()
 	
 	DelayMS(1000);
 	
-	list_name[0][0] = 'P';
-	list_name[0][1] = 'L';
-	list_name[0][2] = 'A';
-	list_name[0][3] = 'Y';
-	list_name[0][4] = ' ';
-	list_name[0][5] = 'G';
-	list_name[0][6] = 'A';
-	list_name[0][7] = 'M';
-	list_name[0][8] = 'E';
-	list_name[0][9] = ' ';
-	list_name[0][10] = ' ';
-	list_name[0][11] = ' ';
+	list_name[0] = 'P';
+	list_name[1] = 'L';
+	list_name[2] = 'A';
+	list_name[3] = 'Y';
+	list_name[4] = ' ';
+	list_name[5] = 'G';
+	list_name[6] = 'A';
+	list_name[7] = 'M';
+	list_name[8] = 'E';
+	list_name[9] = ' ';
+	list_name[10] = ' ';
+	list_name[11] = ' ';
 	
 	list_generate();
-	
 	
 	menu_pos = 0;
 	menu_wait = 0;
 	
 	list_display(menu_pos);
+	list_picture(menu_pos);
 	
 	while (PORTKbits.RK4 == 1 && PORTKbits.RK5 == 1)
 	{	
 		if (PORTKbits.RK0 == 0 && menu_wait == 0)
 		{
-			menu_wait = 0x0005FFFF;
+			menu_wait = 0x0001FFFF;
 			
 			if (menu_pos > 0) menu_pos--;
 			
 			list_display(menu_pos);
+			list_picture(menu_pos);
 		}
 		else
 		{
@@ -954,11 +1073,12 @@ int __attribute__((optimize("O0"))) main()
 		
 		if (PORTKbits.RK1 == 0 && menu_wait == 0)
 		{
-			menu_wait = 0x0005FFFF;
+			menu_wait = 0x0001FFFF;
 			
 			if (menu_pos < list_total-1) menu_pos++;
 			
 			list_display(menu_pos);
+			list_picture(menu_pos);
 		}
 		else
 		{
@@ -1133,9 +1253,23 @@ int __attribute__((optimize("O0"))) main()
 		}
 	}
 	else
-	{
-		nes_burn((char *)list_name[menu_pos]);
+	{		
+		
+		char filename[16];
+		
+		for (int i=0; i<16; i++)
+		{
+			filename[i] = 0;
+		}
+		
+		for (int i=0; i<12; i++)
+		{
+			filename[i] = list_name[menu_pos*12+i];
+		}
+		
+		nes_burn(filename);
 	}
+	
 	
 	while (1)
 	{
