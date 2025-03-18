@@ -305,7 +305,7 @@ void __attribute__((optimize("O0"))) Setup()
 	
 	
 	// set shadow register priorities???
-	PRISS = 0x76543210;
+	PRISS = 0x76543211; //0x76543210;
 	
 	// enable multi-vector interrupts???
 	INTCONSET = _INTCON_MVEC_MASK;

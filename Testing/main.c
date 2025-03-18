@@ -1053,7 +1053,7 @@ int __attribute__((optimize("O0"))) main()
 	menu_wait = 0;
 	
 	list_display(menu_pos);
-	list_picture(menu_pos);
+	//list_picture(menu_pos);
 	
 	while (PORTKbits.RK4 == 1 && PORTKbits.RK5 == 1)
 	{	
@@ -1064,7 +1064,7 @@ int __attribute__((optimize("O0"))) main()
 			if (menu_pos > 0) menu_pos--;
 			
 			list_display(menu_pos);
-			list_picture(menu_pos);
+			//list_picture(menu_pos);
 		}
 		else
 		{
@@ -1078,7 +1078,7 @@ int __attribute__((optimize("O0"))) main()
 			if (menu_pos < list_total-1) menu_pos++;
 			
 			list_display(menu_pos);
-			list_picture(menu_pos);
+			//list_picture(menu_pos);
 		}
 		else
 		{
