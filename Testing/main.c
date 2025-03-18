@@ -1018,6 +1018,7 @@ int __attribute__((optimize("O0"))) main()
 {
 	unsigned short menu_pos = 0;
 	unsigned long menu_wait = 0;
+	unsigned long menu_delay = 0;
 	
 	unsigned long rate = 3; // default of 3:1 frame rate
 	
@@ -1053,18 +1054,25 @@ int __attribute__((optimize("O0"))) main()
 	menu_wait = 0;
 	
 	list_display(menu_pos);
-	//list_picture(menu_pos);
+	list_picture(menu_pos);
 	
 	while (PORTKbits.RK4 == 1 && PORTKbits.RK5 == 1)
 	{	
 		if (PORTKbits.RK0 == 0 && menu_wait == 0)
 		{
-			menu_wait = 0x0001FFFF;
+			menu_wait = 0x0005FFFF;
 			
 			if (menu_pos > 0) menu_pos--;
 			
 			list_display(menu_pos);
-			//list_picture(menu_pos);
+			
+			for (unsigned int i=0; i<240; i++)
+			{
+				for (unsigned int j=0; j<256; j++)
+				{
+					screen_buffer[(240-i)*SCREEN_X + 256 + j] = 0x00;
+				}
+			}
 		}
 		else
 		{
@@ -1073,16 +1081,37 @@ int __attribute__((optimize("O0"))) main()
 		
 		if (PORTKbits.RK1 == 0 && menu_wait == 0)
 		{
-			menu_wait = 0x0001FFFF;
+			menu_wait = 0x0005FFFF;
 			
 			if (menu_pos < list_total-1) menu_pos++;
 			
 			list_display(menu_pos);
-			//list_picture(menu_pos);
+			
+			for (unsigned int i=0; i<240; i++)
+			{
+				for (unsigned int j=0; j<256; j++)
+				{
+					screen_buffer[(240-i)*SCREEN_X + 256 + j] = 0x00;
+				}
+			}
 		}
 		else
 		{
 			if (menu_wait > 0) menu_wait--;
+		}
+		
+		if (menu_wait == 0)
+		{
+			if (menu_delay > 0) menu_delay--;
+		
+			if (menu_delay == 1)
+			{
+				list_picture(menu_pos);
+			}
+		}
+		else
+		{
+			menu_delay = 0x0005FFFF;
 		}
 	}
 	
@@ -1204,8 +1233,18 @@ int __attribute__((optimize("O0"))) main()
 				if (menu_pos == 0) { }
 				else if (menu_pos == 1) { audio_enable = 1; nes_audio_flag = 1; }
 				else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
-				else if (menu_pos == 3) { nes_hack_bottom_hud = 1; nes_hack_sprite_priority = 1; }
-				else if (menu_pos == 4) { nes_hack_bottom_hud = 0; nes_hack_sprite_priority = 0; }
+				else if (menu_pos == 3)
+				{
+					//nes_hack_top_hud = 1;
+					nes_hack_bottom_hud = 1;
+					nes_hack_sprite_priority = 1;
+				}
+				else if (menu_pos == 4)
+				{
+					//nes_hack_top_hud = 0;
+					nes_hack_bottom_hud = 0;
+					nes_hack_sprite_priority = 0;
+				}
 				else if (menu_pos > 4 && menu_pos <= 9) rate = (unsigned long)(menu_pos - 4);
 				else if (menu_pos == 10)
 				{
