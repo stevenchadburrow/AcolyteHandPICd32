@@ -30,9 +30,9 @@ unsigned long nes_pixel_location = 0;
 
 volatile unsigned long nes_interrupt_count = 0;
 
-//volatile unsigned short nes_hack_top_hud = 0; // Duck Tales
-volatile unsigned short nes_hack_bottom_hud = 0; // Mario 3 and Kirby
-volatile unsigned short nes_hack_sprite_priority = 0; // Mario 3
+volatile unsigned char nes_hack_top_hud = 0; // Duck Tales
+volatile unsigned char nes_hack_bottom_hud = 0; // Mario 3 and Kirby
+volatile unsigned char nes_hack_sprite_priority = 0; // Mario 3
 
 unsigned long cpu_current_cycles = 0, cpu_dma_cycles = 0;
 unsigned long ppu_scanline_cycles = 0;
@@ -40,67 +40,69 @@ unsigned long ppu_frame_cycles = 0;
 unsigned long ppu_frame_count = 0;
 volatile signed long ppu_scanline_count = 0; // needs to be signed
 volatile signed long ppu_scanline_interrupt = 0;
-//volatile signed long ppu_scanline_sprite_0 = 0;
+volatile signed long ppu_scanline_sprite_0 = 0;
 unsigned long apu_sample_cycles = 0;
 
 unsigned short map_number = 0x0000;
-unsigned short map_unrom_bank = 0x0000;
-unsigned short map_cnrom_bank = 0x0000;
 
-unsigned short map_mmc1_shift = 0x0000;
-unsigned short map_mmc1_count = 0x0000;
-unsigned short map_mmc1_prg_mode = 0x0003; // should be 0x0003
-unsigned short map_mmc1_chr_mode = 0x0000;
-unsigned short map_mmc1_chr_bank_0 = 0x0010; // leave at 0x0010 for large PRG_ROM
-unsigned short map_mmc1_chr_bank_1 = 0x0000;
-unsigned short map_mmc1_prg_bank = 0x0000;
-unsigned short map_mmc1_ram = 0x0000;
+unsigned long map_unrom_bank = 0x0000;
+unsigned long map_cnrom_bank = 0x0000;
 
-unsigned short map_mmc3_bank_next = 0x0000;
-unsigned short map_mmc3_prg_mode = 0x0000;
-unsigned short map_mmc3_chr_mode = 0x0000;
-unsigned short map_mmc3_bank_r0 = 0x0000;
-unsigned short map_mmc3_bank_r1 = 0x0000;
-unsigned short map_mmc3_bank_r2 = 0x0000;
-unsigned short map_mmc3_bank_r3 = 0x0000;
-unsigned short map_mmc3_bank_r4 = 0x0000;
-unsigned short map_mmc3_bank_r5 = 0x0000;
-unsigned short map_mmc3_bank_r6 = 0x0000;
-unsigned short map_mmc3_bank_r7 = 0x0000;
-unsigned short map_mmc3_ram = 0x0000;
-unsigned short map_mmc3_irq_latch = 0x007F;
-unsigned short map_mmc3_irq_counter = 0x007F; // start at something above 0??
-unsigned short map_mmc3_irq_enable = 0x0000;
-unsigned short map_mmc3_irq_previous = 0x0000;
-unsigned short map_mmc3_irq_interrupt = 0x0000;
+unsigned long map_mmc1_shift = 0x0000;
+unsigned long map_mmc1_count = 0x0000;
+unsigned long map_mmc1_prg_mode = 0x0003; // should be 0x0003
+unsigned long map_mmc1_chr_mode = 0x0000;
+unsigned long map_mmc1_chr_bank_0 = 0x0010; // leave at 0x0010 for large PRG_ROM
+unsigned long map_mmc1_chr_bank_1 = 0x0000;
+unsigned long map_mmc1_prg_bank = 0x0000;
+unsigned long map_mmc1_ram = 0x0000;
 
-unsigned short cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
-unsigned short cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
-unsigned short cpu_flag_d = 0x0000, cpu_flag_i = 0x0001;
-unsigned short cpu_reg_pc = 0xFFFC;
+unsigned long map_mmc3_bank_next = 0x0000;
+unsigned long map_mmc3_prg_mode = 0x0000;
+unsigned long map_mmc3_chr_mode = 0x0000;
+unsigned long map_mmc3_bank_r0 = 0x0000;
+unsigned long map_mmc3_bank_r1 = 0x0000;
+unsigned long map_mmc3_bank_r2 = 0x0000;
+unsigned long map_mmc3_bank_r3 = 0x0000;
+unsigned long map_mmc3_bank_r4 = 0x0000;
+unsigned long map_mmc3_bank_r5 = 0x0000;
+unsigned long map_mmc3_bank_r6 = 0x0000;
+unsigned long map_mmc3_bank_r7 = 0x0000;
+unsigned long map_mmc3_ram = 0x0000;
+unsigned long map_mmc3_irq_latch = 0x007F;
+unsigned long map_mmc3_irq_counter = 0x007F; // start at something above 0??
+unsigned long map_mmc3_irq_enable = 0x0000;
+unsigned long map_mmc3_irq_previous = 0x0000;
+unsigned long map_mmc3_irq_interrupt = 0x0000;
 
-unsigned short cpu_temp_opcode = 0x0000, cpu_temp_memory = 0x0000, cpu_temp_address = 0x0000; 
-unsigned short cpu_temp_result = 0x0000, cpu_temp_cycles = 0x0000;
+unsigned long cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
+unsigned long cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
+unsigned long cpu_flag_d = 0x0000, cpu_flag_i = 0x0001;
+unsigned long cpu_reg_pc = 0xFFFC;
 
-unsigned short cpu_status_r = 0x0000;
+unsigned long cpu_temp_opcode = 0x0000, cpu_temp_memory = 0x0000, cpu_temp_address = 0x0000; 
+unsigned long cpu_temp_result = 0x0000, cpu_temp_cycles = 0x0000;
 
-unsigned short ppu_reg_v = 0x0000, ppu_reg_t = 0x0000, ppu_reg_w = 0x0000;
-unsigned short ppu_reg_a = 0x0000, ppu_reg_b = 0x0000;
-unsigned short ppu_reg_x = 0x0000;
-unsigned short ppu_reg_r = 0x0000;
+unsigned long cpu_status_r = 0x0000;
 
-// flag_e and flag_v were 0x0001;
-unsigned short ppu_flag_e = 0x0000, ppu_flag_p = 0x0000, ppu_flag_h = 0x0000;
-unsigned short ppu_flag_b = 0x0000, ppu_flag_s = 0x0000, ppu_flag_i = 0x0000;
-unsigned short ppu_flag_v = 0x0000, ppu_flag_0 = 0x0000, ppu_flag_o = 0x0000;
+unsigned long ppu_reg_v = 0x0000, ppu_reg_t = 0x0000, ppu_reg_w = 0x0000;
+unsigned long ppu_reg_a = 0x0000, ppu_reg_b = 0x0000;
+unsigned long ppu_reg_x = 0x0000;
+unsigned long ppu_reg_r = 0x0000;
 
-unsigned short ppu_flag_g = 0x0000, ppu_flag_lb = 0x0000, ppu_flag_ls = 0x0000;
-unsigned short ppu_flag_eb = 0x0000, ppu_flag_es = 0x0000;
+unsigned long ppu_flag_e = 0x0000, ppu_flag_p = 0x0000, ppu_flag_h = 0x0000;
+unsigned long ppu_flag_b = 0x0000, ppu_flag_s = 0x0000, ppu_flag_i = 0x0000;
+unsigned long ppu_flag_v = 0x0000, ppu_flag_0 = 0x0000, ppu_flag_o = 0x0000;
 
-unsigned short ppu_status_0 = 0x0000, ppu_status_s = 0x0000, ppu_status_m = 0x0000;
-unsigned short ppu_status_d = 0x0000;
+unsigned long ppu_flag_g = 0x0000, ppu_flag_lb = 0x0000, ppu_flag_ls = 0x0000;
+unsigned long ppu_flag_eb = 0x0000, ppu_flag_es = 0x0000;
 
-unsigned short ctl_flag_s = 0x0000;
+unsigned long ppu_status_0 = 0x0000;
+signed long ppu_status_s = 0x0000; // needs to be signed
+signed long ppu_status_d = 0x0000;
+unsigned long ppu_status_m = 0x0000;
+
+unsigned long ctl_flag_s = 0x0000;
 unsigned long ctl_value_1 = 0x0000, ctl_value_2 = 0x0000;
 unsigned long ctl_latch_1 = 0x0000, ctl_latch_2 = 0x0000;
 
@@ -185,7 +187,7 @@ volatile unsigned char apu_length[32] = {
 	 12,  16,  24,  18,  48,  20,  96,  22, 192,  24,  72,  26,  16,  28,  32,  30
 };
 
-volatile unsigned short apu_duty[32] = {
+volatile unsigned char apu_duty[32] = {
 	0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00,
@@ -590,8 +592,11 @@ void __attribute__((optimize("O0"))) nes_irq_decrement()
 }
 
 unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
-{		
-	if (addr < 0x00002000) return nes_read_cpu_ram((addr&0x000007FF)); // internal ram (and mirrors)
+{			
+	if (addr < 0x00002000)
+	{
+		return nes_read_cpu_ram((addr&0x000007FF)); // internal ram (and mirrors)
+	}
 	else if (addr < 0x00004000) // ppu (and mirrors)
 	{
 		switch ((addr&0x00000007))
@@ -999,6 +1004,7 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 		}
 		else if (map_number == 0x0002) // unrom
 		{
+			last_location = ((prg_offset+0x4000*map_unrom_bank+addr-0x8000));
 			return cart_rom[((prg_offset+0x4000*map_unrom_bank+addr-0x8000))];
 		}
 		else if (map_number == 0x0003) // cnrom
@@ -1118,7 +1124,10 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 
 void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char val)
 {		
-	if (addr < 0x00002000) nes_write_cpu_ram((addr&0x000007FF), val); // internal ram (and mirrors)
+	if (addr < 0x00002000)
+	{
+		nes_write_cpu_ram((addr&0x000007FF), val); // internal ram (and mirrors)
+	}
 	else if (addr < 0x00004000) // ppu (and mirrors)
 	{
 		switch ((addr&0x00000007))
@@ -2020,6 +2029,8 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 unsigned short __attribute__((optimize("O2"))) cpu_run()
 {	
 	cpu_temp_opcode = cpu_read(cpu_reg_pc++);
+	
+	last_opcode = cpu_temp_opcode;
 	
 	switch (cpu_temp_opcode)
 	{
@@ -3639,7 +3650,7 @@ void __attribute__((optimize("O2"))) nes_audio(unsigned long cycles)
 		{
 			apu_pulse_1_k -= (apu_pulse_1_t<<1);
 			
-			apu_pulse_1_o = (apu_duty[(apu_pulse_1_d<<3)+apu_pulse_1_u] & (apu_pulse_1_v << 4));
+			apu_pulse_1_o = (unsigned short)(apu_duty[(apu_pulse_1_d<<3)+apu_pulse_1_u] & (apu_pulse_1_v << 4));
 			
 			apu_pulse_1_u++;
 			
@@ -3656,7 +3667,7 @@ void __attribute__((optimize("O2"))) nes_audio(unsigned long cycles)
 		{
 			apu_pulse_2_k -= (apu_pulse_2_t<<1);
 			
-			apu_pulse_2_o = (apu_duty[(apu_pulse_2_d<<3)+apu_pulse_2_u] & (apu_pulse_2_v << 4));
+			apu_pulse_2_o = (unsigned short)(apu_duty[(apu_pulse_2_d<<3)+apu_pulse_2_u] & (apu_pulse_2_v << 4));
 			
 			apu_pulse_2_u++;
 			
@@ -3789,13 +3800,13 @@ void __attribute__((optimize("O2"))) nes_mixer()
 }
 
 void __attribute__((optimize("O2"))) nes_sprite_0_calc()
-{
+{	
 	// sprite 0
 	if (ppu_flag_h == 0) // 8x8 sprites
 	{
-		//ppu_status_s = 8;
+		ppu_status_s = 8;
 		
-		for (unsigned short i=0; i<8; i++)
+		for (unsigned long i=0; i<8; i++)
 		{
 			if (map_number == 1) // mmc1
 			{
@@ -3887,9 +3898,9 @@ void __attribute__((optimize("O2"))) nes_sprite_0_calc()
 	}
 	else // 8x16 sprites
 	{
-		//ppu_status_s = 16;
+		ppu_status_s = 16;
 		
-		for (unsigned short i=0; i<16; i++)
+		for (unsigned long i=0; i<16; i++)
 		{
 			if (i < 8)
 			{
@@ -4071,6 +4082,9 @@ void __attribute__((optimize("O2"))) nes_sprite_0_calc()
 			}
 		}
 	}
+	
+	ppu_status_s += oam_ram[0]; // add y-coordinate
+	ppu_status_d = oam_ram[3]; // x-coordinate
 }
 
 // needs to be unoptimized else it will be deleted
@@ -4140,12 +4154,12 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		cpu_reg_pc = cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFC] + (cart_rom[prg_offset+0x4000*(cart_rom[4]-1)+0x3FFD] << 8);
 		
 		// hacks
-		//nes_hack_top_hud = 0;
+		nes_hack_top_hud = 0;
 		nes_hack_bottom_hud = 0;
 		nes_hack_sprite_priority = 0;
 		
 		unsigned long loc = prg_offset+0x4000*(cart_rom[4]-1)+0x3FE0;
-		/*
+		
 		if (map_number == 2) // unrom
 		{
 			if (cart_rom[loc+0] == 0xAA && // Duck Tales
@@ -4168,7 +4182,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 				nes_hack_top_hud = 1;
 			}
 		}
-		*/
+		
 		if (map_number == 4) // mmc3
 		{
 			if (cart_rom[loc+0] == 0xFF && // Mario 3
@@ -4227,6 +4241,8 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		//SendString("Reset\n\r\\");
 	}
 	
+	last_location = 0x0000;
+	
 	cpu_current_cycles = 0;
 
 	cpu_current_cycles += cpu_run();
@@ -4239,6 +4255,8 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 	{
 		nes_error(0x01);
 	}
+	
+	last_location = 0x00FF;
 	
 	ppu_scanline_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);
 	
@@ -4313,7 +4331,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 	}
 	
 	if (map_number == 4 && map_mmc3_irq_interrupt > 0) map_mmc3_irq_interrupt = 0;
-
+	
 	ppu_frame_cycles += (cpu_current_cycles<<1);
 	
 	if (ppu_frame_cycles < 4546) // 2273 cycles in v-blank
@@ -4326,29 +4344,32 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		ppu_status_0 = 0;
 	}
 	else if (ppu_frame_cycles < 59565) // 29780.5 cycles per frame
-	{
-		if (ppu_frame_count == loop_count && ppu_flag_v == 0x0001)
-		{
+	{	
+		if (ppu_flag_v == 0x0001)
+		{	
 			nes_sprite_0_calc();
 			
-			nes_sprites(1, 0, 255);
+			if (ppu_frame_count == loop_count)
+			{
+				nes_sprites(1, 0, 255);
+			}
 		}
 		
 		// v-sync
 		ppu_flag_v = 0x0000;
 		
-		if (ppu_scanline_count >= (oam_ram[0]+ppu_status_s) && ppu_scanline_cycles >= (oam_ram[3]) && ppu_status_0 == 0) // very rough math
-		{
+		if (ppu_scanline_count >= (ppu_status_s) && ppu_scanline_cycles >= (ppu_status_d) && ppu_status_0 == 0) // very rough math
+		{	
 			ppu_status_0 = 1;
 			
 			ppu_flag_0 = 1;
 			
-			//if (nes_hack_top_hud > 0)
-			//{
-			//	ppu_scanline_sprite_0 = ppu_scanline_count;
-			//	
-			//	nes_sprites(0, 0, ppu_scanline_count); // hack for Duck Tales
-			//}
+			if (nes_hack_top_hud > 0)
+			{
+				ppu_scanline_sprite_0 = ppu_scanline_count;
+				
+				nes_sprites(0, 0, ppu_scanline_count); // hack for Duck Tales
+			}
 		}
 	}
 	else
@@ -4384,14 +4405,14 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		{
 			ppu_frame_count = 0;
 			
-			//if (ppu_scanline_sprite_0 > 0)
-			//{
-			//	nes_sprites(0, ppu_scanline_sprite_0, 255);
-			//}
-			//else
-			//{
+			if (ppu_scanline_sprite_0 > 0)
+			{
+				nes_sprites(0, ppu_scanline_sprite_0, 255);
+			}
+			else
+			{
 				nes_sprites(0, ppu_scanline_interrupt, 255);
-			//}
+			}
 
 			nes_frame();
 			
@@ -4399,7 +4420,7 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		}
 		
 		ppu_scanline_interrupt = 0;
-		//ppu_scanline_sprite_0 = 0;
+		ppu_scanline_sprite_0 = 0;
 		
 		ppu_scanline_count = -21;
 		//ppu_scanline_count = 0;

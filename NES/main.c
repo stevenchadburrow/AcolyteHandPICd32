@@ -247,8 +247,19 @@ void SendLongHex(unsigned long value)
 	SendHex((unsigned char)(temp));
 }
 
+volatile unsigned long last_opcode = 0x0000; // TEMPORARY!
+volatile unsigned long last_location = 0x0000; // TEMPORARY!
+
 void _general_exception_handler(void)
 {
+	SendString("Last Opcode \\");
+	SendLongHex(last_opcode); // TEMPORARY!
+	SendString("\n\r\\");
+	
+	SendString("Last Location \\");
+	SendLongHex(last_location); // TEMPORARY!
+	SendString("\n\r\\");
+	
 	SendString("General Exception\n\r\\");
 	SendLongHex(((_CP0_GET_CAUSE() & 0x0000007C) >> 2));
 	SendString("\n\r\\");
@@ -1014,13 +1025,175 @@ void __attribute__((optimize("O0"))) list_picture(unsigned short pos)
 	}	
 }
 
+unsigned short menu_pos = 0;
+unsigned long menu_wait = 0;
+unsigned long menu_delay = 0;
+unsigned long menu_rate = 3; // default of 3:1 frame rate
+
+void __attribute__((optimize("O0"))) game_loop()
+{
+	while (1)
+	{ 
+		/*
+		if (PORTKbits.RK7 == 0)
+		{
+			while (PORTKbits.RK7 == 0) { }
+
+			for (unsigned short i=0; i<AUDIO_LEN; i++)
+			{
+				audio_buffer[i] = 0x00;
+			}
+
+			for (unsigned short y=0; y<SCREEN_Y*2; y++)
+			{
+				for (unsigned short x=0; x<SCREEN_X; x++)
+				{
+					screen_buffer[y*SCREEN_X+x] = 0x00;
+					screen_buffer[y*SCREEN_X+x] = 0x00;
+				}
+			}
+
+			controller_enable = 0;
+			screen_frame = 0;
+
+			DelayMS(1000);
+
+			display_string(0x0000, 0x0000, "  Return to Game\\");
+			display_string(0x0000, 0x0008, "  Audio Enable\\");
+			display_string(0x0000, 0x0010, "  Audio Disable\\");
+			display_string(0x0000, 0x0018, "  Hacks Enable\\");
+			display_string(0x0000, 0x0020, "  Hacks Disable\\");
+			display_string(0x0000, 0x0028, "  Frames 1:1\\");
+			display_string(0x0000, 0x0030, "  Frames 2:1\\");
+			display_string(0x0000, 0x0038, "  Frames 3:1\\");
+			display_string(0x0000, 0x0040, "  Frames 4:1\\");
+			display_string(0x0000, 0x0048, "  Frames 5:1\\");
+			display_string(0x0000, 0x0050, "  Load Game A\\");
+			display_string(0x0000, 0x0058, "  Load Game B\\");
+			display_string(0x0000, 0x0060, "  Load Game C\\");
+			display_string(0x0000, 0x0068, "  Load Game D\\");
+			display_string(0x0000, 0x0070, "  Save Game A\\");
+			display_string(0x0000, 0x0078, "  Save Game B\\");
+			display_string(0x0000, 0x0080, "  Save Game C\\");
+			display_string(0x0000, 0x0088, "  Save Game D\\");
+
+			DelayMS(1000);
+
+			menu_pos = 0;
+			menu_wait = 0;
+
+			while (PORTKbits.RK4 == 1 && PORTKbits.RK5 == 1)
+			{	
+				display_character(0x0000, 0x0008*menu_pos, '>');
+
+				if (PORTKbits.RK0 == 0 && menu_wait == 0)
+				{
+					menu_wait = 0x00013FFF;
+
+					display_character(0x0000, 0x0008*menu_pos, ' ');
+
+					if (menu_pos > 0) menu_pos--;
+				}
+				else
+				{
+					if (menu_wait > 0) menu_wait--;
+				}
+
+				if (PORTKbits.RK1 == 0 && menu_wait == 0)
+				{
+					menu_wait = 0x00013FFF;
+
+					display_character(0x0000, 0x0008*menu_pos, ' ');
+
+					if (menu_pos < 17) menu_pos++;
+				}
+				else
+				{
+					if (menu_wait > 0) menu_wait--;
+				}
+			}
+
+			for (unsigned short i=0; i<AUDIO_LEN; i++)
+			{
+				audio_buffer[i] = 0x00;
+			}
+
+			for (unsigned short y=0; y<SCREEN_Y*2; y++)
+			{
+				for (unsigned short x=0; x<SCREEN_X; x++)
+				{
+					screen_buffer[y*SCREEN_X+x] = 0x00;
+					screen_buffer[y*SCREEN_X+x] = 0x00;
+				}
+			}
+
+			controller_enable = 1;
+
+			if (menu_pos == 0) { }
+			else if (menu_pos == 1) { audio_enable = 1; nes_audio_flag = 1; }
+			else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
+			else if (menu_pos == 3)
+			{
+				nes_hack_top_hud = 1;
+				nes_hack_bottom_hud = 1;
+				nes_hack_sprite_priority = 1;
+			}
+			else if (menu_pos == 4)
+			{
+				nes_hack_top_hud = 0;
+				nes_hack_bottom_hud = 0;
+				nes_hack_sprite_priority = 0;
+			}
+			else if (menu_pos > 4 && menu_pos <= 9) menu_rate = (unsigned long)(menu_pos - 4);
+			else if (menu_pos == 10)
+			{
+				nes_load("GAME-A.SAV");
+
+				nes_reset_flag = 0;
+			}
+			else if (menu_pos == 11)
+			{
+				nes_load("GAME-B.SAV");
+
+				nes_reset_flag = 0;
+			}
+			else if (menu_pos == 12)
+			{
+				nes_load("GAME-C.SAV");
+
+				nes_reset_flag = 0;
+			}
+			else if (menu_pos == 13)
+			{
+				nes_load("GAME-D.SAV");
+
+				nes_reset_flag = 0;
+			}
+			else if (menu_pos == 14)
+			{
+				nes_save("GAME-A.SAV");
+			}
+			else if (menu_pos == 15)
+			{
+				nes_save("GAME-B.SAV");
+			}
+			else if (menu_pos == 16)
+			{
+				nes_save("GAME-C.SAV");
+			}
+			else if (menu_pos == 17)
+			{
+				nes_save("GAME-D.SAV");
+			}
+		}
+		*/
+		nes_loop(menu_rate); // frame rate divider and external interrupt
+	}
+}
+
 int __attribute__((optimize("O0"))) main()
 {
-	unsigned short menu_pos = 0;
-	unsigned long menu_wait = 0;
-	unsigned long menu_delay = 0;
-	
-	unsigned long rate = 3; // default of 3:1 frame rate
+	unsigned short sdcard_flag = 0;
 	
 	audio_enable = 0;
 	
@@ -1047,6 +1220,27 @@ int __attribute__((optimize("O0"))) main()
 	list_name[9] = '!';
 	list_name[10] = ' ';
 	list_name[11] = ' ';
+	
+	sdcard_flag = 0;
+	
+	SendString("Checking SD Card...\n\r\\");
+	
+	// Wait for the disk to initialise
+    if (disk_initialize(0) == 0)
+	{
+		sdcard_flag = 1;
+	}
+	
+	if (sdcard_flag == 0)
+	{
+		SendString("SD Card Not Found!\n\r\\");
+		
+		game_loop();
+		
+		while (1) { }
+	}
+	
+	SendString("SD Card Found!\n\r\\");
 	
 	list_generate();
 	
@@ -1134,162 +1328,7 @@ int __attribute__((optimize("O0"))) main()
 		audio_enable = 1; // audio on by default
 		controller_enable = 1; // must be on to play games
 		
-		while (1)
-		{ 
-			if (PORTKbits.RK7 == 0)
-			{
-				while (PORTKbits.RK7 == 0) { }
-				
-				for (unsigned short i=0; i<AUDIO_LEN; i++)
-				{
-					audio_buffer[i] = 0x00;
-				}
-				
-				for (unsigned short y=0; y<SCREEN_Y*2; y++)
-				{
-					for (unsigned short x=0; x<SCREEN_X; x++)
-					{
-						screen_buffer[y*SCREEN_X+x] = 0x00;
-						screen_buffer[y*SCREEN_X+x] = 0x00;
-					}
-				}
-				
-				controller_enable = 0;
-				screen_frame = 0;
-				
-				DelayMS(1000);
-
-				display_string(0x0000, 0x0000, "  Return to Game\\");
-				display_string(0x0000, 0x0008, "  Audio Enable\\");
-				display_string(0x0000, 0x0010, "  Audio Disable\\");
-				display_string(0x0000, 0x0018, "  Hacks Enable\\");
-				display_string(0x0000, 0x0020, "  Hacks Disable\\");
-				display_string(0x0000, 0x0028, "  Frames 1:1\\");
-				display_string(0x0000, 0x0030, "  Frames 2:1\\");
-				display_string(0x0000, 0x0038, "  Frames 3:1\\");
-				display_string(0x0000, 0x0040, "  Frames 4:1\\");
-				display_string(0x0000, 0x0048, "  Frames 5:1\\");
-				display_string(0x0000, 0x0050, "  Load Game A\\");
-				display_string(0x0000, 0x0058, "  Load Game B\\");
-				display_string(0x0000, 0x0060, "  Load Game C\\");
-				display_string(0x0000, 0x0068, "  Load Game D\\");
-				display_string(0x0000, 0x0070, "  Save Game A\\");
-				display_string(0x0000, 0x0078, "  Save Game B\\");
-				display_string(0x0000, 0x0080, "  Save Game C\\");
-				display_string(0x0000, 0x0088, "  Save Game D\\");
-				
-				DelayMS(1000);
-				
-				menu_pos = 0;
-				menu_wait = 0;
-				
-				while (PORTKbits.RK4 == 1 && PORTKbits.RK5 == 1)
-				{	
-					display_character(0x0000, 0x0008*menu_pos, '>');
-
-					if (PORTKbits.RK0 == 0 && menu_wait == 0)
-					{
-						menu_wait = 0x00013FFF;
-
-						display_character(0x0000, 0x0008*menu_pos, ' ');
-
-						if (menu_pos > 0) menu_pos--;
-					}
-					else
-					{
-						if (menu_wait > 0) menu_wait--;
-					}
-
-					if (PORTKbits.RK1 == 0 && menu_wait == 0)
-					{
-						menu_wait = 0x00013FFF;
-
-						display_character(0x0000, 0x0008*menu_pos, ' ');
-
-						if (menu_pos < 17) menu_pos++;
-					}
-					else
-					{
-						if (menu_wait > 0) menu_wait--;
-					}
-				}
-				
-				for (unsigned short i=0; i<AUDIO_LEN; i++)
-				{
-					audio_buffer[i] = 0x00;
-				}
-
-				for (unsigned short y=0; y<SCREEN_Y*2; y++)
-				{
-					for (unsigned short x=0; x<SCREEN_X; x++)
-					{
-						screen_buffer[y*SCREEN_X+x] = 0x00;
-						screen_buffer[y*SCREEN_X+x] = 0x00;
-					}
-				}
-				
-				controller_enable = 1;
-				
-				if (menu_pos == 0) { }
-				else if (menu_pos == 1) { audio_enable = 1; nes_audio_flag = 1; }
-				else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
-				else if (menu_pos == 3)
-				{
-					//nes_hack_top_hud = 1;
-					nes_hack_bottom_hud = 1;
-					nes_hack_sprite_priority = 1;
-				}
-				else if (menu_pos == 4)
-				{
-					//nes_hack_top_hud = 0;
-					nes_hack_bottom_hud = 0;
-					nes_hack_sprite_priority = 0;
-				}
-				else if (menu_pos > 4 && menu_pos <= 9) rate = (unsigned long)(menu_pos - 4);
-				else if (menu_pos == 10)
-				{
-					nes_load("GAME-A.SAV");
-					
-					nes_reset_flag = 0;
-				}
-				else if (menu_pos == 11)
-				{
-					nes_load("GAME-B.SAV");
-					
-					nes_reset_flag = 0;
-				}
-				else if (menu_pos == 12)
-				{
-					nes_load("GAME-C.SAV");
-					
-					nes_reset_flag = 0;
-				}
-				else if (menu_pos == 13)
-				{
-					nes_load("GAME-D.SAV");
-					
-					nes_reset_flag = 0;
-				}
-				else if (menu_pos == 14)
-				{
-					nes_save("GAME-A.SAV");
-				}
-				else if (menu_pos == 15)
-				{
-					nes_save("GAME-B.SAV");
-				}
-				else if (menu_pos == 16)
-				{
-					nes_save("GAME-C.SAV");
-				}
-				else if (menu_pos == 17)
-				{
-					nes_save("GAME-D.SAV");
-				}
-			}
-			
-			nes_loop(rate); // frame rate divider and external interrupt
-		}
+		game_loop();
 	}
 	else
 	{		
