@@ -1004,7 +1004,6 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 		}
 		else if (map_number == 0x0002) // unrom
 		{
-			last_location = ((prg_offset+0x4000*map_unrom_bank+addr-0x8000));
 			return cart_rom[((prg_offset+0x4000*map_unrom_bank+addr-0x8000))];
 		}
 		else if (map_number == 0x0003) // cnrom
@@ -1793,7 +1792,7 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 	cpu_temp_memory = cpu_read(cpu_reg_pc++); }
 
 #define CPU_ZPR { \
-	cpu_temp_memory = (unsigned short)(cpu_ram[cpu_read(cpu_reg_pc++)]&0x00FF); }
+	cpu_temp_memory = (unsigned long)(cpu_ram[cpu_read(cpu_reg_pc++)]&0x00FF); }
 
 #define CPU_ZPW { \
 	cpu_temp_address = cpu_read(cpu_reg_pc++); }
@@ -1802,7 +1801,7 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 	cpu_temp_address = cpu_read(cpu_reg_pc++); }
 
 #define CPU_ZPXR { \
-	cpu_temp_memory = (unsigned short)(cpu_ram[((cpu_read(cpu_reg_pc++)+cpu_reg_x)&0x00FF)]&0x00FF); }
+	cpu_temp_memory = (unsigned long)(cpu_ram[((cpu_read(cpu_reg_pc++)+cpu_reg_x)&0x00FF)]&0x00FF); }
 
 #define CPU_ZPXW { \
 	cpu_temp_address = ((cpu_read(cpu_reg_pc++)+cpu_reg_x)&0x00FF); }
@@ -1811,7 +1810,7 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 	cpu_temp_address = ((cpu_read(cpu_reg_pc++)+cpu_reg_x)&0x00FF); }
 
 #define CPU_ZPYR { \
-	cpu_temp_memory = (unsigned short)(cpu_ram[((cpu_read(cpu_reg_pc++)+cpu_reg_y)&0x00FF)]&0x00FF); }
+	cpu_temp_memory = (unsigned long)(cpu_ram[((cpu_read(cpu_reg_pc++)+cpu_reg_y)&0x00FF)]&0x00FF); }
 
 #define CPU_ZPYW { \
 	cpu_temp_address = ((cpu_read(cpu_reg_pc++)+cpu_reg_y)&0x00FF); }
@@ -2014,7 +2013,8 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 // internal functions
 #define CPU_BRA { \
 	cpu_temp_address = cpu_reg_pc; \
-	cpu_reg_pc = (unsigned short)(cpu_reg_pc+(signed char)cpu_temp_memory); \
+	if (cpu_temp_memory > 127) cpu_reg_pc = (unsigned long)((cpu_reg_pc + cpu_temp_memory - 256) & 0x0000FFFF); \
+	else cpu_reg_pc = (unsigned long)((cpu_reg_pc + cpu_temp_memory) & 0x0000FFFF); \
 	cpu_temp_cycles += ((cpu_temp_address&0xFF00)!=(cpu_reg_pc&0xFF00)); }
 
 #define CPU_PUSH { \
@@ -2026,11 +2026,9 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 	cpu_temp_memory=cpu_ram[0x0100+cpu_reg_s]; }
 
 
-unsigned short __attribute__((optimize("O2"))) cpu_run()
+unsigned long __attribute__((optimize("O2"))) cpu_run()
 {	
 	cpu_temp_opcode = cpu_read(cpu_reg_pc++);
-	
-	last_opcode = cpu_temp_opcode;
 	
 	switch (cpu_temp_opcode)
 	{
@@ -2253,18 +2251,18 @@ unsigned short __attribute__((optimize("O2"))) cpu_run()
 		case 0x4C:
 		{
 			cpu_temp_cycles = 0x0003;
-			cpu_temp_address = (unsigned short)cpu_read(cpu_reg_pc++);
-			cpu_temp_address += ((unsigned short)cpu_read(cpu_reg_pc++)<<8);
+			cpu_temp_address = (unsigned long)cpu_read(cpu_reg_pc++);
+			cpu_temp_address += ((unsigned long)cpu_read(cpu_reg_pc++)<<8);
 			cpu_reg_pc = cpu_temp_address;
 			break;
 		}
 		case 0x6C:
 		{
 			cpu_temp_cycles = 0x0005;
-			cpu_temp_address = (unsigned short)cpu_read(cpu_reg_pc++);
-			cpu_temp_address += ((unsigned short)cpu_read(cpu_reg_pc++)<<8);
-			cpu_temp_memory = (unsigned short)cpu_read(cpu_temp_address);
-			cpu_temp_memory += (unsigned short)(cpu_read((cpu_temp_address&0xFF00)|(((cpu_temp_address&0x00FF)+1)&0x00FF))<<8);
+			cpu_temp_address = (unsigned long)cpu_read(cpu_reg_pc++);
+			cpu_temp_address += ((unsigned long)cpu_read(cpu_reg_pc++)<<8);
+			cpu_temp_memory = (unsigned long)cpu_read(cpu_temp_address);
+			cpu_temp_memory += (unsigned long)(cpu_read((cpu_temp_address&0xFF00)|(((cpu_temp_address&0x00FF)+1)&0x00FF))<<8);
 			cpu_reg_pc = cpu_temp_memory;
 			break;
 		}
@@ -4241,8 +4239,6 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		//SendString("Reset\n\r\\");
 	}
 	
-	last_location = 0x0000;
-	
 	cpu_current_cycles = 0;
 
 	cpu_current_cycles += cpu_run();
@@ -4255,8 +4251,6 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 	{
 		nes_error(0x01);
 	}
-	
-	last_location = 0x00FF;
 	
 	ppu_scanline_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);
 	

@@ -247,18 +247,23 @@ void SendLongHex(unsigned long value)
 	SendHex((unsigned char)(temp));
 }
 
-volatile unsigned long last_opcode = 0x0000; // TEMPORARY!
-volatile unsigned long last_location = 0x0000; // TEMPORARY!
+//volatile unsigned long last_opcode = 0x0000; // TEMPORARY!
+//volatile unsigned long last_location = 0x0000; // TEMPORARY!
+//volatile unsigned long last_value = 0x0000; // TEMPORARY!
 
 void _general_exception_handler(void)
 {
-	SendString("Last Opcode \\");
-	SendLongHex(last_opcode); // TEMPORARY!
-	SendString("\n\r\\");
+	//SendString("Last Opcode \\");
+	//SendLongHex(last_opcode); // TEMPORARY!
+	//SendString("\n\r\\");
 	
-	SendString("Last Location \\");
-	SendLongHex(last_location); // TEMPORARY!
-	SendString("\n\r\\");
+	//SendString("Last Location \\");
+	//SendLongHex(last_location); // TEMPORARY!
+	//SendString("\n\r\\");
+	
+	//SendString("Last Value \\");
+	//SendLongHex(last_value); // TEMPORARY!
+	//SendString("\n\r\\");
 	
 	SendString("General Exception\n\r\\");
 	SendLongHex(((_CP0_GET_CAUSE() & 0x0000007C) >> 2));
