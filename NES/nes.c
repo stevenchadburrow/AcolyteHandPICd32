@@ -202,7 +202,7 @@ volatile unsigned short apu_period[16] = {
 	4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
 };
 
-volatile void __attribute__((optimize("O0"),vector(_TIMER_8_VECTOR), interrupt(ipl2srs))) t8_handler()
+volatile void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"),vector(_TIMER_8_VECTOR), interrupt(ipl2srs))) t8_handler()
 {		
 	IFS1bits.T8IF = 0;  // clear interrupt flag
 	
@@ -221,7 +221,7 @@ volatile void __attribute__((optimize("O0"),vector(_TIMER_8_VECTOR), interrupt(i
 	}
 }
 
-volatile void __attribute__((optimize("O0"),vector(_TIMER_9_VECTOR), interrupt(ipl3srs))) t9_handler()
+volatile void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"),vector(_TIMER_9_VECTOR), interrupt(ipl3srs))) t9_handler()
 {		
 	IFS1bits.T9IF = 0;  // clear interrupt flag
 	
@@ -231,7 +231,7 @@ volatile void __attribute__((optimize("O0"),vector(_TIMER_9_VECTOR), interrupt(i
 }
 
 // change for platform
-void __attribute__((optimize("O1"))) nes_error(unsigned char code)
+void __attribute__((optimize("O0"))) nes_error(unsigned char code)
 {			
 	SendChar('\n');
 	SendChar('\r');
@@ -507,67 +507,67 @@ void __attribute__((optimize("O2"))) nes_buttons()
 	ctl_value_2 = 0xFF040000 | (controller_status_4 << 8) | controller_status_2;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_cpu_ram(unsigned long addr)
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_read_cpu_ram(unsigned long addr)
 {
 	return cpu_ram[(addr&2047)];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_write_cpu_ram(unsigned long addr, unsigned char val)
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_write_cpu_ram(unsigned long addr, unsigned char val)
 {
 	cpu_ram[(addr&2047)] = val;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_ppu_ram(unsigned long addr)
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_read_ppu_ram(unsigned long addr)
 {
 	return ppu_ram[(addr&2047)];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_write_ppu_ram(unsigned long addr, unsigned char val)
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_write_ppu_ram(unsigned long addr, unsigned char val)
 {
 	ppu_ram[(addr&2047)] = val;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_prg_ram(unsigned long addr)
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_read_prg_ram(unsigned long addr)
 {
 	return prg_ram[(addr&8191)];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_write_prg_ram(unsigned long addr, unsigned char val)
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_write_prg_ram(unsigned long addr, unsigned char val)
 {
 	prg_ram[(addr&8191)] = val;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_chr_ram(unsigned long addr)
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_read_chr_ram(unsigned long addr)
 {
 	return chr_ram[(addr&8191)];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_write_chr_ram(unsigned long addr, unsigned char val)
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_write_chr_ram(unsigned long addr, unsigned char val)
 {
 	chr_ram[(addr&8191)] = val;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_oam_ram(unsigned long addr)
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_read_oam_ram(unsigned long addr)
 {
 	return oam_ram[(addr&255)];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_write_oam_ram(unsigned long addr, unsigned char val)
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_write_oam_ram(unsigned long addr, unsigned char val)
 {
 	oam_ram[(addr&255)] = val;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_pal_ram(unsigned long addr)
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_read_pal_ram(unsigned long addr)
 {
 	return pal_ram[(addr&31)];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_write_pal_ram(unsigned long addr, unsigned char val)
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_write_pal_ram(unsigned long addr, unsigned char val)
 {
 	pal_ram[(addr&31)] = val;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_cart_rom(unsigned long addr)
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_read_cart_rom(unsigned long addr)
 {
 	debug_location = 3;
 	debug_value = addr;
@@ -575,7 +575,7 @@ unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unrol
 	return cart_rom[addr];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_irq_decrement()
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) nes_irq_decrement()
 {
 	if (map_mmc3_irq_counter == 0)
 	{

@@ -1,7 +1,7 @@
 
 
 
-volatile void __attribute__((optimize("00"),vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_handler()
+volatile void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing,caller-saves"),vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_handler()
 {		
     IFS0bits.OC3IF = 0;  // clear interrupt flag
 	
@@ -281,7 +281,7 @@ volatile void __attribute__((optimize("00"),vector(_OUTPUT_COMPARE_3_VECTOR), in
 	return;
 }
 
-volatile void __attribute__((optimize("00"),vector(_CHANGE_NOTICE_D_VECTOR),interrupt(ipl5srs))) cnd_handler()
+volatile void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing,caller-saves"),vector(_CHANGE_NOTICE_D_VECTOR),interrupt(ipl5srs))) cnd_handler()
 {
 	IFS3bits.CNDIF = 0;  // clear interrupt flag
 	
@@ -510,7 +510,7 @@ volatile void __attribute__((optimize("00"),vector(_CHANGE_NOTICE_D_VECTOR),inte
 	return;
 }
 
-volatile void __attribute__((optimize("O0"),vector(_UART3_RX_VECTOR), interrupt(ipl4srs))) u3rx_handler() //, nomips16)) u3rx_handler()
+volatile void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing,caller-saves"),vector(_UART3_RX_VECTOR), interrupt(ipl4srs))) u3rx_handler() //, nomips16)) u3rx_handler()
 {	
 	IFS4bits.U3RXIF = 0;  // clear interrupt flag
 	
