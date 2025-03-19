@@ -247,28 +247,23 @@ void SendLongHex(unsigned long value)
 	SendHex((unsigned char)(temp));
 }
 
-//volatile unsigned long last_opcode = 0x0000; // TEMPORARY!
-//volatile unsigned long last_location = 0x0000; // TEMPORARY!
-//volatile unsigned long last_value = 0x0000; // TEMPORARY!
+volatile unsigned long debug_location = 0x0000; // TEMPORARY!
+volatile unsigned long debug_value = 0x0000; // TEMPORARY!
 
 void _general_exception_handler(void)
-{
-	//SendString("Last Opcode \\");
-	//SendLongHex(last_opcode); // TEMPORARY!
-	//SendString("\n\r\\");
-	
-	//SendString("Last Location \\");
-	//SendLongHex(last_location); // TEMPORARY!
-	//SendString("\n\r\\");
-	
-	//SendString("Last Value \\");
-	//SendLongHex(last_value); // TEMPORARY!
-	//SendString("\n\r\\");
-	
+{	
 	SendString("General Exception\n\r\\");
 	SendLongHex(((_CP0_GET_CAUSE() & 0x0000007C) >> 2));
 	SendString("\n\r\\");
     SendLongHex(_CP0_GET_EPC());
+	SendString("\n\r\\");
+	
+	SendString("Debug Location \\");
+	SendLongHex(debug_location); // TEMPORARY!
+	SendString("\n\r\\");
+	
+	SendString("Debug Value \\");
+	SendLongHex(debug_value); // TEMPORARY!
 	SendString("\n\r\\");
 	
 	DelayMS(1000);
@@ -1035,11 +1030,10 @@ unsigned long menu_wait = 0;
 unsigned long menu_delay = 0;
 unsigned long menu_rate = 3; // default of 3:1 frame rate
 
-void __attribute__((optimize("O0"))) game_loop()
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) game_loop()
 {
 	while (1)
 	{ 
-		/*
 		if (PORTKbits.RK7 == 0)
 		{
 			while (PORTKbits.RK7 == 0) { }
@@ -1139,9 +1133,9 @@ void __attribute__((optimize("O0"))) game_loop()
 			else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
 			else if (menu_pos == 3)
 			{
-				nes_hack_top_hud = 1;
-				nes_hack_bottom_hud = 1;
-				nes_hack_sprite_priority = 1;
+				nes_hack_top_hud = 1; // Duck Tales
+				nes_hack_bottom_hud = 1; // Mario 3, Kirby, and Double Dragon 2
+				nes_hack_sprite_priority = 1; // Mario 3
 			}
 			else if (menu_pos == 4)
 			{
@@ -1191,12 +1185,12 @@ void __attribute__((optimize("O0"))) game_loop()
 				nes_save("GAME-D.SAV");
 			}
 		}
-		*/
+		
 		nes_loop(menu_rate); // frame rate divider and external interrupt
 	}
 }
 
-int __attribute__((optimize("O0"))) main()
+int __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) main()
 {
 	unsigned short sdcard_flag = 0;
 	
@@ -1259,7 +1253,7 @@ int __attribute__((optimize("O0"))) main()
 	{	
 		if (PORTKbits.RK0 == 0 && menu_wait == 0)
 		{
-			menu_wait = 0x0005FFFF;
+			menu_wait = 0x0007FFFF;
 			
 			if (menu_pos > 0) menu_pos--;
 			
@@ -1280,7 +1274,7 @@ int __attribute__((optimize("O0"))) main()
 		
 		if (PORTKbits.RK1 == 0 && menu_wait == 0)
 		{
-			menu_wait = 0x0005FFFF;
+			menu_wait = 0x0007FFFF;
 			
 			if (menu_pos < list_total-1) menu_pos++;
 			
@@ -1310,7 +1304,7 @@ int __attribute__((optimize("O0"))) main()
 		}
 		else
 		{
-			menu_delay = 0x0005FFFF;
+			menu_delay = 0x0007FFFF;
 		}
 	}
 	

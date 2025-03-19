@@ -231,7 +231,7 @@ volatile void __attribute__((optimize("O0"),vector(_TIMER_9_VECTOR), interrupt(i
 }
 
 // change for platform
-void __attribute__((optimize("O2"))) nes_error(unsigned char code)
+void __attribute__((optimize("O1"))) nes_error(unsigned char code)
 {			
 	SendChar('\n');
 	SendChar('\r');
@@ -507,67 +507,75 @@ void __attribute__((optimize("O2"))) nes_buttons()
 	ctl_value_2 = 0xFF040000 | (controller_status_4 << 8) | controller_status_2;
 }
 
-unsigned char __attribute__((optimize("O0"))) nes_read_cpu_ram(unsigned long addr)
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_cpu_ram(unsigned long addr)
 {
 	return cpu_ram[(addr&2047)];
 }
 
-void __attribute__((optimize("O0"))) nes_write_cpu_ram(unsigned long addr, unsigned char val)
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_write_cpu_ram(unsigned long addr, unsigned char val)
 {
 	cpu_ram[(addr&2047)] = val;
 }
 
-unsigned char __attribute__((optimize("O0"))) nes_read_ppu_ram(unsigned long addr)
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_ppu_ram(unsigned long addr)
 {
 	return ppu_ram[(addr&2047)];
 }
 
-void __attribute__((optimize("O0"))) nes_write_ppu_ram(unsigned long addr, unsigned char val)
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_write_ppu_ram(unsigned long addr, unsigned char val)
 {
 	ppu_ram[(addr&2047)] = val;
 }
 
-unsigned char __attribute__((optimize("O0"))) nes_read_prg_ram(unsigned long addr)
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_prg_ram(unsigned long addr)
 {
 	return prg_ram[(addr&8191)];
 }
 
-void __attribute__((optimize("O0"))) nes_write_prg_ram(unsigned long addr, unsigned char val)
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_write_prg_ram(unsigned long addr, unsigned char val)
 {
 	prg_ram[(addr&8191)] = val;
 }
 
-unsigned char __attribute__((optimize("O0"))) nes_read_chr_ram(unsigned long addr)
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_chr_ram(unsigned long addr)
 {
 	return chr_ram[(addr&8191)];
 }
 
-void __attribute__((optimize("O0"))) nes_write_chr_ram(unsigned long addr, unsigned char val)
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_write_chr_ram(unsigned long addr, unsigned char val)
 {
 	chr_ram[(addr&8191)] = val;
 }
 
-unsigned char __attribute__((optimize("O0"))) nes_read_oam_ram(unsigned long addr)
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_oam_ram(unsigned long addr)
 {
 	return oam_ram[(addr&255)];
 }
 
-void __attribute__((optimize("O0"))) nes_write_oam_ram(unsigned long addr, unsigned char val)
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_write_oam_ram(unsigned long addr, unsigned char val)
 {
 	oam_ram[(addr&255)] = val;
 }
 
-unsigned char __attribute__((optimize("O0"))) nes_read_pal_ram(unsigned long addr)
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_pal_ram(unsigned long addr)
 {
 	return pal_ram[(addr&31)];
 }
 
-void __attribute__((optimize("O0"))) nes_write_pal_ram(unsigned long addr, unsigned char val)
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_write_pal_ram(unsigned long addr, unsigned char val)
 {
 	pal_ram[(addr&31)] = val;
 }
 
-void __attribute__((optimize("O0"))) nes_irq_decrement()
+unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_read_cart_rom(unsigned long addr)
+{
+	debug_location = 3;
+	debug_value = addr;
+	
+	return cart_rom[addr];
+}
+
+void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,gcse"))) nes_irq_decrement()
 {
 	if (map_mmc3_irq_counter == 0)
 	{
@@ -592,7 +600,10 @@ void __attribute__((optimize("O0"))) nes_irq_decrement()
 }
 
 unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
-{			
+{	
+	debug_location = 1;
+	debug_value = addr;
+	
 	if (addr < 0x00002000)
 	{
 		return nes_read_cpu_ram((addr&0x000007FF)); // internal ram (and mirrors)
@@ -663,7 +674,7 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 							{
 								if (cart_rom[4] <= 0x10) // 256KB or less
 								{
-									ppu_reg_b = cart_rom[(((chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+ppu_reg_v)))];
+									ppu_reg_b = nes_read_cart_rom(((chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+ppu_reg_v)));
 								}
 								else
 								{
@@ -676,11 +687,11 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 								{
 									if (ppu_reg_v < 0x1000)
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x00001000*(map_mmc1_chr_bank_0)+ppu_reg_v)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x00001000*(map_mmc1_chr_bank_0)+ppu_reg_v)));
 									}
 									else
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x00001000*(map_mmc1_chr_bank_1)+ppu_reg_v-0x1000)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x00001000*(map_mmc1_chr_bank_1)+ppu_reg_v-0x1000)));
 									}
 								}
 								else
@@ -691,11 +702,11 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 						}
 						else if (map_number == 2) // unrom
 						{
-							ppu_reg_b = cart_rom[(((chr_offset+ppu_reg_v)))];
+							ppu_reg_b = nes_read_cart_rom(((chr_offset+ppu_reg_v)));
 						}
 						else if (map_number == 3) // cnrom
 						{
-							ppu_reg_b = cart_rom[(((chr_offset+0x2000*map_cnrom_bank+ppu_reg_v)))];
+							ppu_reg_b = nes_read_cart_rom(((chr_offset+0x2000*map_cnrom_bank+ppu_reg_v)));
 						}
 						else if (map_number == 4) // mmc3
 						{							
@@ -705,42 +716,42 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 								{
 									case 0x0000:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0800*map_mmc3_bank_r0+ppu_reg_v)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0800*map_mmc3_bank_r0+ppu_reg_v)));
 										break;
 									}
 									case 0x0400:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0800*map_mmc3_bank_r0+ppu_reg_v)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0800*map_mmc3_bank_r0+ppu_reg_v)));
 										break;
 									}
 									case 0x0800:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0800*map_mmc3_bank_r1+ppu_reg_v-0x0800)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0800*map_mmc3_bank_r1+ppu_reg_v-0x0800)));
 										break;
 									}
 									case 0x0C00:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0800*map_mmc3_bank_r1+ppu_reg_v-0x0800)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0800*map_mmc3_bank_r1+ppu_reg_v-0x0800)));
 										break;
 									}
 									case 0x1000:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0400*map_mmc3_bank_r2+ppu_reg_v-0x1000)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0400*map_mmc3_bank_r2+ppu_reg_v-0x1000)));
 										break;
 									}
 									case 0x1400:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0400*map_mmc3_bank_r3+ppu_reg_v-0x1400)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0400*map_mmc3_bank_r3+ppu_reg_v-0x1400)));
 										break;
 									}
 									case 0x1800:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0400*map_mmc3_bank_r4+ppu_reg_v-0x1800)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0400*map_mmc3_bank_r4+ppu_reg_v-0x1800)));
 										break;
 									}
 									case 0x1C00:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0400*map_mmc3_bank_r5+ppu_reg_v-0x1C00)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0400*map_mmc3_bank_r5+ppu_reg_v-0x1C00)));
 										break;
 									}
 								}
@@ -751,42 +762,42 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 								{
 									case 0x0000:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0400*map_mmc3_bank_r2+ppu_reg_v)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0400*map_mmc3_bank_r2+ppu_reg_v)));
 										break;
 									}
 									case 0x0400:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0400*map_mmc3_bank_r3+ppu_reg_v-0x0400)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0400*map_mmc3_bank_r3+ppu_reg_v-0x0400)));
 										break;
 									}
 									case 0x0800:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0400*map_mmc3_bank_r4+ppu_reg_v-0x0800)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0400*map_mmc3_bank_r4+ppu_reg_v-0x0800)));
 										break;
 									}
 									case 0x0C00:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0400*map_mmc3_bank_r5+ppu_reg_v-0x0C00)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0400*map_mmc3_bank_r5+ppu_reg_v-0x0C00)));
 										break;
 									}
 									case 0x1000:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0800*map_mmc3_bank_r0+ppu_reg_v-0x1000)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0800*map_mmc3_bank_r0+ppu_reg_v-0x1000)));
 										break;
 									}
 									case 0x1400:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0800*map_mmc3_bank_r0+ppu_reg_v-0x1000)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0800*map_mmc3_bank_r0+ppu_reg_v-0x1000)));
 										break;
 									}
 									case 0x1800:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0800*map_mmc3_bank_r1+ppu_reg_v-0x1800)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0800*map_mmc3_bank_r1+ppu_reg_v-0x1800)));
 										break;
 									}
 									case 0x1C00:
 									{
-										ppu_reg_b = cart_rom[(((chr_offset+0x0800*map_mmc3_bank_r1+ppu_reg_v-0x1800)))];
+										ppu_reg_b = nes_read_cart_rom(((chr_offset+0x0800*map_mmc3_bank_r1+ppu_reg_v-0x1800)));
 										break;
 									}
 								}
@@ -794,7 +805,7 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 						}
 						else // nrom
 						{
-							ppu_reg_b = cart_rom[(((chr_offset+ppu_reg_v)))];
+							ppu_reg_b = nes_read_cart_rom(((chr_offset+ppu_reg_v)));
 						}
 					}
 					else // chr_ram
@@ -975,40 +986,40 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 			{
 				if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
 				{
-					return cart_rom[((prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000))];
+					return nes_read_cart_rom((prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000));
 				}
 				else if (map_mmc1_prg_mode == 2)
 				{
-					return cart_rom[((prg_offset+addr-0x8000))];
+					return nes_read_cart_rom((prg_offset+addr-0x8000));
 				}
 				else
 				{
-					return cart_rom[((prg_offset+0x4000*map_mmc1_prg_bank+addr-0x8000))];
+					return nes_read_cart_rom((prg_offset+0x4000*map_mmc1_prg_bank+addr-0x8000));
 				}
 			}
 			else // up to 512KB
 			{
 				if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
 				{
-					return cart_rom[((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000))];
+					return nes_read_cart_rom((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000));
 				}
 				else if (map_mmc1_prg_mode == 2)
 				{
-					return cart_rom[((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+addr-0x8000))];
+					return nes_read_cart_rom((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+addr-0x8000));
 				}
 				else
 				{
-					return cart_rom[((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x4000*map_mmc1_prg_bank+addr-0x8000))];
+					return nes_read_cart_rom((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x4000*map_mmc1_prg_bank+addr-0x8000));
 				}
 			}
 		}
 		else if (map_number == 0x0002) // unrom
 		{
-			return cart_rom[((prg_offset+0x4000*map_unrom_bank+addr-0x8000))];
+			return nes_read_cart_rom((prg_offset+0x4000*map_unrom_bank+addr-0x8000));
 		}
 		else if (map_number == 0x0003) // cnrom
 		{
-			return cart_rom[((prg_offset+addr-0x8000))];
+			return nes_read_cart_rom((prg_offset+addr-0x8000));
 		}
 		else if (map_number == 0x0004) // mmc3
 		{
@@ -1016,21 +1027,21 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 			{
 				if (map_mmc3_prg_mode == 0x0000)
 				{
-					return cart_rom[((prg_offset+0x2000*map_mmc3_bank_r6+addr-0x8000))];
+					return nes_read_cart_rom((prg_offset+0x2000*map_mmc3_bank_r6+addr-0x8000));
 				}
 				else
 				{	
-					return cart_rom[((prg_offset+0x2000*((cart_rom[4]<<1)-2)+addr-0x8000))];
+					return nes_read_cart_rom((prg_offset+0x2000*((cart_rom[4]<<1)-2)+addr-0x8000));
 				}
 			}
 			else
 			{
-				return cart_rom[((prg_offset+0x2000*map_mmc3_bank_r7+addr-0xA000))];
+				return nes_read_cart_rom((prg_offset+0x2000*map_mmc3_bank_r7+addr-0xA000));
 			}
 		}
 		else // nrom
 		{
-			return cart_rom[((prg_offset+addr-0x8000))];
+			return nes_read_cart_rom((prg_offset+addr-0x8000));
 		}
 	}
 	else if (addr < 0x00010000) // cart rom (upper half)
@@ -1041,46 +1052,46 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 			{
 				if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
 				{
-					return cart_rom[((prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000))];
+					return nes_read_cart_rom((prg_offset+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000));
 				}
 				else if (map_mmc1_prg_mode == 2)
 				{
-					return cart_rom[((prg_offset+0x4000*map_mmc1_prg_bank+addr-0xC000))];
+					return nes_read_cart_rom((prg_offset+0x4000*map_mmc1_prg_bank+addr-0xC000));
 				}
 				else
 				{
-					return cart_rom[((prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000))];
+					return nes_read_cart_rom((prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000));
 				}
 			}
 			else // up to 512KB
 			{
 				if (map_mmc1_prg_mode == 0 || map_mmc1_prg_mode == 1)
 				{
-					return cart_rom[((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000))];
+					return nes_read_cart_rom((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x8000*((map_mmc1_prg_bank&0x0E)>>1)+addr-0x8000));
 				}
 				else if (map_mmc1_prg_mode == 2)
 				{
-					return cart_rom[((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x4000*map_mmc1_prg_bank+addr-0xC000))];
+					return nes_read_cart_rom((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x4000*map_mmc1_prg_bank+addr-0xC000));
 				}
 				else
 				{
-					return cart_rom[((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x4000*((cart_rom[4]-0x10)-1)+addr-0xC000))];
+					return nes_read_cart_rom((prg_offset+0x00040000*((map_mmc1_chr_bank_0&0x10)>>4)+0x4000*((cart_rom[4]-0x10)-1)+addr-0xC000));
 				}
 			}
 		}
 		else if (map_number == 0x0002) // unrom
 		{
-			return cart_rom[((prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000))];
+			return nes_read_cart_rom((prg_offset+0x4000*(cart_rom[4]-1)+addr-0xC000));
 		}
 		else if (map_number == 0x0003) // cnrom
 		{
 			if (cart_rom[4] == 0x01)
 			{
-				return cart_rom[((prg_offset+addr-0xC000))];
+				return nes_read_cart_rom((prg_offset+addr-0xC000));
 			}
 			else
 			{
-				return cart_rom[((prg_offset+addr-0x8000))];
+				return nes_read_cart_rom((prg_offset+addr-0x8000));
 			}
 		}
 		else if (map_number == 0x0004) // mmc3
@@ -1089,27 +1100,27 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 			{
 				if (map_mmc3_prg_mode == 0x0000)
 				{
-					return cart_rom[((prg_offset+0x2000*((cart_rom[4]<<1)-2)+addr-0xC000))];
+					return nes_read_cart_rom((prg_offset+0x2000*((cart_rom[4]<<1)-2)+addr-0xC000));
 				}
 				else
 				{	
-					return cart_rom[((prg_offset+0x2000*map_mmc3_bank_r6+addr-0xC000))];
+					return nes_read_cart_rom((prg_offset+0x2000*map_mmc3_bank_r6+addr-0xC000));
 				}
 			}
 			else
 			{
-				return cart_rom[((prg_offset+0x2000*((cart_rom[4]<<1)-1)+addr-0xE000))];
+				return nes_read_cart_rom((prg_offset+0x2000*((cart_rom[4]<<1)-1)+addr-0xE000));
 			}
 		}
 		else // nrom
 		{
 			if (cart_rom[4] == 0x01)
 			{
-				return cart_rom[((prg_offset+addr-0xC000))];
+				return nes_read_cart_rom((prg_offset+addr-0xC000));
 			}
 			else
 			{
-				return cart_rom[((prg_offset+addr-0x8000))];
+				return nes_read_cart_rom((prg_offset+addr-0x8000));
 			}
 		}
 	}
@@ -1122,7 +1133,10 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 }
 
 void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char val)
-{		
+{	
+	debug_location = 2;
+	debug_value = addr;
+	
 	if (addr < 0x00002000)
 	{
 		nes_write_cpu_ram((addr&0x000007FF), val); // internal ram (and mirrors)
@@ -1517,9 +1531,9 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 				if ((cpu_current_cycles&0x00000002) == 0x00000000) cpu_dma_cycles = 513; // 513 cycles on even
 				else cpu_dma_cycles = 514; // 514 cycles on odd
 				
-				for (unsigned short loop=0; loop<256; loop++)
+				for (unsigned long loop=0; loop<256; loop++)
 				{
-					nes_write_oam_ram(loop, cpu_read(loop+(val<<8))); // perhaps read from internal ram directly to make faster?
+					nes_write_oam_ram(loop, cpu_read(loop+((unsigned long)val<<8))); // perhaps read from internal ram directly to make faster?
 				}
 				
 				break;
@@ -1789,95 +1803,95 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 
 // cpu addressing modes
 #define CPU_IMM { \
-	cpu_temp_memory = cpu_read(cpu_reg_pc++); }
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_reg_pc++); }
 
 #define CPU_ZPR { \
-	cpu_temp_memory = (unsigned long)(cpu_ram[cpu_read(cpu_reg_pc++)]&0x00FF); }
+	cpu_temp_memory = (unsigned long)(cpu_ram[(unsigned long)cpu_read(cpu_reg_pc++)]&0x00FF); }
 
 #define CPU_ZPW { \
-	cpu_temp_address = cpu_read(cpu_reg_pc++); }
+	cpu_temp_address = (unsigned long)cpu_read(cpu_reg_pc++); }
 
 #define CPU_ZPM { \
-	cpu_temp_address = cpu_read(cpu_reg_pc++); }
+	cpu_temp_address = (unsigned long)cpu_read(cpu_reg_pc++); }
 
 #define CPU_ZPXR { \
-	cpu_temp_memory = (unsigned long)(cpu_ram[((cpu_read(cpu_reg_pc++)+cpu_reg_x)&0x00FF)]&0x00FF); }
+	cpu_temp_memory = (unsigned long)(cpu_ram[(((unsigned long)cpu_read(cpu_reg_pc++)+cpu_reg_x)&0x00FF)]&0x00FF); }
 
 #define CPU_ZPXW { \
-	cpu_temp_address = ((cpu_read(cpu_reg_pc++)+cpu_reg_x)&0x00FF); }
+	cpu_temp_address = (((unsigned long)cpu_read(cpu_reg_pc++)+cpu_reg_x)&0x00FF); }
 
 #define CPU_ZPXM { \
-	cpu_temp_address = ((cpu_read(cpu_reg_pc++)+cpu_reg_x)&0x00FF); }
+	cpu_temp_address = (((unsigned long)cpu_read(cpu_reg_pc++)+cpu_reg_x)&0x00FF); }
 
 #define CPU_ZPYR { \
-	cpu_temp_memory = (unsigned long)(cpu_ram[((cpu_read(cpu_reg_pc++)+cpu_reg_y)&0x00FF)]&0x00FF); }
+	cpu_temp_memory = (unsigned long)(cpu_ram[(((unsigned long)cpu_read(cpu_reg_pc++)+cpu_reg_y)&0x00FF)]&0x00FF); }
 
 #define CPU_ZPYW { \
-	cpu_temp_address = ((cpu_read(cpu_reg_pc++)+cpu_reg_y)&0x00FF); }
+	cpu_temp_address = (((unsigned long)cpu_read(cpu_reg_pc++)+cpu_reg_y)&0x00FF); }
 
 #define CPU_ABSR { \
-	cpu_temp_address = cpu_read(cpu_reg_pc++); \
-	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); \
-	cpu_temp_memory = cpu_read(cpu_temp_address); }
+	cpu_temp_address = (unsigned long)cpu_read(cpu_reg_pc++); \
+	cpu_temp_address += ((unsigned long)cpu_read(cpu_reg_pc++)<<8); \
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_temp_address); }
 
 #define CPU_ABSW { \
-	cpu_temp_address = cpu_read(cpu_reg_pc++); \
-	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); }
+	cpu_temp_address = (unsigned long)cpu_read(cpu_reg_pc++); \
+	cpu_temp_address += ((unsigned long)cpu_read(cpu_reg_pc++)<<8); }
 	
 #define CPU_ABSM { \
-	cpu_temp_address = cpu_read(cpu_reg_pc++); \
-	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); }
+	cpu_temp_address = (unsigned long)cpu_read(cpu_reg_pc++); \
+	cpu_temp_address += ((unsigned long)cpu_read(cpu_reg_pc++)<<8); }
 
 #define CPU_ABXR { \
-	cpu_temp_address = cpu_read(cpu_reg_pc++); \
+	cpu_temp_address = (unsigned long)cpu_read(cpu_reg_pc++); \
 	cpu_temp_cycles += ((cpu_temp_address+cpu_reg_x)>>8); \
-	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); \
+	cpu_temp_address += ((unsigned long)cpu_read(cpu_reg_pc++)<<8); \
 	cpu_temp_address += cpu_reg_x; \
-	cpu_temp_memory = cpu_read(cpu_temp_address); }
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_temp_address); }
 
 #define CPU_ABXW { \
-	cpu_temp_address = cpu_read(cpu_reg_pc++); \
+	cpu_temp_address = (unsigned long)cpu_read(cpu_reg_pc++); \
 	cpu_temp_cycles += ((cpu_temp_address+cpu_reg_x)>>8); \
-	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); \
+	cpu_temp_address += ((unsigned long)cpu_read(cpu_reg_pc++)<<8); \
 	cpu_temp_address += cpu_reg_x; }
 	
 #define CPU_ABXM { \
-	cpu_temp_address = cpu_read(cpu_reg_pc++); \
-	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); \
+	cpu_temp_address = (unsigned long)cpu_read(cpu_reg_pc++); \
+	cpu_temp_address += ((unsigned long)cpu_read(cpu_reg_pc++)<<8); \
 	cpu_temp_address += cpu_reg_x; }
 	
 #define CPU_ABYR { \
-	cpu_temp_address = cpu_read(cpu_reg_pc++); \
+	cpu_temp_address = (unsigned long)cpu_read(cpu_reg_pc++); \
 	cpu_temp_cycles += ((cpu_temp_address+cpu_reg_y)>>8); \
-	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); \
+	cpu_temp_address += ((unsigned long)cpu_read(cpu_reg_pc++)<<8); \
 	cpu_temp_address += cpu_reg_y; \
-	cpu_temp_memory = cpu_read(cpu_temp_address); }
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_temp_address); }
 
 #define CPU_ABYW { \
-	cpu_temp_address = cpu_read(cpu_reg_pc++); \
+	cpu_temp_address = (unsigned long)cpu_read(cpu_reg_pc++); \
 	cpu_temp_cycles += ((cpu_temp_address+cpu_reg_y)>>8); \
-	cpu_temp_address += (cpu_read(cpu_reg_pc++)<<8); \
+	cpu_temp_address += ((unsigned long)cpu_read(cpu_reg_pc++)<<8); \
 	cpu_temp_address += cpu_reg_y; }
 	
 #define CPU_INDXR { \
-	cpu_temp_memory = cpu_read(cpu_reg_pc++); \
-	cpu_temp_address = cpu_ram[((cpu_temp_memory+cpu_reg_x)&0x00FF)]+(cpu_ram[((cpu_temp_memory+cpu_reg_x+1)&0x00FF)]<<8); \
-	cpu_temp_memory = cpu_read(cpu_temp_address); }
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_reg_pc++); \
+	cpu_temp_address = (unsigned long)cpu_ram[((cpu_temp_memory+cpu_reg_x)&0x00FF)]+((unsigned long)cpu_ram[((cpu_temp_memory+cpu_reg_x+1)&0x00FF)]<<8); \
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_temp_address); }
 
 #define CPU_INDXW { \
-	cpu_temp_memory = cpu_read(cpu_reg_pc++); \
-	cpu_temp_address = cpu_ram[((cpu_temp_memory+cpu_reg_x)&0x00FF)]+(cpu_ram[((cpu_temp_memory+cpu_reg_x+1)&0x00FF)]<<8); }
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_reg_pc++); \
+	cpu_temp_address = (unsigned long)cpu_ram[((cpu_temp_memory+cpu_reg_x)&0x00FF)]+((unsigned long)cpu_ram[((cpu_temp_memory+cpu_reg_x+1)&0x00FF)]<<8); }
 	
 #define CPU_INDYR { \
-	cpu_temp_memory = cpu_read(cpu_reg_pc++); \
-	cpu_temp_address = cpu_ram[cpu_temp_memory]+(cpu_ram[((cpu_temp_memory+1)&0x00FF)]<<8); \
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_reg_pc++); \
+	cpu_temp_address = (unsigned long)cpu_ram[cpu_temp_memory]+((unsigned long)cpu_ram[((cpu_temp_memory+1)&0x00FF)]<<8); \
 	cpu_temp_cycles += (((cpu_temp_address&0x00FF)+cpu_reg_y)>>8); \
 	cpu_temp_address += cpu_reg_y; \
-	cpu_temp_memory = cpu_read(cpu_temp_address); }
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_temp_address); }
 
 #define CPU_INDYW { \
-	cpu_temp_memory = cpu_read(cpu_reg_pc++); \
-	cpu_temp_address = cpu_ram[cpu_temp_memory]+(cpu_ram[((cpu_temp_memory+1)&0x00FF)]<<8); \
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_reg_pc++); \
+	cpu_temp_address = (unsigned long)cpu_ram[cpu_temp_memory]+((unsigned long)cpu_ram[((cpu_temp_memory+1)&0x00FF)]<<8); \
 	cpu_temp_address += cpu_reg_y; }
 	
 // instructions
@@ -1896,10 +1910,10 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 	cpu_flag_n = (cpu_reg_a>>7); }
 	
 #define CPU_ASL { \
-	cpu_temp_memory = cpu_read(cpu_temp_address); \
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_temp_address); \
 	cpu_flag_c = (cpu_temp_memory>>7); \
 	cpu_temp_memory = ((cpu_temp_memory<<1)&0x00FF); \
-	cpu_write(cpu_temp_address,(unsigned char)cpu_temp_memory); \
+	cpu_write(cpu_temp_address,(unsigned char)(cpu_temp_memory & 0x00FF)); \
 	cpu_flag_z = (cpu_temp_memory==0x0000); \
 	cpu_flag_n = (cpu_temp_memory>>7); }
 	
@@ -1928,9 +1942,9 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 	cpu_flag_n = (cpu_temp_memory>>7); }
 	
 #define CPU_DEC { \
-	cpu_temp_memory = cpu_read(cpu_temp_address); \
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_temp_address); \
 	cpu_temp_memory = ((cpu_temp_memory-1)&0x00FF); \
-	cpu_write(cpu_temp_address,(unsigned char)cpu_temp_memory); \
+	cpu_write(cpu_temp_address,(unsigned char)(cpu_temp_memory&0x00FF)); \
 	cpu_flag_z = (cpu_temp_memory==0x0000); \
 	cpu_flag_n = (cpu_temp_memory>>7); }
 
@@ -1940,9 +1954,9 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 	cpu_flag_n = (cpu_reg_a>>7); }
 
 #define CPU_INC { \
-	cpu_temp_memory = cpu_read(cpu_temp_address); \
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_temp_address); \
 	cpu_temp_memory = ((cpu_temp_memory+1)&0x00FF); \
-	cpu_write(cpu_temp_address,(unsigned char)cpu_temp_memory); \
+	cpu_write(cpu_temp_address,(unsigned char)(cpu_temp_memory&0x00FF)); \
 	cpu_flag_z = (cpu_temp_memory==0x0000); \
 	cpu_flag_n = (cpu_temp_memory>>7); }
 
@@ -1962,10 +1976,10 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 	cpu_flag_n = (cpu_reg_y>>7); }
 
 #define CPU_LSR { \
-	cpu_temp_memory = cpu_read(cpu_temp_address); \
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_temp_address); \
 	cpu_flag_c = (cpu_temp_memory&0x01); \
 	cpu_temp_memory = (cpu_temp_memory>>1); \
-	cpu_write(cpu_temp_address,(unsigned char)cpu_temp_memory); \
+	cpu_write(cpu_temp_address,(unsigned char)(cpu_temp_memory&0x00FF)); \
 	cpu_flag_z = (cpu_temp_memory==0x0000); \
 	cpu_flag_n = (cpu_temp_memory>>7); }
 
@@ -1975,20 +1989,20 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 	cpu_flag_n = (cpu_reg_a>>7); }
 
 #define CPU_ROL { \
-	cpu_temp_memory = cpu_read(cpu_temp_address); \
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_temp_address); \
 	cpu_temp_memory = (((cpu_temp_memory<<1)&0x01FF)|cpu_flag_c); \
 	cpu_flag_c = (cpu_temp_memory>>8); \
 	cpu_temp_memory = (cpu_temp_memory&0x00FF); \
-	cpu_write(cpu_temp_address,(unsigned char)cpu_temp_memory); \
+	cpu_write(cpu_temp_address,(unsigned char)(cpu_temp_memory&0x00FF)); \
 	cpu_flag_z = (cpu_temp_memory==0x0000); \
 	cpu_flag_n = (cpu_temp_memory>>7); }
 
 #define CPU_ROR { \
-	cpu_temp_memory = cpu_read(cpu_temp_address); \
+	cpu_temp_memory = (unsigned long)cpu_read(cpu_temp_address); \
 	cpu_temp_memory = (cpu_temp_memory|(cpu_flag_c<<8)); \
 	cpu_flag_c = (cpu_temp_memory&0x01); \
 	cpu_temp_memory = (cpu_temp_memory>>1); \
-	cpu_write(cpu_temp_address,(unsigned char)cpu_temp_memory); \
+	cpu_write(cpu_temp_address,(unsigned char)(cpu_temp_memory&0x00FF)); \
 	cpu_flag_z = (cpu_temp_memory==0x0000); \
 	cpu_flag_n = (cpu_temp_memory>>7); }
 
@@ -2002,13 +2016,13 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 	cpu_reg_a = cpu_temp_result; }
 
 #define CPU_STA { \
-	cpu_write(cpu_temp_address, (unsigned char)cpu_reg_a); }
+	cpu_write(cpu_temp_address, (unsigned char)(cpu_reg_a&0x00FF)); }
 
 #define CPU_STX { \
-	cpu_write(cpu_temp_address, (unsigned char)cpu_reg_x); }
+	cpu_write(cpu_temp_address, (unsigned char)(cpu_reg_x&0x00FF)); }
 
 #define CPU_STY { \
-	cpu_write(cpu_temp_address, (unsigned char)cpu_reg_y); }
+	cpu_write(cpu_temp_address, (unsigned char)(cpu_reg_y&0x00FF)); }
 
 // internal functions
 #define CPU_BRA { \
@@ -2018,17 +2032,17 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 	cpu_temp_cycles += ((cpu_temp_address&0xFF00)!=(cpu_reg_pc&0xFF00)); }
 
 #define CPU_PUSH { \
-	cpu_ram[0x0100+cpu_reg_s]=cpu_temp_memory; \
+	cpu_ram[0x0100+(cpu_reg_s&0x00FF)]=cpu_temp_memory; \
 	cpu_reg_s=((cpu_reg_s-1)&0x00FF); }
 
 #define CPU_PULL { \
 	cpu_reg_s=((cpu_reg_s+1)&0x00FF); \
-	cpu_temp_memory=cpu_ram[0x0100+cpu_reg_s]; }
+	cpu_temp_memory=cpu_ram[(0x0100+(cpu_reg_s&0x00FF))]; }
 
 
 unsigned long __attribute__((optimize("O2"))) cpu_run()
 {	
-	cpu_temp_opcode = cpu_read(cpu_reg_pc++);
+	cpu_temp_opcode = (unsigned long)cpu_read(cpu_reg_pc++);
 	
 	switch (cpu_temp_opcode)
 	{
@@ -2105,8 +2119,8 @@ unsigned long __attribute__((optimize("O2"))) cpu_run()
 			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
 				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
 			CPU_PUSH;
-			cpu_reg_pc = cpu_read(0xFFFE);
-			cpu_reg_pc += (cpu_read(0xFFFF)<<8);
+			cpu_reg_pc = (unsigned long)cpu_read(0xFFFE);
+			cpu_reg_pc += ((unsigned long)cpu_read(0xFFFF)<<8);
 			
 			cpu_current_cycles += 7;
 			
@@ -2119,7 +2133,7 @@ unsigned long __attribute__((optimize("O2"))) cpu_run()
 		case 0x50:
 		{
 			cpu_temp_cycles = 0x0002;
-			cpu_temp_memory = cpu_read(cpu_reg_pc++);
+			cpu_temp_memory = (unsigned long)cpu_read(cpu_reg_pc++);
 			if (cpu_flag_v == 0x0000) { cpu_temp_cycles = 3; CPU_BRA; }
 			break;
 		}
@@ -2128,7 +2142,7 @@ unsigned long __attribute__((optimize("O2"))) cpu_run()
 		case 0x70:
 		{
 			cpu_temp_cycles = 0x0002;
-			cpu_temp_memory = cpu_read(cpu_reg_pc++);
+			cpu_temp_memory = (unsigned long)cpu_read(cpu_reg_pc++);
 			if (cpu_flag_v != 0x0000) { cpu_temp_cycles = 3; CPU_BRA; }
 			break;
 		}
@@ -2275,8 +2289,8 @@ unsigned long __attribute__((optimize("O2"))) cpu_run()
 			CPU_PUSH;
 			cpu_temp_memory = ((cpu_reg_pc+1)&0x00FF);
 			CPU_PUSH;
-			cpu_temp_address = cpu_read(cpu_reg_pc++);
-			cpu_temp_address += (cpu_read(cpu_reg_pc)<<8);
+			cpu_temp_address = (unsigned long)cpu_read(cpu_reg_pc++);
+			cpu_temp_address += ((unsigned long)cpu_read(cpu_reg_pc)<<8);
 			cpu_reg_pc = cpu_temp_address;
 			break;
 		}
@@ -2585,6 +2599,9 @@ void __attribute__((optimize("O2"))) nes_border()
 
 void __attribute__((optimize("O2"))) nes_background(signed short line)
 {
+	debug_location = 5;
+	debug_value = line;
+	
 	unsigned short scroll_x = 0, scroll_y = 0;
 	unsigned short scroll_n = 0;
 	unsigned short scroll_t = 0, scroll_l = 0;
@@ -2604,11 +2621,11 @@ void __attribute__((optimize("O2"))) nes_background(signed short line)
 		ppu_reg_r = ((ppu_reg_r & 0x7BE0) | (ppu_reg_t & 0x041F));
 	}
 	
-	if (map_number == 4 && nes_hack_bottom_hud > 0)
+	if (nes_hack_bottom_hud > 0)
 	{
-		if (ppu_scanline_interrupt > 0)
+		if ((map_number == 4 && ppu_scanline_interrupt > 0) || (map_number != 4 && ppu_scanline_sprite_0 > 0))
 		{
-			ppu_reg_r = 0x0800; // hack for Mario 3 and Kirby
+			ppu_reg_r = 0x0800; // hack for Mario 3, Kirby, Double Dragon, and Double Dragon 2
 		}
 	}
 	
@@ -2973,6 +2990,9 @@ void __attribute__((optimize("O2"))) nes_background(signed short line)
 	
 void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground, unsigned long min_y, unsigned long max_y)
 {
+	debug_location = 6;
+	debug_value = ground;
+	
 	unsigned short sprite_x = 0, sprite_y = 0;
 	unsigned short sprite_attr = 0, sprite_tile = 0;
 	unsigned char sprite_flip_horz = 0, sprite_flip_vert = 0;
@@ -2985,12 +3005,12 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground, unsigned 
 	{
 		for (signed char s=63; s>=0; s--) // must be signed!
 		{
-			sprite_x = oam_ram[((s<<2)+3)];
-			sprite_y = oam_ram[((s<<2)+0)];
+			sprite_x = oam_ram[(((s<<2)+3)&0x00FF)];
+			sprite_y = oam_ram[(((s<<2)+0)&0x00FF)];
 
 			if (sprite_x < 0xF9 && sprite_y < 0xEF && sprite_y >= min_y && sprite_y < max_y)
 			{
-				sprite_attr = oam_ram[((s<<2)+2)];
+				sprite_attr = oam_ram[(((s<<2)+2)&0x00FF)];
 
 				if (((sprite_attr&0x20)>>5) == ground || ground > 1) // foreground/background
 				{
@@ -3213,7 +3233,7 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground, unsigned 
 						{
 							if (cart_rom[5] > 0)
 							{
-								pixel_lookup = sprite_tile*16+0x1000*(oam_ram[((s<<2)+1)]&0x01)+(sprite_flip_vert==0x00?j:15-j);
+								pixel_lookup = sprite_tile*16+0x1000*(oam_ram[(((s<<2)+1)&0x00FF)]&0x01)+(sprite_flip_vert==0x00?j:15-j);
 
 								if (map_number == 1) // mmc1
 								{
@@ -3376,7 +3396,7 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground, unsigned 
 							}
 							else
 							{
-								pixel_lookup = sprite_tile*16+0x1000*(oam_ram[((s<<2)+1)]&0x01)+(sprite_flip_vert==0x00?j:15-j);
+								pixel_lookup = sprite_tile*16+0x1000*(oam_ram[(((s<<2)+1)&0x00FF)]&0x01)+(sprite_flip_vert==0x00?j:15-j);
 
 								if ((sprite_flip_vert==0x00?j:15-j) < 8)
 								{
@@ -3437,6 +3457,9 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground, unsigned 
 
 void __attribute__((optimize("O2"))) nes_audio(unsigned long cycles)
 {
+	debug_location = 7;
+	debug_value = cycles;
+	
 	apu_counter_q += (cycles);
 	
 	while (apu_counter_q >= 7446) //7456) // quarter of a frame
@@ -3764,7 +3787,7 @@ void __attribute__((optimize("O2"))) nes_audio(unsigned long cycles)
 						apu_flag_i = 1;
 					}
 					
-					apu_dmc_t = cpu_read(apu_dmc_a);
+					apu_dmc_t = (unsigned short)cpu_read(apu_dmc_a);
 					
 					apu_dmc_a++;
 				}
@@ -4158,6 +4181,29 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 		
 		unsigned long loc = prg_offset+0x4000*(cart_rom[4]-1)+0x3FE0;
 		
+		if (map_number == 1) // mmc1
+		{
+			if (cart_rom[loc+0] == 0xFB && // Double Dragon
+				cart_rom[loc+1] == 0x4C &&
+				cart_rom[loc+2] == 0x6A &&
+				cart_rom[loc+3] == 0xFC &&
+				cart_rom[loc+4] == 0x4C &&
+				cart_rom[loc+5] == 0x9E &&
+				cart_rom[loc+6] == 0xFA &&
+				cart_rom[loc+7] == 0x00 &&
+				cart_rom[loc+8] == 0xEE &&
+				cart_rom[loc+9] == 0xF1 &&
+				cart_rom[loc+10] == 0xFF &&
+				cart_rom[loc+11] == 0xEA &&
+				cart_rom[loc+12] == 0xEA &&
+				cart_rom[loc+13] == 0xEA &&
+				cart_rom[loc+14] == 0x4C &&
+				cart_rom[loc+15] == 0x3D)
+			{
+				nes_hack_bottom_hud = 1;
+			}
+		}
+		
 		if (map_number == 2) // unrom
 		{
 			if (cart_rom[loc+0] == 0xAA && // Duck Tales
@@ -4222,6 +4268,25 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 			{
 				nes_hack_bottom_hud = 1;
 			}
+			else if (cart_rom[loc+0] == 0x00 && // Double Dragon 2
+				cart_rom[loc+1] == 0x8D &&
+				cart_rom[loc+2] == 0xF0 &&
+				cart_rom[loc+3] == 0x00 &&
+				cart_rom[loc+4] == 0x4C &&
+				cart_rom[loc+5] == 0x0D &&
+				cart_rom[loc+6] == 0xED &&
+				cart_rom[loc+7] == 0x5C &&
+				cart_rom[loc+8] == 0x5D &&
+				cart_rom[loc+9] == 0x5E &&
+				cart_rom[loc+10] == 0x5F &&
+				cart_rom[loc+11] == 0x6D &&
+				cart_rom[loc+12] == 0x00 &&
+				cart_rom[loc+13] == 0xC1 &&
+				cart_rom[loc+14] == 0xC2 &&
+				cart_rom[loc+15] == 0xC3)
+			{
+				nes_hack_bottom_hud = 1;
+			}
 		}
 		
 		//SendLongHex(cpu_reg_pc);
@@ -4241,7 +4306,11 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 	
 	cpu_current_cycles = 0;
 
+	debug_location = 0;
+	
 	cpu_current_cycles += cpu_run();
+	
+	debug_location = 4;
 	
 	cpu_current_cycles += cpu_dma_cycles;
 	
@@ -4304,8 +4373,8 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
 				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
 			CPU_PUSH;
-			cpu_reg_pc = cpu_read(0xFFFE);
-			cpu_reg_pc += (cpu_read(0xFFFF)<<8);
+			cpu_reg_pc = (unsigned long)cpu_read(0xFFFE);
+			cpu_reg_pc += ((unsigned long)cpu_read(0xFFFF)<<8);
 			
 			cpu_current_cycles += 7;
 			
@@ -4358,11 +4427,11 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 			
 			ppu_flag_0 = 1;
 			
-			if (nes_hack_top_hud > 0)
+			if (nes_hack_top_hud > 0 || nes_hack_bottom_hud > 0)
 			{
 				ppu_scanline_sprite_0 = ppu_scanline_count;
 				
-				nes_sprites(0, 0, ppu_scanline_count); // hack for Duck Tales
+				nes_sprites(0, 0, ppu_scanline_count); // hack for Duck Tales and Double Dragon
 			}
 		}
 	}
@@ -4388,8 +4457,8 @@ void __attribute__((optimize("O2"))) nes_loop(unsigned long loop_count)
 			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
 				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
 			CPU_PUSH;
-			cpu_reg_pc = cpu_read(0xFFFA);
-			cpu_reg_pc += (cpu_read(0xFFFB)<<8);
+			cpu_reg_pc = (unsigned long)cpu_read(0xFFFA);
+			cpu_reg_pc += ((unsigned long)cpu_read(0xFFFB)<<8);
 			
 			ppu_frame_cycles += 7;
 		}
