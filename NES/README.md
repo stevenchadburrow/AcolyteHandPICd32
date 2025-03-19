@@ -4,10 +4,11 @@ These files contain an NES emulator for the PIC32MZ.  It currently is running at
 
 This currently works with these mappers: NROM, UNROM, CNROM, MMC1, and MMC3 (only some implementation).
 
-The default 40 games chosen for this system include:
+The default 50 games chosen for this system include:
 
 1942 - NROM - Great, sound effects are annoying<br>
 1943: Midway - UNROM - Perfect<br>
+Arkanoid - CNROM - Perfect<br>
 Ballon Fight - NROM - Perfect<br>
 Battle Kid - UNROM - Perfect<br>
 Bionic Commando - MMC1 - Perfect<br>
@@ -16,14 +17,20 @@ Castlevania - UNROM - Great, minor sprite priority issues<br>
 Castlevania 2 - MMC1 - Great, minor sprite priority issues<br>
 Contra - MMC1 - Perfect<br>
 Championship Rally - MMC1 - Perfect<br>
+Double Dragon - MMC1 - Great, (hacked bottom status bar)<br>
+Double Dragon 2 - MMC3 - Good, bottom status bar is wrong sometimes, (hacked bottom status bar)<br>
+Dig Dug - NROM - Perfect<br>
 Donkey Kong - NROM - Great, sound effects are annoying<br>
+Double Dribble - UNROM - Perfect<br>
 Dragon Warrior - MMC1 - Perfect<br>
 Dragon Warrior 2 - MMC1 - Perfect<br>
 Dragon Warrior 3 - MMC1 - Perfect<br>
 Dragon Warrior 4 - MMC1 - Perfect<br>
+Duck Tales - UNROM - Great, a few scanlines in status bar scroll incorrectly (hacked top status bar)<br>
 Excitebike - NROM - Good, horizontal scrolling split on wrong scanline<br>
 Final Fantasy - MMC1 - Perfect<br>
-Gradius - CNROM - Great, single scanline in status bar missing<br>
+Ghosts 'n Goblins - UNROM - Perfect<br>
+Gradius - CNROM - Great, a few scanline in status bar missing<br>
 Ice Climber - NROM - Perfect<br>
 Kid Icarus - MMC1 - Perfect<br>
 Kirby's Adventure - MMC3 - Great, (hacked bottom status bar)<br>
@@ -43,6 +50,7 @@ Super Mario Bros - NROM - Perfect<br>
 Super Mario Bros 2 - MMC3 - Perfect<br>
 Super Mario Bros 3 - MMC3 - Good, (hacked bottom status bar and sprite priority)<br>
 Tetris - MMC1 - Perfect<br>
+Super Turrican - MMC3 - Great, intro screen has wrong tiles<br>
 Wizardry: Proving Grounds - MMC1 - Perfect<br>
 Zelda - MMC1 - Good, vertical scrolling is off<br>
 Zelda 2 - MMC1 - Good, occasional slowdowns<br>
