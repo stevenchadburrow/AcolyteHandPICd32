@@ -1030,7 +1030,7 @@ unsigned long menu_wait = 0;
 unsigned long menu_delay = 0;
 unsigned long menu_rate = 3; // default of 3:1 frame rate
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) game_loop()
+void __attribute__((optimize("O2"))) game_loop()
 {
 	while (1)
 	{ 
@@ -1193,12 +1193,11 @@ void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,a
 // Start with optimize("O1")
 // then add more!
 // definitely bad optimizations are: gcse
-// probably bad optimizations are: inline-small-functions,caller-saves?
-// possibly ok optimizations: strict-aliasing?
+// probably bad optimizations are: inline-small-functions,caller-saves,strict-aliasing
 // undecided optimizations: align-functions,align-loops,align_labels
 // good optimizations: expensive-optimizations,peephole,unroll-loops
 
-int __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops,align-functions,align-loops,align-labels,strict-aliasing"))) main()
+int __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) main()
 {
 	unsigned short sdcard_flag = 0;
 	
