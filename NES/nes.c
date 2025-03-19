@@ -509,77 +509,77 @@ void __attribute__((optimize("O2"))) nes_buttons()
 
 unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_cpu_ram(unsigned long addr)
 {
-	return cpu_ram[(addr&2047)];
-	//return cpu_ram[addr];
+	//return cpu_ram[(addr&2047)];
+	return cpu_ram[addr];
 }
 
 void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_write_cpu_ram(unsigned long addr, unsigned char val)
 {
-	cpu_ram[(addr&2047)] = val;
-	//cpu_ram[addr] = val;
+	//cpu_ram[(addr&2047)] = val;
+	cpu_ram[addr] = val;
 }
 
 unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_ppu_ram(unsigned long addr)
 {
-	return ppu_ram[(addr&2047)];
-	//return ppu_ram[addr];
+	//return ppu_ram[(addr&2047)];
+	return ppu_ram[addr];
 }
 
 void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_write_ppu_ram(unsigned long addr, unsigned char val)
 {
-	ppu_ram[(addr&2047)] = val;
-	//ppu_ram[addr] = val;
+	//ppu_ram[(addr&2047)] = val;
+	ppu_ram[addr] = val;
 }
 
 unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_prg_ram(unsigned long addr)
 {
-	return prg_ram[(addr&8191)];
-	//return prg_ram[addr];
+	//return prg_ram[(addr&8191)];
+	return prg_ram[addr];
 }
 
 void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_write_prg_ram(unsigned long addr, unsigned char val)
 {
-	prg_ram[(addr&8191)] = val;
-	//prg_ram[addr] = val;
+	//prg_ram[(addr&8191)] = val;
+	prg_ram[addr] = val;
 }
 
 unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_chr_ram(unsigned long addr)
 {
-	return chr_ram[(addr&8191)];
-	//return chr_ram[addr];
+	//return chr_ram[(addr&8191)];
+	return chr_ram[addr];
 }
 
 void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_write_chr_ram(unsigned long addr, unsigned char val)
 {
-	chr_ram[(addr&8191)] = val;
-	//chr_ram[addr] = val;
+	//chr_ram[(addr&8191)] = val;
+	chr_ram[addr] = val;
 }
 
 unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_oam_ram(unsigned long addr)
 {
-	return oam_ram[(addr&255)];
-	//return oam_ram[addr];
+	//return oam_ram[(addr&255)];
+	return oam_ram[addr];
 }
 
 void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_write_oam_ram(unsigned long addr, unsigned char val)
 {
-	oam_ram[(addr&255)] = val;
-	//oam_ram[addr] = val;
+	//oam_ram[(addr&255)] = val;
+	oam_ram[addr] = val;
 }
 
 unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_pal_ram(unsigned long addr)
 {
-	return pal_ram[(addr&31)];
-	//return pal_ram[addr];
+	//return pal_ram[(addr&31)];
+	return pal_ram[addr];
 }
 
 void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_write_pal_ram(unsigned long addr, unsigned char val)
 {
-	pal_ram[(addr&31)] = val;
-	//pal_ram[addr] = val;
+	//pal_ram[(addr&31)] = val;
+	pal_ram[addr] = val;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_cart_rom(unsigned long addr)
+volatile unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_cart_rom(unsigned long addr)
 {
 	//debug_location = 3;
 	//debug_value = addr;
@@ -4487,7 +4487,7 @@ void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops")
 			}
 			else
 			{
-				if (nes_hack_bottom_hud == 0)
+				if (nes_hack_bottom_hud == 0) // this is just for speed sake
 				{
 					nes_sprites(0, ppu_scanline_interrupt, 255);
 				}
