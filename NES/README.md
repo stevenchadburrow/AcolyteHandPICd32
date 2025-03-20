@@ -4,7 +4,7 @@ These files contain an NES emulator for the PIC32MZ.  It currently is running at
 
 This currently works with these mappers: NROM, UNROM, CNROM, MMC1, and MMC3 (only some implementation).
 
-The default 50 games chosen for this system include:
+The default 51 games chosen for this system include:
 
 1942 - NROM - Great, sound effects are annoying<br>
 1943: Midway - UNROM - Perfect<br>
@@ -13,6 +13,7 @@ Ballon Fight - NROM - Perfect<br>
 Battle Kid - UNROM - Perfect<br>
 Bionic Commando - MMC1 - Perfect<br>
 Blaster Master - MMC1 - Great, minor sprite priority issues<br>
+Bubble Bobble - MMC1 - Perfect<br>
 Castlevania - UNROM - Great, minor sprite priority issues<br>
 Castlevania 2 - MMC1 - Great, minor sprite priority issues<br>
 Contra - MMC1 - Perfect<br>
