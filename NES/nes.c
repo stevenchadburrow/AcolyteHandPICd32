@@ -256,6 +256,18 @@ void nes_error(unsigned char code)
 	}
 	else if (code == 0x01)
 	{
+		SendString("Verify Mismatch \\");
+		SendString("\n\r\\");
+		
+		screen_frame = 0;
+		
+		for (unsigned int i=0; i<28; i++)
+		{
+			display_string(0, 0x0008*i, "Verify Mismatch\\");
+		}
+	}
+	else if (code == 0x02)
+	{
 		SendString("Unknown Opcode \\");
 		SendLongHex(cpu_reg_pc);
 		SendChar(':');
@@ -388,6 +400,67 @@ unsigned char nes_load(char *filename)
 	return flag;
 }
 
+unsigned char nes_verify(char *filename)
+{
+	// Global variables
+	FIL file; // File handle for the file we open
+	DIR dir; // Directory information for the current directory
+	FATFS fso; // File System Object for the file system we are reading from
+	
+	//SendString("Initializing disk\n\r\\");
+	
+	// Wait for the disk to initialise
+    while(disk_initialize(0));
+    // Mount the disk
+    f_mount(&fso, "", 0);
+    // Change dir to the root directory
+    f_chdir("/");
+    // Open the directory
+    f_opendir(&dir, ".");
+ 
+	unsigned char buffer[1];
+	unsigned int bytes;
+	unsigned int result;
+	unsigned char flag;
+	
+	unsigned long offset = 16 + cart_rom[4]*16384 + cart_rom[5]*8192;
+	
+	result = f_open(&file, filename, FA_READ);
+	if (result == 0)
+	{		
+		flag = 1;
+		
+		for (unsigned int i=0; i<offset; i++)
+		{
+			while (f_read(&file, &buffer[0], 1, &bytes) != 0) { } // MUST READ ONE BYTE AT A TIME!!!
+			
+			if (cart_rom[i] != buffer[0])
+			{
+				nes_error(0x01);
+				
+				flag = 0;
+				
+				break;
+			}
+		}
+		
+		while (f_sync(&file) != 0) { }
+		while (f_close(&file) != 0) { }
+		
+		//SendString("Read cart ram from file\n\r\\");
+	}
+	else
+	{		
+		//SendString("Could not read cart ram from file\n\r\\");
+		
+		flag = 0;
+		
+		nes_error(0x00);
+	}	
+	
+	return flag;
+}
+
 // change for platform
 unsigned char nes_burn(char *filename)
 {
@@ -448,7 +521,7 @@ unsigned char nes_burn(char *filename)
 
 		//SendString("Read successful\n\r\\");
 		
-		flag = 1;
+		flag = nes_verify(filename);
 	}
 	else
 	{
@@ -509,80 +582,80 @@ void nes_buttons()
 
 unsigned char nes_read_cpu_ram(unsigned long addr)
 {
-	//return cpu_ram[(addr&2047)];
-	return cpu_ram[addr];
+	return cpu_ram[(addr&2047)];
+	//return cpu_ram[addr];
 }
 
 void nes_write_cpu_ram(unsigned long addr, unsigned char val)
 {
-	//cpu_ram[(addr&2047)] = val;
-	cpu_ram[addr] = val;
+	cpu_ram[(addr&2047)] = val;
+	//cpu_ram[addr] = val;
 }
 
 unsigned char nes_read_ppu_ram(unsigned long addr)
 {
-	//return ppu_ram[(addr&2047)];
-	return ppu_ram[addr];
+	return ppu_ram[(addr&2047)];
+	//return ppu_ram[addr];
 }
 
 void nes_write_ppu_ram(unsigned long addr, unsigned char val)
 {
-	//ppu_ram[(addr&2047)] = val;
-	ppu_ram[addr] = val;
+	ppu_ram[(addr&2047)] = val;
+	//ppu_ram[addr] = val;
 }
 
 unsigned char nes_read_prg_ram(unsigned long addr)
 {
-	//return prg_ram[(addr&8191)];
-	return prg_ram[addr];
+	return prg_ram[(addr&8191)];
+	//return prg_ram[addr];
 }
 
 void nes_write_prg_ram(unsigned long addr, unsigned char val)
 {
-	//prg_ram[(addr&8191)] = val;
-	prg_ram[addr] = val;
+	prg_ram[(addr&8191)] = val;
+	//prg_ram[addr] = val;
 }
 
 unsigned char nes_read_chr_ram(unsigned long addr)
 {
-	//return chr_ram[(addr&8191)];
-	return chr_ram[addr];
+	return chr_ram[(addr&8191)];
+	//return chr_ram[addr];
 }
 
 void nes_write_chr_ram(unsigned long addr, unsigned char val)
 {
-	//chr_ram[(addr&8191)] = val;
-	chr_ram[addr] = val;
+	chr_ram[(addr&8191)] = val;
+	//chr_ram[addr] = val;
 }
 
 unsigned char nes_read_oam_ram(unsigned long addr)
 {
-	//return oam_ram[(addr&255)];
-	return oam_ram[addr];
+	return oam_ram[(addr&255)];
+	//return oam_ram[addr];
 }
 
 void nes_write_oam_ram(unsigned long addr, unsigned char val)
 {
-	//oam_ram[(addr&255)] = val;
-	oam_ram[addr] = val;
+	oam_ram[(addr&255)] = val;
+	//oam_ram[addr] = val;
 }
 
 unsigned char nes_read_pal_ram(unsigned long addr)
 {
-	//return pal_ram[(addr&31)];
-	return pal_ram[addr];
+	return pal_ram[(addr&31)];
+	//return pal_ram[addr];
 }
 
 void nes_write_pal_ram(unsigned long addr, unsigned char val)
 {
-	//pal_ram[(addr&31)] = val;
-	pal_ram[addr] = val;
+	pal_ram[(addr&31)] = val;
+	//pal_ram[addr] = val;
 }
 
 volatile unsigned char nes_read_cart_rom(unsigned long addr)
 {
-	//debug_location = 3;
-	//debug_value = addr;
+	debug_location = 3;
+	debug_value = addr;
 	
 	return cart_rom[addr];
 }
@@ -2055,6 +2128,10 @@ void cpu_write(unsigned long addr, unsigned char val)
 unsigned long cpu_run()
 {	
 	cpu_temp_opcode = (unsigned long)cpu_read(cpu_reg_pc++);
+	
+	//debug_opcode = cpu_temp_opcode;
+	//debug_operand_1 = cpu_read(cpu_reg_pc);
+	//debug_operand_2 = cpu_read(cpu_reg_pc+1);
 	
 	switch (cpu_temp_opcode)
 	{
@@ -4331,7 +4408,7 @@ void nes_loop(unsigned long loop_count)
 
 	if (cpu_current_cycles == 0)
 	{
-		nes_error(0x01);
+		nes_error(0x02);
 	}
 	
 	ppu_scanline_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);

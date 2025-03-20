@@ -247,6 +247,9 @@ void SendLongHex(unsigned long value)
 	SendHex((unsigned char)(temp));
 }
 
+volatile unsigned long debug_opcode = 0x0000;
+volatile unsigned long debug_operand_1 = 0x0000;
+volatile unsigned long debug_operand_2 = 0x0000;
 volatile unsigned long debug_location = 0x0000; // TEMPORARY!
 volatile unsigned long debug_value = 0x0000; // TEMPORARY!
 
@@ -256,6 +259,18 @@ void _general_exception_handler(void)
 	SendLongHex(((_CP0_GET_CAUSE() & 0x0000007C) >> 2));
 	SendString("\n\r\\");
     SendLongHex(_CP0_GET_EPC());
+	SendString("\n\r\\");
+	
+	SendString("Debug Opcode \\");
+	SendLongHex(debug_opcode); // TEMPORARY!
+	SendString("\n\r\\");
+	
+	SendString("Debug Operand 1 \\");
+	SendLongHex(debug_operand_1); // TEMPORARY!
+	SendString("\n\r\\");
+	
+	SendString("Debug Operand 2 \\");
+	SendLongHex(debug_operand_2); // TEMPORARY!
 	SendString("\n\r\\");
 	
 	SendString("Debug Location \\");
