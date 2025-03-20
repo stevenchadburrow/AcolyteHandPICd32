@@ -17,7 +17,6 @@ Bubble Bobble - MMC1 - Perfect<br>
 Castlevania - UNROM - Great, minor sprite priority issues<br>
 Castlevania 2 - MMC1 - Great, minor sprite priority issues<br>
 Contra - MMC1 - Perfect<br>
-Championship Rally - MMC1 - Perfect<br>
 Double Dragon - MMC1 - Great, (hacked bottom status bar)<br>
 Double Dragon 2 - MMC3 - Good, bottom status bar is wrong sometimes, (hacked bottom status bar)<br>
 Dig Dug - NROM - Perfect<br>
@@ -47,6 +46,7 @@ Ninja Gaiden - MMC1 - Great, missing tiles on some cutscenes<br>
 Paperboy - CNROM - Perfect<br>
 Rampage - MMC3 - Perfect<br>
 River City Ransom - MMC3 - Great, some text disappears too quickly<br>
+Super Cars - UNROM - Perfect<br>
 Super Mario Bros - NROM - Perfect<br>
 Super Mario Bros 2 - MMC3 - Perfect<br>
 Super Mario Bros 3 - MMC3 - Good, (hacked bottom status bar and sprite priority)<br>
