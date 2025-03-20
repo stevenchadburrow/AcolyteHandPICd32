@@ -800,7 +800,7 @@ volatile unsigned char ps2_conversion[256] =
 volatile char __attribute__((coherent)) list_name[100*12];
 volatile unsigned short list_total = 1; // start at 1
 
-void __attribute__((optimize("O0"))) list_generate()
+void list_generate()
 {
 	// Global variables
 	DIR dir; // Directory information for the current directory
@@ -871,7 +871,7 @@ void __attribute__((optimize("O0"))) list_generate()
 	f_rewinddir(&dir);
 }
 
-void __attribute__((optimize("O0"))) list_display(unsigned short pos)
+void list_display(unsigned short pos)
 {
 	unsigned short start = 0;
 	
@@ -909,7 +909,7 @@ void __attribute__((optimize("O0"))) list_display(unsigned short pos)
 	}
 }
 
-void __attribute__((optimize("O0"))) list_picture(unsigned short pos)
+void list_picture(unsigned short pos)
 {
 	char filename[16];
 	unsigned char dot = 0;
@@ -1030,7 +1030,7 @@ unsigned long menu_wait = 0;
 unsigned long menu_delay = 0;
 unsigned long menu_rate = 3; // default of 3:1 frame rate
 
-void __attribute__((optimize("O2"))) game_loop()
+void game_loop()
 {
 	while (1)
 	{ 
@@ -1197,7 +1197,7 @@ void __attribute__((optimize("O2"))) game_loop()
 // undecided optimizations: align-functions,align-loops,align_labels
 // good optimizations: expensive-optimizations,peephole,unroll-loops
 
-int __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) main()
+int main()
 {
 	unsigned short sdcard_flag = 0;
 	

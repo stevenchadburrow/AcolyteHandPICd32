@@ -202,7 +202,7 @@ volatile unsigned short apu_period[16] = {
 	4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
 };
 
-volatile void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"),vector(_TIMER_8_VECTOR), interrupt(ipl2srs))) t8_handler()
+volatile void __attribute__((vector(_TIMER_8_VECTOR), interrupt(ipl2srs))) t8_handler()
 {		
 	IFS1bits.T8IF = 0;  // clear interrupt flag
 	
@@ -221,7 +221,7 @@ volatile void __attribute__((optimize("O1,expensive-optimizations,peephole,unrol
 	}
 }
 
-volatile void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"),vector(_TIMER_9_VECTOR), interrupt(ipl3srs))) t9_handler()
+volatile void __attribute__((vector(_TIMER_9_VECTOR), interrupt(ipl3srs))) t9_handler()
 {		
 	IFS1bits.T9IF = 0;  // clear interrupt flag
 	
@@ -231,7 +231,7 @@ volatile void __attribute__((optimize("O1,expensive-optimizations,peephole,unrol
 }
 
 // change for platform
-void __attribute__((optimize("O0"))) nes_error(unsigned char code)
+void nes_error(unsigned char code)
 {			
 	SendChar('\n');
 	SendChar('\r');
@@ -284,7 +284,7 @@ void __attribute__((optimize("O0"))) nes_error(unsigned char code)
 	while (1) { } // wait until reset occurs
 }
 
-unsigned char __attribute__((optimize("O0"))) nes_save(char *filename)
+unsigned char nes_save(char *filename)
 {
 	// Global variables
 	FIL file; // File handle for the file we open
@@ -336,7 +336,7 @@ unsigned char __attribute__((optimize("O0"))) nes_save(char *filename)
 	return flag;
 }
 
-unsigned char __attribute__((optimize("O0"))) nes_load(char *filename)
+unsigned char nes_load(char *filename)
 {
 	// Global variables
 	FIL file; // File handle for the file we open
@@ -389,7 +389,7 @@ unsigned char __attribute__((optimize("O0"))) nes_load(char *filename)
 }
 
 // change for platform
-unsigned char __attribute__((optimize("O0"))) nes_burn(char *filename)
+unsigned char nes_burn(char *filename)
 {
 	for (unsigned long i=0x1D100000; i<0x1D200000; i+=0x00001000) // pages are 0x1000
 	{
@@ -474,7 +474,7 @@ unsigned char __attribute__((optimize("O0"))) nes_burn(char *filename)
 }
 
 // change for platform
-void __attribute__((optimize("O2"))) nes_pixel(unsigned short pos_x, unsigned short pos_y, unsigned char color)
+void nes_pixel(unsigned short pos_x, unsigned short pos_y, unsigned char color)
 {
 	nes_pixel_location = ((pos_y))*SCREEN_X+((pos_x<<1))+(1-screen_frame)*SCREEN_XY;
 	screen_buffer[(nes_pixel_location)] = color;
@@ -482,13 +482,13 @@ void __attribute__((optimize("O2"))) nes_pixel(unsigned short pos_x, unsigned sh
 }
 
 // change for platform
-void __attribute__((optimize("O2"))) nes_frame()
+void nes_frame()
 {
 	screen_frame = 1 - screen_frame;
 }
 
 // change for platform
-void __attribute__((optimize("O2"))) nes_sound(unsigned char sample)
+void nes_sound(unsigned char sample)
 {
 	audio_buffer[(audio_write)%AUDIO_LEN] = sample;
 	
@@ -501,85 +501,85 @@ void __attribute__((optimize("O2"))) nes_sound(unsigned char sample)
 }
 	
 // change for platform
-void __attribute__((optimize("O2"))) nes_buttons()
+void nes_buttons()
 {
 	ctl_value_1 = 0xFF080000 | (controller_status_3 << 8) | controller_status_1;
 	ctl_value_2 = 0xFF040000 | (controller_status_4 << 8) | controller_status_2;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_cpu_ram(unsigned long addr)
+unsigned char nes_read_cpu_ram(unsigned long addr)
 {
 	//return cpu_ram[(addr&2047)];
 	return cpu_ram[addr];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_write_cpu_ram(unsigned long addr, unsigned char val)
+void nes_write_cpu_ram(unsigned long addr, unsigned char val)
 {
 	//cpu_ram[(addr&2047)] = val;
 	cpu_ram[addr] = val;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_ppu_ram(unsigned long addr)
+unsigned char nes_read_ppu_ram(unsigned long addr)
 {
 	//return ppu_ram[(addr&2047)];
 	return ppu_ram[addr];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_write_ppu_ram(unsigned long addr, unsigned char val)
+void nes_write_ppu_ram(unsigned long addr, unsigned char val)
 {
 	//ppu_ram[(addr&2047)] = val;
 	ppu_ram[addr] = val;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_prg_ram(unsigned long addr)
+unsigned char nes_read_prg_ram(unsigned long addr)
 {
 	//return prg_ram[(addr&8191)];
 	return prg_ram[addr];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_write_prg_ram(unsigned long addr, unsigned char val)
+void nes_write_prg_ram(unsigned long addr, unsigned char val)
 {
 	//prg_ram[(addr&8191)] = val;
 	prg_ram[addr] = val;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_chr_ram(unsigned long addr)
+unsigned char nes_read_chr_ram(unsigned long addr)
 {
 	//return chr_ram[(addr&8191)];
 	return chr_ram[addr];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_write_chr_ram(unsigned long addr, unsigned char val)
+void nes_write_chr_ram(unsigned long addr, unsigned char val)
 {
 	//chr_ram[(addr&8191)] = val;
 	chr_ram[addr] = val;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_oam_ram(unsigned long addr)
+unsigned char nes_read_oam_ram(unsigned long addr)
 {
 	//return oam_ram[(addr&255)];
 	return oam_ram[addr];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_write_oam_ram(unsigned long addr, unsigned char val)
+void nes_write_oam_ram(unsigned long addr, unsigned char val)
 {
 	//oam_ram[(addr&255)] = val;
 	oam_ram[addr] = val;
 }
 
-unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_pal_ram(unsigned long addr)
+unsigned char nes_read_pal_ram(unsigned long addr)
 {
 	//return pal_ram[(addr&31)];
 	return pal_ram[addr];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_write_pal_ram(unsigned long addr, unsigned char val)
+void nes_write_pal_ram(unsigned long addr, unsigned char val)
 {
 	//pal_ram[(addr&31)] = val;
 	pal_ram[addr] = val;
 }
 
-volatile unsigned char __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_read_cart_rom(unsigned long addr)
+volatile unsigned char nes_read_cart_rom(unsigned long addr)
 {
 	//debug_location = 3;
 	//debug_value = addr;
@@ -587,7 +587,7 @@ volatile unsigned char __attribute__((optimize("O1,expensive-optimizations,peeph
 	return cart_rom[addr];
 }
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_irq_decrement()
+void nes_irq_decrement()
 {
 	if (map_mmc3_irq_counter == 0)
 	{
@@ -611,7 +611,7 @@ void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops")
 	map_mmc3_irq_previous = map_mmc3_irq_counter;
 }
 
-unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
+unsigned char cpu_read(unsigned long addr)
 {	
 	debug_location = 1;
 	debug_value = addr;
@@ -1144,7 +1144,7 @@ unsigned char __attribute__((optimize("O2"))) cpu_read(unsigned long addr)
 	return 0xFF;
 }
 
-void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char val)
+void cpu_write(unsigned long addr, unsigned char val)
 {	
 	debug_location = 2;
 	debug_value = addr;
@@ -2052,7 +2052,7 @@ void __attribute__((optimize("O2"))) cpu_write(unsigned long addr, unsigned char
 	cpu_temp_memory=cpu_ram[(0x0100+(cpu_reg_s&0x00FF))]; }
 
 
-unsigned long __attribute__((optimize("O2"))) cpu_run()
+unsigned long cpu_run()
 {	
 	cpu_temp_opcode = (unsigned long)cpu_read(cpu_reg_pc++);
 	
@@ -2594,7 +2594,7 @@ unsigned long __attribute__((optimize("O2"))) cpu_run()
 	return cpu_temp_cycles;
 }
 
-void __attribute__((optimize("O2"))) nes_border()
+void nes_border()
 {
 	unsigned char pixel_color = 0;
 
@@ -2609,7 +2609,7 @@ void __attribute__((optimize("O2"))) nes_border()
 	}
 }
 
-void __attribute__((optimize("O2"))) nes_background(signed short line)
+void nes_background(signed short line)
 {
 	debug_location = 5;
 	debug_value = line;
@@ -3001,7 +3001,7 @@ void __attribute__((optimize("O2"))) nes_background(signed short line)
 	}
 }
 	
-void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground, unsigned long min_y, unsigned long max_y)
+void nes_sprites(unsigned char ground, unsigned long min_y, unsigned long max_y)
 {
 	debug_location = 6;
 	debug_value = ground;
@@ -3468,7 +3468,7 @@ void __attribute__((optimize("O2"))) nes_sprites(unsigned char ground, unsigned 
 	}
 }
 
-void __attribute__((optimize("O2"))) nes_audio(unsigned long cycles)
+void nes_audio(unsigned long cycles)
 {
 	debug_location = 7;
 	debug_value = cycles;
@@ -3819,7 +3819,7 @@ void __attribute__((optimize("O2"))) nes_audio(unsigned long cycles)
 	else apu_dmc_o = (apu_dmc_d<<1);
 }
 
-void __attribute__((optimize("O2"))) nes_mixer()
+void nes_mixer()
 {
 	apu_mixer_output = 0x0000;
 	
@@ -3833,7 +3833,7 @@ void __attribute__((optimize("O2"))) nes_mixer()
 	nes_sound(apu_mixer_output);
 }
 
-void __attribute__((optimize("O2"))) nes_sprite_0_calc()
+void nes_sprite_0_calc()
 {	
 	// sprite 0
 	if (ppu_flag_h == 0) // 8x8 sprites
@@ -4122,7 +4122,7 @@ void __attribute__((optimize("O2"))) nes_sprite_0_calc()
 }
 
 // needs to be unoptimized else it will be deleted
-void __attribute__((optimize("O0"))) nes_wait(unsigned long loop_count)
+void nes_wait(unsigned long loop_count)
 {
 	// wait for interrupts to catch up
 	while (nes_interrupt_count < (loop_count)) { }
@@ -4131,7 +4131,7 @@ void __attribute__((optimize("O0"))) nes_wait(unsigned long loop_count)
 }
 
 
-void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops"))) nes_loop(unsigned long loop_count)
+void nes_loop(unsigned long loop_count)
 {	 
 	if (nes_init_flag == 0)
 	{
@@ -4487,10 +4487,7 @@ void __attribute__((optimize("O1,expensive-optimizations,peephole,unroll-loops")
 			}
 			else
 			{
-				if (nes_hack_bottom_hud == 0) // this is just for speed sake
-				{
-					nes_sprites(0, ppu_scanline_interrupt, 255);
-				}
+				nes_sprites(0, ppu_scanline_interrupt, 255);
 			}
 
 			nes_frame();
