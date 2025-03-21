@@ -655,8 +655,8 @@ void nes_write_pal_ram(unsigned long addr, unsigned char val)
 
 unsigned char nes_read_cart_rom(unsigned long addr)
 {
-	debug_location = 3;
-	debug_value = addr;
+	//debug_location = 3;
+	//debug_value = addr;
 	
 	return (unsigned char)(unsigned char)cart_rom[addr];
 }
