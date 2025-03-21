@@ -33,6 +33,7 @@ volatile unsigned long nes_interrupt_count = 0;
 volatile unsigned char nes_hack_top_hud = 0; // Duck Tales
 volatile unsigned char nes_hack_bottom_hud = 0; // Mario 3 and Kirby
 volatile unsigned char nes_hack_sprite_priority = 0; // Mario 3
+volatile unsigned char nes_hack_vertical_shift = 0; // Battletoads
 
 unsigned long cpu_current_cycles = 0, cpu_dma_cycles = 0;
 unsigned long ppu_scanline_cycles = 0;
@@ -2724,7 +2725,7 @@ void nes_background(signed short line)
 	unsigned char pixel_high = 0, pixel_low = 0;
 	unsigned char pixel_color = 0;
 	
-	if (line >= 0 && line < 8)
+	if ((line >= 0 && line < 8) || (line >= 0 && line < 32 && nes_hack_vertical_shift > 0))
 	{
 		ppu_reg_r = ppu_reg_t;
 	}
@@ -2743,7 +2744,9 @@ void nes_background(signed short line)
 	
 	if (ppu_flag_eb > 0)
 	{
-		pixel_y = line - ((ppu_reg_r & 0x7000) >> 12);
+		pixel_y = (line) - ((ppu_reg_r & 0x7000) >> 12);
+		
+		if (nes_hack_vertical_shift > 0) pixel_y += 32;
 		
 		if (pixel_y >= 8 && pixel_y < 232) // remove overscan above and below
 		{
@@ -2752,7 +2755,7 @@ void nes_background(signed short line)
 			{					
 				scroll_x = (ppu_reg_r & 0x001F) + w;
 				
-				scroll_y = ((ppu_reg_r & 0x03E0) >> 5) + (line>>3);
+				scroll_y = ((ppu_reg_r & 0x03E0) >> 5) + ((line)>>3);
 				
 				scroll_n = ((ppu_reg_r & 0x0C00) >> 10);
 
@@ -4220,6 +4223,8 @@ void nes_sprite_0_calc()
 	
 	ppu_status_s += oam_ram[0]; // add y-coordinate
 	ppu_status_d = oam_ram[3]; // x-coordinate
+	
+	if (nes_hack_vertical_shift > 0) ppu_status_s += 8;
 }
 
 // needs to be unoptimized else it will be deleted
@@ -4292,6 +4297,7 @@ void nes_loop(unsigned long loop_count)
 		nes_hack_top_hud = 0;
 		nes_hack_bottom_hud = 0;
 		nes_hack_sprite_priority = 0;
+		nes_hack_vertical_shift = 0;
 		
 		unsigned long loc = prg_offset+0x4000*((unsigned char)cart_rom[4]-1)+0x3FE0;
 		
@@ -4381,6 +4387,29 @@ void nes_loop(unsigned long loop_count)
 				(unsigned char)cart_rom[loc+15] == 0x00)
 			{
 				nes_hack_bottom_hud = 1;
+			}
+		}
+		
+		if (map_number == 7) // anrom
+		{
+			if ((unsigned char)cart_rom[loc+0] == 0x2D && // Battletoads
+				(unsigned char)cart_rom[loc+1] == 0x68 &&
+				(unsigned char)cart_rom[loc+2] == 0x85 &&
+				(unsigned char)cart_rom[loc+3] == 0x13 &&
+				(unsigned char)cart_rom[loc+4] == 0xB9 &&
+				(unsigned char)cart_rom[loc+5] == 0xB3 &&
+				(unsigned char)cart_rom[loc+6] == 0xFF &&
+				(unsigned char)cart_rom[loc+7] == 0x99 &&
+				(unsigned char)cart_rom[loc+8] == 0xB3 &&
+				(unsigned char)cart_rom[loc+9] == 0xFF &&
+				(unsigned char)cart_rom[loc+10] == 0x60 &&
+				(unsigned char)cart_rom[loc+11] == 0xCA &&
+				(unsigned char)cart_rom[loc+12] == 0xD0 &&
+				(unsigned char)cart_rom[loc+13] == 0xFD &&
+				(unsigned char)cart_rom[loc+14] == 0x88 &&
+				(unsigned char)cart_rom[loc+15] == 0xD0)
+			{
+				nes_hack_vertical_shift = 1;
 			}
 		}
 		
