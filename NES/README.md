@@ -20,7 +20,6 @@ Castlevania 2 - MMC1 - Great, minor sprite priority issues<br>
 Championship Rally - MMC1 - Perfect<br>
 Contra - MMC1 - Perfect<br>
 Double Dragon - MMC1 - Great, (hacked bottom status bar)<br>
-Double Dragon 2 - MMC3 - Good, bottom status bar is wrong sometimes, (hacked bottom status bar)<br>
 Dig Dug - NROM - Perfect<br>
 Donkey Kong - NROM - Great, sound effects are annoying<br>
 Double Dribble - UNROM - Perfect<br>
@@ -36,6 +35,7 @@ Gradius - CNROM - Great, a few scanline in status bar missing<br>
 Ice Climber - NROM - Perfect<br>
 Kid Icarus - MMC1 - Perfect<br>
 Kirby's Adventure - MMC3 - Great, (hacked bottom status bar)<br>
+King's Quest V - MMC3, Great, some tiles are wrong<br>
 Kung Fu - NROM - Perfect<br>
 Mach Rider - NROM - Good, horizontal scanlines off a bit<br>
 Mario Bros - NROM - Perfect<br>
