@@ -12,7 +12,7 @@ Arkanoid - CNROM - Perfect<br>
 Ballon Fight - NROM - Perfect<br>
 Baseball - NROM - Perfect<br>
 Battle Kid - UNROM - Perfect<br>
-Battletoads - ANROM - Fair, vertical scrolling is off, missing status bar<br>
+Battletoads - ANROM - Fair, (hacked vertical scrolling, but cutscenes are a mess now)<br>
 Bionic Commando - MMC1 - Perfect<br>
 Blades of Steel - UNROM - Perfect<br>
 Blaster Master - MMC1 - Great, minor sprite priority issues<br>
