@@ -52,7 +52,7 @@ R.C. Pro AM 2 - ANROM - Great, single scanline on intro screen off<br>
 River City Ransom - MMC3 - Great, some text disappears too quickly<br>
 Super Mario Bros - NROM - Perfect<br>
 Super Mario Bros 2 - MMC3 - Perfect<br>
-Super Mario Bros 3 - MMC3 - Good, (hacked bottom status bar and sprite priority)<br>
+Super Mario Bros 3 - MMC3 - Good, line-up game no longer works, (hacked bottom status bar and sprite priority)<br>
 Super Off Road - ANROM - Good, some tiles off, status bar shifted down<br>
 Tetris - MMC1 - Perfect<br>
 Super Turrican - MMC3 - Great, intro screen has wrong tiles<br>
