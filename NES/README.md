@@ -10,9 +10,11 @@ The default 55 games chosen for this system include:
 1943: Midway - UNROM - Perfect<br>
 Arkanoid - CNROM - Perfect<br>
 Ballon Fight - NROM - Perfect<br>
+Baseball - NROM - Perfect<br>
 Battle Kid - UNROM - Perfect<br>
 Battletoads - ANROM - Fair, vertical scrolling is off, missing status bar<br>
 Bionic Commando - MMC1 - Perfect<br>
+Blades of Steel - UNROM - Perfect<br>
 Blaster Master - MMC1 - Great, minor sprite priority issues<br>
 Bubble Bobble - MMC1 - Perfect<br>
 Castlevania - UNROM - Great, minor sprite priority issues<br>
@@ -23,8 +25,6 @@ Double Dragon - MMC1 - Great, (hacked bottom status bar)<br>
 Dig Dug - NROM - Perfect<br>
 Donkey Kong - NROM - Great, sound effects are annoying<br>
 Double Dribble - UNROM - Perfect<br>
-Dragon Warrior - MMC1 - Perfect<br>
-Dragon Warrior 2 - MMC1 - Perfect<br>
 Dragon Warrior 3 - MMC1 - Perfect<br>
 Dragon Warrior 4 - MMC1 - Perfect<br>
 Duck Tales - UNROM - Great, a few scanlines in status bar scroll incorrectly, (hacked top status bar)<br>
