@@ -1149,7 +1149,7 @@ void game_loop()
 			else if (menu_pos == 3)
 			{
 				nes_hack_top_hud = 1; // Duck Tales
-				nes_hack_bottom_hud = 1; // Mario 3, Kirby, and Double Dragon 2
+				nes_hack_bottom_hud = 1; // Mario 3, Kirby, and Double Dragon
 				nes_hack_sprite_priority = 1; // Mario 3
 			}
 			else if (menu_pos == 4)

@@ -2737,7 +2737,7 @@ void nes_background(signed short line)
 	{
 		if ((map_number == 4 && ppu_scanline_interrupt > 0) || (map_number != 4 && ppu_scanline_sprite_0 > 0))
 		{
-			ppu_reg_r = ((ppu_reg_r & 0x041F) | 0x0800); // hack for Mario 3, Kirby, Double Dragon, and Double Dragon 2
+			ppu_reg_r = ((ppu_reg_r & 0x041F) | 0x0800); // hack for Mario 3, Kirby, and Double Dragon
 		}
 	}
 	
@@ -4379,25 +4379,6 @@ void nes_loop(unsigned long loop_count)
 				(unsigned char)cart_rom[loc+13] == 'l' &&
 				(unsigned char)cart_rom[loc+14] == 'X' &&
 				(unsigned char)cart_rom[loc+15] == 0x00)
-			{
-				nes_hack_bottom_hud = 1;
-			}
-			else if ((unsigned char)cart_rom[loc+0] == 0x00 && // Double Dragon 2
-				(unsigned char)cart_rom[loc+1] == 0x8D &&
-				(unsigned char)cart_rom[loc+2] == 0xF0 &&
-				(unsigned char)cart_rom[loc+3] == 0x00 &&
-				(unsigned char)cart_rom[loc+4] == 0x4C &&
-				(unsigned char)cart_rom[loc+5] == 0x0D &&
-				(unsigned char)cart_rom[loc+6] == 0xED &&
-				(unsigned char)cart_rom[loc+7] == 0x5C &&
-				(unsigned char)cart_rom[loc+8] == 0x5D &&
-				(unsigned char)cart_rom[loc+9] == 0x5E &&
-				(unsigned char)cart_rom[loc+10] == 0x5F &&
-				(unsigned char)cart_rom[loc+11] == 0x6D &&
-				(unsigned char)cart_rom[loc+12] == 0x00 &&
-				(unsigned char)cart_rom[loc+13] == 0xC1 &&
-				(unsigned char)cart_rom[loc+14] == 0xC2 &&
-				(unsigned char)cart_rom[loc+15] == 0xC3)
 			{
 				nes_hack_bottom_hud = 1;
 			}
