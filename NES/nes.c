@@ -2736,7 +2736,7 @@ void nes_background(signed short line)
 	
 	if (nes_hack_bottom_hud > 0)
 	{
-		if ((map_number == 4 && ppu_scanline_interrupt > 0) || (map_number != 4 && ppu_scanline_sprite_0 > 0))
+		if ((map_number == 4 && ppu_scanline_interrupt > 0) || (map_number == 1 && ppu_scanline_sprite_0 > 0))
 		{
 			ppu_reg_r = ((ppu_reg_r & 0x041F) | 0x0800); // hack for Mario 3, Kirby, and Double Dragon
 		}
