@@ -47,6 +47,7 @@ unsigned short map_number = 0x0000;
 
 unsigned long map_unrom_bank = 0x0000;
 unsigned long map_cnrom_bank = 0x0000;
+unsigned long map_anrom_bank = 0x0000;
 
 unsigned long map_mmc1_shift = 0x0000;
 unsigned long map_mmc1_count = 0x0000;
@@ -1124,6 +1125,10 @@ unsigned char cpu_read(unsigned long addr)
 				return nes_read_cart_rom((prg_offset+0x2000*map_mmc3_bank_r7+addr-0xA000));
 			}
 		}
+		else if (map_number == 0x0007) // anrom
+		{
+			return nes_read_cart_rom((prg_offset+0x8000*map_anrom_bank+addr-0x8000));
+		}
 		else // nrom
 		{
 			return nes_read_cart_rom((prg_offset+addr-0x8000));
@@ -1196,6 +1201,10 @@ unsigned char cpu_read(unsigned long addr)
 			{
 				return nes_read_cart_rom((prg_offset+0x2000*(((unsigned char)cart_rom[4]<<1)-1)+addr-0xE000));
 			}
+		}
+		else if (map_number == 0x0007) // anrom
+		{
+			return nes_read_cart_rom((prg_offset+0x8000*map_anrom_bank+addr-0x8000));
 		}
 		else // nrom
 		{
@@ -1715,7 +1724,7 @@ void cpu_write(unsigned long addr, unsigned char val)
 			}
 			else
 			{
-				map_mmc1_shift = ((map_mmc1_shift >> 1) | ((val & 0x01) << 4));
+				map_mmc1_shift = ((map_mmc1_shift >> 1) | (((unsigned long)val & 0x01) << 4));
 				map_mmc1_count = map_mmc1_count + 1;
 				
 				if (map_mmc1_count >= 5)
@@ -1775,11 +1784,11 @@ void cpu_write(unsigned long addr, unsigned char val)
 		}
 		else if (map_number == 0x0002) // unrom
 		{
-			map_unrom_bank = (val & 0x0F);
+			map_unrom_bank = ((unsigned long)val & 0x0F);
 		}
 		else if (map_number == 0x0003) // cnrom
 		{
-			map_cnrom_bank = (val & 0x03);
+			map_cnrom_bank = ((unsigned long)val & 0x03);
 		}
 		else if (map_number == 0x0004) // mmc3
 		{
@@ -1787,9 +1796,9 @@ void cpu_write(unsigned long addr, unsigned char val)
 			{
 				if ((addr & 0x00000001) == 0x00000000) // even
 				{
-					map_mmc3_bank_next = (val & 0x07);
-					map_mmc3_prg_mode = ((val & 0x40) >> 6);
-					map_mmc3_chr_mode = ((val & 0x80) >> 7);
+					map_mmc3_bank_next = ((unsigned long)val & 0x07);
+					map_mmc3_prg_mode = (((unsigned long)val & 0x40) >> 6);
+					map_mmc3_chr_mode = (((unsigned long)val & 0x80) >> 7);
 				}
 				else // odd
 				{
@@ -1797,42 +1806,42 @@ void cpu_write(unsigned long addr, unsigned char val)
 					{
 						case 0x00:
 						{
-							map_mmc3_bank_r0 = ((val & 0xFE) >> 1);
+							map_mmc3_bank_r0 = (((unsigned long)val & 0xFE) >> 1);
 							break;
 						}
 						case 0x01:
 						{
-							map_mmc3_bank_r1 = ((val & 0xFE) >> 1);
+							map_mmc3_bank_r1 = (((unsigned long)val & 0xFE) >> 1);
 							break;
 						}
 						case 0x02:
 						{
-							map_mmc3_bank_r2 = val;
+							map_mmc3_bank_r2 = (unsigned long)val;
 							break;
 						}
 						case 0x03:
 						{
-							map_mmc3_bank_r3 = val;
+							map_mmc3_bank_r3 = (unsigned long)val;
 							break;
 						}
 						case 0x04:
 						{
-							map_mmc3_bank_r4 = val;
+							map_mmc3_bank_r4 = (unsigned long)val;
 							break;
 						}
 						case 0x05:
 						{
-							map_mmc3_bank_r5 = val;
+							map_mmc3_bank_r5 = (unsigned long)val;
 							break;
 						}
 						case 0x06:
 						{
-							map_mmc3_bank_r6 = (val & 0x3F);
+							map_mmc3_bank_r6 = ((unsigned long)val & 0x3F);
 							break;
 						}
 						case 0x07:
 						{
-							map_mmc3_bank_r7 = (val & 0x3F);
+							map_mmc3_bank_r7 = ((unsigned long)val & 0x3F);
 							break;
 						}
 					}
@@ -1842,7 +1851,7 @@ void cpu_write(unsigned long addr, unsigned char val)
 			{
 				if ((addr & 0x00000001) == 0x00000000) // even
 				{
-					if ((val & 0x01) == 0x00)
+					if (((unsigned long)val & 0x01) == 0x00)
 					{
 						ppu_status_m = 0x0001; // horizontal scrolling
 					}
@@ -1853,14 +1862,14 @@ void cpu_write(unsigned long addr, unsigned char val)
 				}
 				else // odd
 				{
-					map_mmc3_ram = ((val & 0x80) >> 7);
+					map_mmc3_ram = (((unsigned long)val & 0x80) >> 7);
 				}
 			}
 			else if (addr < 0x0000E000) // irq values
 			{
 				if ((addr & 0x00000001) == 0x00000000) // even
 				{
-					map_mmc3_irq_latch = val;
+					map_mmc3_irq_latch = (unsigned long)val;
 				}
 				else // odd
 				{
@@ -1877,6 +1886,19 @@ void cpu_write(unsigned long addr, unsigned char val)
 				{
 					map_mmc3_irq_enable = 0x0001; // enable
 				}
+			}
+		}
+		else if (map_number == 0x0007) // anrom
+		{
+			map_anrom_bank = ((unsigned long)val & 0x07);
+			
+			if (((unsigned long)val & 0x10) == 0x00)
+			{
+				ppu_status_m = 0x0002;
+			}
+			else
+			{
+				ppu_status_m = 0x0003;
 			}
 		}
 	}
@@ -4401,6 +4423,8 @@ void nes_loop(unsigned long loop_count)
 	debug_location = 0;
 	
 	cpu_current_cycles += cpu_run();
+	
+	//cpu_ram[0x0026] = 0x00; // hack for Turbo Racer
 	
 	debug_location = 4;
 	
