@@ -7,13 +7,52 @@
 // Run:
 // ./NesEmulator.o Roms/SMB.NES
 
-
 // An NES emulator designed for the PIC32MZ
 // Yet easy to implement on other platforms
 // Written by: Professor Steven Chad Burrow
 
-#include <stdio.h>
+// To download required libraries, use:
+
+// sudo apt-get install g++ libglfw3-dev
+
+// (and maybe others?  Mesa packages for Linux?  Mingw perhaps?)
+
+// Use this to compile:
+
+// g++ -o Base.o Base.cpp -lglfw -lGL -lGLU
+
+// Then to execute:
+
+// ./Base.o
+
+// For Windows, use Code::Blocks and download the GLFW Pre-Compiled Libraries, and just toss those into the folders needed ("include" and "lib").
+
+// Do not use the GLFW project, but use a blank project, and use the linker to put in all kinds of things.
+
+// Also remember you need <windows.h> for any Windows program!
+
 #include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <math.h>
+#include <time.h>
+#include <string.h>
+
+#include <GLFW/glfw3.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
+
+int open_window_x = 512;
+int open_window_y = 480;
+
+int open_cursor_new_x = 0;
+int open_cursor_new_y = 0;
+int open_cursor_old_x = 0;
+int open_cursor_old_y = 0;
+
+int open_keyboard_state[512];
+
+clock_t open_clock_previous, open_clock_current;
 
 
 unsigned char screen_buffer[256*240];
@@ -296,8 +335,63 @@ void nes_sound(unsigned char sample)
 // change for platform
 void nes_buttons()
 {
+	controller_status_1 = 0x00;
+
+	if (open_keyboard_state[GLFW_KEY_X] == 1)
+	{	
+		controller_status_1 |= 0x01;
+	}
+	
+	if (open_keyboard_state[GLFW_KEY_Z] == 1)
+	{	
+		controller_status_1 |= 0x02;
+	}
+
+	if (open_keyboard_state[GLFW_KEY_SPACE] == 1)
+	{	
+		controller_status_1 |= 0x04;
+	}
+
+	if (open_keyboard_state[GLFW_KEY_ENTER] == 1)
+	{	
+		controller_status_1 |= 0x08;
+	}
+
+	if (open_keyboard_state[GLFW_KEY_UP] == 1)
+	{	
+		controller_status_1 |= 0x10;
+	}
+
+	if (open_keyboard_state[GLFW_KEY_DOWN] == 1)
+	{	
+		controller_status_1 |= 0x20;
+	}
+
+	if (open_keyboard_state[GLFW_KEY_LEFT] == 1)
+	{	
+		controller_status_1 |= 0x40;
+	}
+
+	if (open_keyboard_state[GLFW_KEY_RIGHT] == 1)
+	{	
+		controller_status_1 |= 0x80;
+	}
+
 	ctl_value_1 = 0xFF080000 | (controller_status_3 << 8) | controller_status_1;
 	ctl_value_2 = 0xFF040000 | (controller_status_4 << 8) | controller_status_2;
+}
+
+// change for platform
+void nes_wait(unsigned long loop_count)
+{
+	while ((double)(open_clock_current - open_clock_previous) < (double)(loop_count * CLOCKS_PER_SEC) / 60.0f)
+	{
+		open_clock_current = clock();
+	} 
+	
+	nes_interrupt_count -= loop_count;
+
+	open_clock_previous = open_clock_current;
 }
 
 unsigned char nes_read_cpu_ram(unsigned long addr)
@@ -3923,17 +4017,8 @@ void nes_sprite_0_calc()
 	if (nes_hack_vertical_shift > 0) ppu_status_s += 8;
 }
 
-// needs to be unoptimized else it will be deleted
-void nes_wait(unsigned long loop_count)
+void nes_init()
 {
-	// wait for interrupts to catch up
-	//while (nes_interrupt_count < (loop_count)) { }
-	
-	nes_interrupt_count -= loop_count;
-}
-
-void nes_loop(unsigned long loop_count)
-{	 
 	if (nes_init_flag == 0)
 	{
 		nes_init_flag = 1;
@@ -4098,7 +4183,10 @@ void nes_loop(unsigned long loop_count)
 		//SendLongHex(cpu_reg_pc);
 		//SendString("Reset\n\r\\");
 	}
-	
+}
+
+void nes_loop(unsigned long loop_count)
+{	 
 	cpu_current_cycles = 0;
 
 	cpu_current_cycles += cpu_run();
@@ -4118,9 +4206,12 @@ void nes_loop(unsigned long loop_count)
 	{		
 		ppu_scanline_cycles -= 341;
 
-		if (ppu_frame_count == loop_count)
-		{	
-			nes_background(ppu_scanline_count);
+		if (ppu_scanline_count >= 0)
+		{
+			if (ppu_frame_count >= loop_count)
+			{	
+				nes_background(ppu_scanline_count);
+			}
 		}
 		
 		if (map_number == 4) // mmc3
@@ -4202,9 +4293,11 @@ void nes_loop(unsigned long loop_count)
 		if (ppu_flag_v == 0x0001)
 		{	
 			nes_sprite_0_calc();
-			
-			if (ppu_frame_count == loop_count)
+
+			if (ppu_frame_count >= loop_count)
 			{
+				nes_border();
+
 				nes_sprites(1, 0, 255);
 			}
 		}
@@ -4221,8 +4314,11 @@ void nes_loop(unsigned long loop_count)
 			if (nes_hack_top_hud > 0 || nes_hack_bottom_hud > 0)
 			{
 				ppu_scanline_sprite_0 = ppu_scanline_count;
-				
-				nes_sprites(0, 0, ppu_scanline_count); // hack for Duck Tales and Double Dragon
+
+				if (ppu_frame_count >= loop_count)
+				{
+					nes_sprites(0, 0, ppu_scanline_count); // hack for Duck Tales and Double Dragon
+				}
 			}
 		}
 	}
@@ -4258,7 +4354,7 @@ void nes_loop(unsigned long loop_count)
 		if (ppu_frame_count >= loop_count)
 		{
 			ppu_frame_count = 0;
-			
+
 			if (ppu_scanline_sprite_0 > 0)
 			{
 				nes_sprites(0, ppu_scanline_sprite_0, 255);
@@ -4280,60 +4376,11 @@ void nes_loop(unsigned long loop_count)
 		//ppu_scanline_count = 0;
 		
 		ppu_frame_count++;
-		
-		// start frame drawing
-		if (ppu_frame_count >= loop_count)
-		{
-			nes_border();
-		}
 
 		nes_buttons();
 	}
 }
 
-
-// To download required libraries, use:
-
-// sudo apt-get install g++ libglfw3-dev
-
-// (and maybe others?  Mesa packages for Linux?  Mingw perhaps?)
-
-// Use this to compile:
-
-// g++ -o Base.o Base.cpp -lglfw -lGL -lGLU
-
-// Then to execute:
-
-// ./Base.o
-
-// For Windows, use Code::Blocks and download the GLFW Pre-Compiled Libraries, and just toss those into the folders needed ("include" and "lib").
-
-// Do not use the GLFW project, but use a blank project, and use the linker to put in all kinds of things.
-
-// Also remember you need <windows.h> for any Windows program!
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <math.h>
-#include <time.h>
-#include <string.h>
-
-#include <GLFW/glfw3.h>
-#include <GL/gl.h>
-#include <GL/glu.h>
-
-int open_window_x = 512;
-int open_window_y = 480;
-
-int open_cursor_new_x = 0;
-int open_cursor_new_y = 0;
-int open_cursor_old_x = 0;
-int open_cursor_old_y = 0;
-
-int open_keyboard_state[512];
-
-clock_t open_clock_previous, open_clock_current;
 
 void InitializeOpenGLSettings()
 {
@@ -4476,62 +4523,17 @@ int main(const int argc, const char **argv)
 	glfwSetWindowSizeCallback(window, handleResize);
 
 	nes_burn((char *)argv[1]);
+
+	nes_init();
 	
 	// loop until closed
 	while (!glfwWindowShouldClose(window))
 	{
-		controller_status_1 = 0x00;
-
-		if (open_keyboard_state[GLFW_KEY_X] == 1)
-		{	
-			controller_status_1 |= 0x01;
-		}
-		
-		if (open_keyboard_state[GLFW_KEY_Z] == 1)
-		{	
-			controller_status_1 |= 0x02;
-		}
-
-		if (open_keyboard_state[GLFW_KEY_SPACE] == 1)
-		{	
-			controller_status_1 |= 0x04;
-		}
-
-		if (open_keyboard_state[GLFW_KEY_ENTER] == 1)
-		{	
-			controller_status_1 |= 0x08;
-		}
-
-		if (open_keyboard_state[GLFW_KEY_UP] == 1)
-		{	
-			controller_status_1 |= 0x10;
-		}
-
-		if (open_keyboard_state[GLFW_KEY_DOWN] == 1)
-		{	
-			controller_status_1 |= 0x20;
-		}
-
-		if (open_keyboard_state[GLFW_KEY_LEFT] == 1)
-		{	
-			controller_status_1 |= 0x40;
-		}
-
-		if (open_keyboard_state[GLFW_KEY_RIGHT] == 1)
-		{	
-			controller_status_1 |= 0x80;
-		}
-
-		nes_loop(3); // using 1 here doesn't work?
+		nes_loop(1); // using 1 here doesn't work?
 
 		if (screen_frame > 0)
 		{
 			screen_frame = 0;
-
-			open_clock_previous = open_clock_current;
-			open_clock_current = clock();
-
-			//printf("TimeDiff: %lf\n", (double)(open_clock_current - open_clock_previous) / (double)CLOCKS_PER_SEC);
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			glLoadIdentity(); // doesn't work right?
