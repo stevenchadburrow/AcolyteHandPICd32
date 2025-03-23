@@ -1,4 +1,4 @@
-*** These are just backups of files that are not fully implemented yet.  There are still 'general exception' errors occuring randomly. ***
+*** These are just backups of files that are not fully implemented yet.  NesEmulator.c is my Linux/OpenGL port. ***
 
 These files contain an NES emulator for the PIC32MZ.  It currently is running at 216 MHz, and if emulating the NES at around 20 FPS with audio it is nearly at full speed.
 
