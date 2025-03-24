@@ -2551,7 +2551,7 @@ void nes_vertical_increment()
 	ppu_reg_v = ((ppu_reg_v & 0x7BE0) | (ppu_reg_t & 0x041F));
 }
 
-void nes_background(unsigned long tile, unsigned long line)
+void nes_background_tile(unsigned long tile, unsigned long line)
 {
 	unsigned long scroll_t = 0, scroll_l = 0;
 	
@@ -2859,446 +2859,450 @@ void nes_sprites(unsigned char ground, unsigned long min_y, unsigned long max_y)
 	{
 		for (signed char s=63; s>=0; s--) // must be signed!
 		{
-			sprite_x = oam_ram[(((s<<2)+3)&0x00FF)];
 			sprite_y = oam_ram[(((s<<2)+0)&0x00FF)];
 
-			if (sprite_x < 0xF9 && sprite_y < 0xEF && sprite_y >= min_y && sprite_y < max_y)
+			if (sprite_y >= min_y && sprite_y < max_y)
 			{
-				sprite_attr = oam_ram[(((s<<2)+2)&0x00FF)];
-
-				if (((sprite_attr&0x20)>>5) == ground || ground > 1) // foreground/background
+				sprite_x = oam_ram[(((s<<2)+3)&0x00FF)];
+				
+				if (sprite_x < 0xF9 && sprite_y < 0xEF)
 				{
-					sprite_flip_horz = ((sprite_attr>>6)&0x01);
-					sprite_flip_vert = (sprite_attr>>7);
+					sprite_attr = oam_ram[(((s<<2)+2)&0x00FF)];
 
-					if (ppu_flag_h == 0) // 8x8 sprites
+					if (((sprite_attr&0x20)>>5) == ground || ground > 1) // foreground/background
 					{
-						sprite_tile = oam_ram[(s<<2)+1];
+						sprite_flip_horz = ((sprite_attr>>6)&0x01);
+						sprite_flip_vert = (sprite_attr>>7);
 
-						for (unsigned char j=0; j<8; j++)
+						if (ppu_flag_h == 0) // 8x8 sprites
 						{
-							if ((unsigned char)cart_rom[5] > 0)
+							sprite_tile = oam_ram[(s<<2)+1];
+
+							for (unsigned char j=0; j<8; j++)
 							{
-								pixel_lookup = sprite_tile*16+0x1000*ppu_flag_s+(sprite_flip_vert==0x00?j:7-j);
-								
-								if (map_number == 1) // mmc1
+								if ((unsigned char)cart_rom[5] > 0)
 								{
-									if (map_mmc1_chr_mode == 0) // 8KB
-									{
-										if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
-										{
-											pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0&0x1E);
-										}
-										else
-										{
-
-										}
-									}
-									else if (map_mmc1_chr_mode == 1) // 4KB banked
-									{
-										if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
-										{
-											if (pixel_lookup < 0x1000)
-											{
-												pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0);
-											}
-											else
-											{
-												pixel_lookup += 0x00001000*(map_mmc1_chr_bank_1);
-												pixel_lookup -= 0x00001000;
-											}
-										}
-										else
-										{
-
-										}
-									}
-								}
-								else if (map_number == 3) // cnrom
-								{
-									pixel_lookup += 0x2000*map_cnrom_bank;
-								}
-								else if (map_number == 4) // mmc3
-								{
-									if (map_mmc3_chr_mode == 0x0000)
-									{
-										switch ((pixel_lookup&0xFC00))
-										{
-											case 0x0000:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r0;
-												break;
-											}
-											case 0x0400:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r0;
-												break;
-											}
-											case 0x0800:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r1;
-												pixel_lookup -= 0x0800;
-												break;
-											}
-											case 0x0C00:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r1;
-												pixel_lookup -= 0x0800;
-												break;
-											}
-											case 0x1000:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r2;
-												pixel_lookup -= 0x1000;
-												break;
-											}
-											case 0x1400:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r3;
-												pixel_lookup -= 0x1400;
-												break;
-											}
-											case 0x1800:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r4;
-												pixel_lookup -= 0x1800;
-												break;
-											}
-											case 0x1C00:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r5;
-												pixel_lookup -= 0x1C00;
-												break;
-											}
-										}
-									}
-									else
-									{
-										switch ((pixel_lookup&0xFC00))
-										{
-											case 0x0000:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r2;
-												break;
-											}
-											case 0x0400:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r3;
-												pixel_lookup -= 0x0400;
-												break;
-											}
-											case 0x0800:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r4;
-												pixel_lookup -= 0x0800;
-												break;
-											}
-											case 0x0C00:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r5;
-												pixel_lookup -= 0x0C00;
-												break;
-											}
-											case 0x1000:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r0;
-												pixel_lookup -= 0x1000;
-												break;
-											}
-											case 0x1400:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r0;
-												pixel_lookup -= 0x1000;
-												break;
-											}
-											case 0x1800:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r1;
-												pixel_lookup -= 0x1800;
-												break;
-											}
-											case 0x1C00:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r1;
-												pixel_lookup -= 0x1800;
-												break;
-											}
-										}
-									}
-								}
-								
-								pixel_lookup += chr_offset;
-
-								pixel_low = (unsigned char)cart_rom[(pixel_lookup)];
-								pixel_high = (unsigned char)cart_rom[(pixel_lookup+8)];
-							}
-							else
-							{
-								pixel_lookup = sprite_tile*16+0x1000*ppu_flag_s+(sprite_flip_vert==0x00?j:7-j);
-
-								pixel_low = chr_ram[(pixel_lookup)];
-								pixel_high = chr_ram[(pixel_lookup+8)];
-							}
-
-							for (unsigned char i=0; i<8; i++)
-							{
-								if (sprite_flip_horz == 0x00) pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
-								else pixel_color = ((pixel_high<<1)&0x02)|(pixel_low&0x01);
-								
-								if (pixel_color != 0x00)
-								{
-									pixel_x = sprite_x+i;
-									pixel_y = sprite_y+j+1;
+									pixel_lookup = sprite_tile*16+0x1000*ppu_flag_s+(sprite_flip_vert==0x00?j:7-j);
 									
-									if (ppu_flag_ls > 0 || pixel_x >= 8) 
+									if (map_number == 1) // mmc1
 									{
-										if (pixel_x >= 0 && pixel_x < 256 && pixel_y >= 8 && pixel_y < 232)
+										if (map_mmc1_chr_mode == 0) // 8KB
 										{
-											if (ppu_flag_g > 0)
+											if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
 											{
-												nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[(0x0010+((sprite_attr&0x03)<<2)+pixel_color)]&0x30)]);
+												pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0&0x1E);
 											}
 											else
 											{
-												nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[(0x0010+((sprite_attr&0x03)<<2)+pixel_color)]]);
+
 											}
 										}
-									}
-								}
-
-								if (sprite_flip_horz == 0x00)
-								{
-									pixel_high = pixel_high << 1;
-									pixel_low = pixel_low << 1;
-								}
-								else
-								{
-									pixel_high = pixel_high >> 1;
-									pixel_low = pixel_low >> 1;
-								}
-							}
-						}
-					}
-					else // 8x16 sprites
-					{
-						sprite_tile = (oam_ram[(s<<2)+1] & 0xFE);
-
-						for (unsigned char j=0; j<16; j++)
-						{
-							if ((unsigned char)cart_rom[5] > 0)
-							{
-								pixel_lookup = sprite_tile*16+0x1000*(oam_ram[(((s<<2)+1)&0x00FF)]&0x01)+(sprite_flip_vert==0x00?j:15-j);
-
-								if (map_number == 1) // mmc1
-								{
-									if (map_mmc1_chr_mode == 0) // 8KB
-									{
-										if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
+										else if (map_mmc1_chr_mode == 1) // 4KB banked
 										{
-											pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0&0x1E);
-										}
-										else
-										{
-
-										}
-									}
-									else if (map_mmc1_chr_mode == 1) // 4KB banked
-									{
-										if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
-										{
-											if (pixel_lookup < 0x1000)
+											if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
 											{
-												pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0);
+												if (pixel_lookup < 0x1000)
+												{
+													pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0);
+												}
+												else
+												{
+													pixel_lookup += 0x00001000*(map_mmc1_chr_bank_1);
+													pixel_lookup -= 0x00001000;
+												}
 											}
 											else
 											{
-												pixel_lookup += 0x00001000*(map_mmc1_chr_bank_1);
-												pixel_lookup -= 0x00001000;
+
+											}
+										}
+									}
+									else if (map_number == 3) // cnrom
+									{
+										pixel_lookup += 0x2000*map_cnrom_bank;
+									}
+									else if (map_number == 4) // mmc3
+									{
+										if (map_mmc3_chr_mode == 0x0000)
+										{
+											switch ((pixel_lookup&0xFC00))
+											{
+												case 0x0000:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r0;
+													break;
+												}
+												case 0x0400:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r0;
+													break;
+												}
+												case 0x0800:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r1;
+													pixel_lookup -= 0x0800;
+													break;
+												}
+												case 0x0C00:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r1;
+													pixel_lookup -= 0x0800;
+													break;
+												}
+												case 0x1000:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r2;
+													pixel_lookup -= 0x1000;
+													break;
+												}
+												case 0x1400:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r3;
+													pixel_lookup -= 0x1400;
+													break;
+												}
+												case 0x1800:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r4;
+													pixel_lookup -= 0x1800;
+													break;
+												}
+												case 0x1C00:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r5;
+													pixel_lookup -= 0x1C00;
+													break;
+												}
 											}
 										}
 										else
 										{
+											switch ((pixel_lookup&0xFC00))
+											{
+												case 0x0000:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r2;
+													break;
+												}
+												case 0x0400:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r3;
+													pixel_lookup -= 0x0400;
+													break;
+												}
+												case 0x0800:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r4;
+													pixel_lookup -= 0x0800;
+													break;
+												}
+												case 0x0C00:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r5;
+													pixel_lookup -= 0x0C00;
+													break;
+												}
+												case 0x1000:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r0;
+													pixel_lookup -= 0x1000;
+													break;
+												}
+												case 0x1400:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r0;
+													pixel_lookup -= 0x1000;
+													break;
+												}
+												case 0x1800:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r1;
+													pixel_lookup -= 0x1800;
+													break;
+												}
+												case 0x1C00:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r1;
+													pixel_lookup -= 0x1800;
+													break;
+												}
+											}
+										}
+									}
+									
+									pixel_lookup += chr_offset;
 
-										}
-									}
-								}
-								else if (map_number == 3) // cnrom
-								{
-									pixel_lookup += 0x2000*map_cnrom_bank;
-								}
-								else if (map_number == 4) // mmc3
-								{
-									if (map_mmc3_chr_mode == 0x0000)
-									{
-										switch ((pixel_lookup&0xFC00))
-										{
-											case 0x0000:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r0;
-												break;
-											}
-											case 0x0400:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r0;
-												break;
-											}
-											case 0x0800:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r1;
-												pixel_lookup -= 0x0800;
-												break;
-											}
-											case 0x0C00:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r1;
-												pixel_lookup -= 0x0800;
-												break;
-											}
-											case 0x1000:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r2;
-												pixel_lookup -= 0x1000;
-												break;
-											}
-											case 0x1400:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r3;
-												pixel_lookup -= 0x1400;
-												break;
-											}
-											case 0x1800:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r4;
-												pixel_lookup -= 0x1800;
-												break;
-											}
-											case 0x1C00:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r5;
-												pixel_lookup -= 0x1C00;
-												break;
-											}
-										}
-									}
-									else
-									{
-										switch ((pixel_lookup&0xFC00))
-										{
-											case 0x0000:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r2;
-												break;
-											}
-											case 0x0400:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r3;
-												pixel_lookup -= 0x0400;
-												break;
-											}
-											case 0x0800:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r4;
-												pixel_lookup -= 0x0800;
-												break;
-											}
-											case 0x0C00:
-											{
-												pixel_lookup += 0x00000400*map_mmc3_bank_r5;
-												pixel_lookup -= 0x0C00;
-												break;
-											}
-											case 0x1000:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r0;
-												pixel_lookup -= 0x1000;
-												break;
-											}
-											case 0x1400:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r0;
-												pixel_lookup -= 0x1000;
-												break;
-											}
-											case 0x1800:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r1;
-												pixel_lookup -= 0x1800;
-												break;
-											}
-											case 0x1C00:
-											{
-												pixel_lookup += 0x00000800*map_mmc3_bank_r1;
-												pixel_lookup -= 0x1800;
-												break;
-											}
-										}
-									}
-								}
-								
-								pixel_lookup += chr_offset;
-								
-								if ((sprite_flip_vert==0x00?j:15-j) < 8)
-								{
 									pixel_low = (unsigned char)cart_rom[(pixel_lookup)];
 									pixel_high = (unsigned char)cart_rom[(pixel_lookup+8)];
 								}
 								else
 								{
-									pixel_low = (unsigned char)cart_rom[(pixel_lookup+8)];
-									pixel_high = (unsigned char)cart_rom[(pixel_lookup+16)];
-								}
-							}
-							else
-							{
-								pixel_lookup = sprite_tile*16+0x1000*(oam_ram[(((s<<2)+1)&0x00FF)]&0x01)+(sprite_flip_vert==0x00?j:15-j);
+									pixel_lookup = sprite_tile*16+0x1000*ppu_flag_s+(sprite_flip_vert==0x00?j:7-j);
 
-								if ((sprite_flip_vert==0x00?j:15-j) < 8)
-								{
 									pixel_low = chr_ram[(pixel_lookup)];
 									pixel_high = chr_ram[(pixel_lookup+8)];
 								}
-								else
-								{
-									pixel_low = chr_ram[(pixel_lookup+8)];
-									pixel_high = chr_ram[(pixel_lookup+16)];
-								}
-							}
 
-							for (unsigned char i=0; i<8; i++)
-							{
-								if (sprite_flip_horz == 0x00) pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
-								else pixel_color = ((pixel_high<<1)&0x02)|(pixel_low&0x01);
-
-								if (pixel_color != 0x00)
+								for (unsigned char i=0; i<8; i++)
 								{
-									pixel_x = sprite_x+i;
-									pixel_y = sprite_y+j+1;
+									if (sprite_flip_horz == 0x00) pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
+									else pixel_color = ((pixel_high<<1)&0x02)|(pixel_low&0x01);
 									
-									if (ppu_flag_ls > 0 || pixel_x >= 8) 
+									if (pixel_color != 0x00)
 									{
-										if (pixel_x >= 0 && pixel_x < 256 && pixel_y >= 8 && pixel_y < 232)
+										pixel_x = sprite_x+i;
+										pixel_y = sprite_y+j+1;
+										
+										if (ppu_flag_ls > 0 || pixel_x >= 8) 
 										{
-											if (ppu_flag_g > 0)
+											if (pixel_x >= 0 && pixel_x < 256 && pixel_y >= 8 && pixel_y < 232)
 											{
-												nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[(0x0010+((sprite_attr&0x03)<<2)+pixel_color)]&0x30)]);
-											}
-											else
-											{
-												nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[(0x0010+((sprite_attr&0x03)<<2)+pixel_color)]]);
+												if (ppu_flag_g > 0)
+												{
+													nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[(0x0010+((sprite_attr&0x03)<<2)+pixel_color)]&0x30)]);
+												}
+												else
+												{
+													nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[(0x0010+((sprite_attr&0x03)<<2)+pixel_color)]]);
+												}
 											}
 										}
 									}
-								}
 
-								if (sprite_flip_horz == 0x00)
+									if (sprite_flip_horz == 0x00)
+									{
+										pixel_high = pixel_high << 1;
+										pixel_low = pixel_low << 1;
+									}
+									else
+									{
+										pixel_high = pixel_high >> 1;
+										pixel_low = pixel_low >> 1;
+									}
+								}
+							}
+						}
+						else // 8x16 sprites
+						{
+							sprite_tile = (oam_ram[(s<<2)+1] & 0xFE);
+
+							for (unsigned char j=0; j<16; j++)
+							{
+								if ((unsigned char)cart_rom[5] > 0)
 								{
-									pixel_high = ((pixel_high << 1) & 0xFF);
-									pixel_low = ((pixel_low << 1) & 0xFF);
+									pixel_lookup = sprite_tile*16+0x1000*(oam_ram[(((s<<2)+1)&0x00FF)]&0x01)+(sprite_flip_vert==0x00?j:15-j);
+
+									if (map_number == 1) // mmc1
+									{
+										if (map_mmc1_chr_mode == 0) // 8KB
+										{
+											if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
+											{
+												pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0&0x1E);
+											}
+											else
+											{
+
+											}
+										}
+										else if (map_mmc1_chr_mode == 1) // 4KB banked
+										{
+											if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
+											{
+												if (pixel_lookup < 0x1000)
+												{
+													pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0);
+												}
+												else
+												{
+													pixel_lookup += 0x00001000*(map_mmc1_chr_bank_1);
+													pixel_lookup -= 0x00001000;
+												}
+											}
+											else
+											{
+
+											}
+										}
+									}
+									else if (map_number == 3) // cnrom
+									{
+										pixel_lookup += 0x2000*map_cnrom_bank;
+									}
+									else if (map_number == 4) // mmc3
+									{
+										if (map_mmc3_chr_mode == 0x0000)
+										{
+											switch ((pixel_lookup&0xFC00))
+											{
+												case 0x0000:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r0;
+													break;
+												}
+												case 0x0400:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r0;
+													break;
+												}
+												case 0x0800:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r1;
+													pixel_lookup -= 0x0800;
+													break;
+												}
+												case 0x0C00:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r1;
+													pixel_lookup -= 0x0800;
+													break;
+												}
+												case 0x1000:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r2;
+													pixel_lookup -= 0x1000;
+													break;
+												}
+												case 0x1400:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r3;
+													pixel_lookup -= 0x1400;
+													break;
+												}
+												case 0x1800:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r4;
+													pixel_lookup -= 0x1800;
+													break;
+												}
+												case 0x1C00:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r5;
+													pixel_lookup -= 0x1C00;
+													break;
+												}
+											}
+										}
+										else
+										{
+											switch ((pixel_lookup&0xFC00))
+											{
+												case 0x0000:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r2;
+													break;
+												}
+												case 0x0400:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r3;
+													pixel_lookup -= 0x0400;
+													break;
+												}
+												case 0x0800:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r4;
+													pixel_lookup -= 0x0800;
+													break;
+												}
+												case 0x0C00:
+												{
+													pixel_lookup += 0x00000400*map_mmc3_bank_r5;
+													pixel_lookup -= 0x0C00;
+													break;
+												}
+												case 0x1000:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r0;
+													pixel_lookup -= 0x1000;
+													break;
+												}
+												case 0x1400:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r0;
+													pixel_lookup -= 0x1000;
+													break;
+												}
+												case 0x1800:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r1;
+													pixel_lookup -= 0x1800;
+													break;
+												}
+												case 0x1C00:
+												{
+													pixel_lookup += 0x00000800*map_mmc3_bank_r1;
+													pixel_lookup -= 0x1800;
+													break;
+												}
+											}
+										}
+									}
+									
+									pixel_lookup += chr_offset;
+									
+									if ((sprite_flip_vert==0x00?j:15-j) < 8)
+									{
+										pixel_low = (unsigned char)cart_rom[(pixel_lookup)];
+										pixel_high = (unsigned char)cart_rom[(pixel_lookup+8)];
+									}
+									else
+									{
+										pixel_low = (unsigned char)cart_rom[(pixel_lookup+8)];
+										pixel_high = (unsigned char)cart_rom[(pixel_lookup+16)];
+									}
 								}
 								else
 								{
-									pixel_high = ((pixel_high >> 1) & 0xFF);
-									pixel_low = ((pixel_low >> 1) & 0xFF);
+									pixel_lookup = sprite_tile*16+0x1000*(oam_ram[(((s<<2)+1)&0x00FF)]&0x01)+(sprite_flip_vert==0x00?j:15-j);
+
+									if ((sprite_flip_vert==0x00?j:15-j) < 8)
+									{
+										pixel_low = chr_ram[(pixel_lookup)];
+										pixel_high = chr_ram[(pixel_lookup+8)];
+									}
+									else
+									{
+										pixel_low = chr_ram[(pixel_lookup+8)];
+										pixel_high = chr_ram[(pixel_lookup+16)];
+									}
+								}
+
+								for (unsigned char i=0; i<8; i++)
+								{
+									if (sprite_flip_horz == 0x00) pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
+									else pixel_color = ((pixel_high<<1)&0x02)|(pixel_low&0x01);
+
+									if (pixel_color != 0x00)
+									{
+										pixel_x = sprite_x+i;
+										pixel_y = sprite_y+j+1;
+										
+										if (ppu_flag_ls > 0 || pixel_x >= 8) 
+										{
+											if (pixel_x >= 0 && pixel_x < 256 && pixel_y >= 8 && pixel_y < 232)
+											{
+												if (ppu_flag_g > 0)
+												{
+													nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[(0x0010+((sprite_attr&0x03)<<2)+pixel_color)]&0x30)]);
+												}
+												else
+												{
+													nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[(0x0010+((sprite_attr&0x03)<<2)+pixel_color)]]);
+												}
+											}
+										}
+									}
+
+									if (sprite_flip_horz == 0x00)
+									{
+										pixel_high = ((pixel_high << 1) & 0xFF);
+										pixel_low = ((pixel_low << 1) & 0xFF);
+									}
+									else
+									{
+										pixel_high = ((pixel_high >> 1) & 0xFF);
+										pixel_low = ((pixel_low >> 1) & 0xFF);
+									}
 								}
 							}
 						}
@@ -3696,7 +3700,13 @@ void nes_sprite_0_calc()
 					}
 					else
 					{
+						if ((unsigned char)chr_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+							(unsigned char)chr_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+						{
+							ppu_status_s = i+1;
 
+							break;
+						}
 					}
 				}
 				else if (map_mmc1_chr_mode == 1) // 4KB banked
@@ -3726,7 +3736,13 @@ void nes_sprite_0_calc()
 					}
 					else
 					{
+						if ((unsigned char)chr_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+							(unsigned char)chr_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+						{
+							ppu_status_s = i+1;
 
+							break;
+						}
 					}
 				}
 			}
@@ -3780,31 +3796,37 @@ void nes_sprite_0_calc()
 				{
 					if (map_mmc1_chr_mode == 0) // 8KB
 					{
-						if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
+						if ((unsigned char)cart_rom[5] > 0 && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
 						{
 							if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
 								(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
 							{
-								ppu_status_s = i+9;
+								ppu_status_s = i+1;
 
 								break;
 							}
 						}
 						else
 						{
+							if ((unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+								(unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+							{
+								ppu_status_s = i+1;
 
+								break;
+							}
 						}
 					}
 					else if (map_mmc1_chr_mode == 1) // 4KB banked
 					{
-						if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
+						if ((unsigned char)cart_rom[5] > 0 && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
 						{
 							if (ppu_flag_s == 0)
 							{
 								if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
 									(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
 								{
-									ppu_status_s = i+9;
+									ppu_status_s = i+1;
 
 									break;
 								}
@@ -3814,7 +3836,7 @@ void nes_sprite_0_calc()
 								if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
 									(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
 								{
-									ppu_status_s = i+9;
+									ppu_status_s = i+1;
 
 									break;
 								}
@@ -3822,7 +3844,13 @@ void nes_sprite_0_calc()
 						}
 						else
 						{
+							if ((unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+								(unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+							{
+								ppu_status_s = i+1;
 
+								break;
+							}
 						}
 					}
 				}
@@ -3831,7 +3859,7 @@ void nes_sprite_0_calc()
 					if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
 						(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
 					{
-						ppu_status_s = i+9;
+						ppu_status_s = i+1;
 
 						break;
 					}
@@ -3841,14 +3869,14 @@ void nes_sprite_0_calc()
 					if ((unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
 						(unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
 					{
-						ppu_status_s = i+9;
+						ppu_status_s = i+1;
 
 						break;
 					}
 				}
 				else if (map_number == 4) // mmc3
 				{
-					ppu_status_s = i+9; // THIS NEEDS WORK!
+					ppu_status_s = i+1; // THIS NEEDS WORK!
 
 					break;
 				}
@@ -3857,7 +3885,7 @@ void nes_sprite_0_calc()
 					if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
 						(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
 					{
-						ppu_status_s = i+9;
+						ppu_status_s = i+1;
 
 						break;
 					}
@@ -3869,7 +3897,7 @@ void nes_sprite_0_calc()
 				{
 					if (map_mmc1_chr_mode == 0) // 8KB
 					{
-						if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
+						if ((unsigned char)cart_rom[5] > 0 && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
 						{
 							if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
 								(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
@@ -3881,12 +3909,18 @@ void nes_sprite_0_calc()
 						}
 						else
 						{
+							if ((unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+								(unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+							{
+								ppu_status_s = i+1;
 
+								break;
+							}
 						}
 					}
 					else if (map_mmc1_chr_mode == 1) // 4KB banked
 					{
-						if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
+						if ((unsigned char)cart_rom[5] > 0 && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
 						{
 							if (ppu_flag_s == 0)
 							{
@@ -3911,7 +3945,13 @@ void nes_sprite_0_calc()
 						}
 						else
 						{
+							if ((unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+								(unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+							{
+								ppu_status_s = i+1;
 
+								break;
+							}
 						}
 					}
 				}
@@ -4070,7 +4110,7 @@ void nes_loop(unsigned long loop_count)
 		{
 			if (ppu_frame_count >= loop_count)
 			{	
-				nes_background(ppu_tile_count, ppu_scanline_count);
+				nes_background_tile(ppu_tile_count, ppu_scanline_count);
 
 				if (ppu_flag_eb > 0) nes_horizontal_increment();
 			}
@@ -4091,6 +4131,21 @@ void nes_loop(unsigned long loop_count)
 			{	
 				nes_irq_decrement();
 			}
+		}
+
+		if (ppu_flag_h == 0) // 8x8 sprites
+		{
+			nes_sprites(1, ppu_scanline_count+1, ppu_scanline_count+2); // background sprites
+
+			nes_sprites(0, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprites
+			//nes_sprites(2, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprite hack
+		}
+		else // 8x16 sprites
+		{
+			nes_sprites(1, ppu_scanline_count+1, ppu_scanline_count+2); // background sprites
+
+			nes_sprites(0, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprites
+			//nes_sprites(2, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprite hack
 		}
 		
 		ppu_tile_count = 0;
@@ -4152,8 +4207,6 @@ void nes_loop(unsigned long loop_count)
 			if (ppu_frame_count >= loop_count)
 			{
 				nes_border();
-
-				nes_sprites(1, 0, 255); // background sprites
 			}
 		}
 		
@@ -4188,8 +4241,6 @@ void nes_loop(unsigned long loop_count)
 		if (ppu_frame_count >= loop_count)
 		{
 			ppu_frame_count = 0;
-
-			nes_sprites(0, 0, 255); // foreground sprites
 
 			nes_frame();
 			
