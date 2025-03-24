@@ -3688,7 +3688,7 @@ void nes_sprite_0_calc()
 			{
 				if (map_mmc1_chr_mode == 0) // 8KB
 				{
-					if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
+					if ((unsigned char)cart_rom[5] > 0) // && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
 					{
 						if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
 							(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
@@ -3711,7 +3711,7 @@ void nes_sprite_0_calc()
 				}
 				else if (map_mmc1_chr_mode == 1) // 4KB banked
 				{
-					if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
+					if ((unsigned char)cart_rom[5] > 0) // && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
 					{
 						if (ppu_flag_s == 0)
 						{
@@ -3796,7 +3796,7 @@ void nes_sprite_0_calc()
 				{
 					if (map_mmc1_chr_mode == 0) // 8KB
 					{
-						if ((unsigned char)cart_rom[5] > 0 && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
+						if ((unsigned char)cart_rom[5] > 0) // && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
 						{
 							if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
 								(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
@@ -3819,7 +3819,7 @@ void nes_sprite_0_calc()
 					}
 					else if (map_mmc1_chr_mode == 1) // 4KB banked
 					{
-						if ((unsigned char)cart_rom[5] > 0 && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
+						if ((unsigned char)cart_rom[5] > 0) // && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
 						{
 							if (ppu_flag_s == 0)
 							{
@@ -3897,7 +3897,7 @@ void nes_sprite_0_calc()
 				{
 					if (map_mmc1_chr_mode == 0) // 8KB
 					{
-						if ((unsigned char)cart_rom[5] > 0 && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
+						if ((unsigned char)cart_rom[5] > 0) // && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
 						{
 							if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
 								(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
@@ -3920,7 +3920,7 @@ void nes_sprite_0_calc()
 					}
 					else if (map_mmc1_chr_mode == 1) // 4KB banked
 					{
-						if ((unsigned char)cart_rom[5] > 0 && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
+						if ((unsigned char)cart_rom[5] > 0) // && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
 						{
 							if (ppu_flag_s == 0)
 							{
