@@ -87,18 +87,17 @@ unsigned long nes_pixel_location = 0;
 
 unsigned long nes_interrupt_count = 0;
 
-unsigned char nes_hack_top_hud = 0; // Duck Tales
-unsigned char nes_hack_bottom_hud = 0; // Mario 3 and Kirby
-unsigned char nes_hack_sprite_priority = 0; // Mario 3
-unsigned char nes_hack_vertical_shift = 0; // Battletoads
+unsigned long cpu_current_cycles = 0;
+unsigned long cpu_dma_cycles = 0;
 
-unsigned long cpu_current_cycles = 0, cpu_dma_cycles = 0;
+unsigned long ppu_tile_cycles = 0;
 unsigned long ppu_scanline_cycles = 0;
 unsigned long ppu_frame_cycles = 0;
+
 unsigned long ppu_frame_count = 0;
 signed long ppu_scanline_count = 0; // needs to be signed
-signed long ppu_scanline_interrupt = 0;
-signed long ppu_scanline_sprite_0 = 0;
+unsigned long ppu_tile_count = 0;
+
 unsigned long apu_sample_cycles = 0;
 
 unsigned short map_number = 0x0000;
@@ -147,7 +146,6 @@ unsigned long cpu_status_r = 0x0000;
 unsigned long ppu_reg_v = 0x0000, ppu_reg_t = 0x0000, ppu_reg_w = 0x0000;
 unsigned long ppu_reg_a = 0x0000, ppu_reg_b = 0x0000;
 unsigned long ppu_reg_x = 0x0000;
-unsigned long ppu_reg_r = 0x0000;
 
 unsigned long ppu_flag_e = 0x0000, ppu_flag_p = 0x0000, ppu_flag_h = 0x0000;
 unsigned long ppu_flag_b = 0x0000, ppu_flag_s = 0x0000, ppu_flag_i = 0x0000;
@@ -767,8 +765,6 @@ unsigned char cpu_read(unsigned long addr)
 					ppu_reg_v += 0x0020;
 				}
 				
-				//ppu_reg_r = ppu_reg_v;
-				
 				return val;
 				
 				break;
@@ -1115,8 +1111,6 @@ void cpu_write(unsigned long addr, unsigned char val)
 					ppu_reg_t = ((ppu_reg_t & 0x7F00) | (unsigned long)val);
 					ppu_reg_v = ppu_reg_t;
 					ppu_reg_w = 0x0000;
-					
-					ppu_reg_r = ppu_reg_t;
 				}
 				
 				//if (map_number == 0x0004) // mmc3
@@ -1197,8 +1191,6 @@ void cpu_write(unsigned long addr, unsigned char val)
 				{
 					ppu_reg_v += 0x0020;
 				}
-				
-				//ppu_reg_r = ppu_reg_v;
 				
 				break;
 			}
@@ -2508,10 +2500,59 @@ void nes_border()
 	}
 }
 
-void nes_background(signed short line)
+void nes_horizontal_increment()
 {
-	unsigned long scroll_x = 0, scroll_y = 0;
-	unsigned long scroll_n = 0;
+	if ((ppu_reg_v & 0x001F) == 0x001F)
+	{
+		ppu_reg_v = (ppu_reg_v & 0x7FE0);
+
+		if ((ppu_reg_v & 0x0400) == 0x0400)
+		{
+			ppu_reg_v = (ppu_reg_v & 0x7BFF);
+		}
+		else
+		{
+			ppu_reg_v = ((ppu_reg_v & 0x7BFF) | 0x0400);
+		}
+	}
+	else
+	{
+		ppu_reg_v = ((ppu_reg_v & 0x7FE0) | ((ppu_reg_v & 0x001F) + 1));
+	}
+}
+
+void nes_vertical_increment()
+{
+	if ((ppu_reg_v & 0x7000) == 0x7000)
+	{
+		if ((ppu_reg_v & 0x03E0) >= 0x03A0)
+		{
+			ppu_reg_v = (ppu_reg_v & 0x0C1F);			
+
+			if ((ppu_reg_v & 0x0800) == 0x0800)
+			{
+				ppu_reg_v = (ppu_reg_v & 0x77FF);
+			}
+			else
+			{
+				ppu_reg_v = ((ppu_reg_v & 0x77FF) | 0x0800);
+			}
+		}
+		else
+		{
+			ppu_reg_v = ((ppu_reg_v & 0x0C1F) | ((ppu_reg_v & 0x03E0) + 0x0020));
+		}
+	}
+	else
+	{
+		ppu_reg_v = ((ppu_reg_v & 0x0FFF) | ((ppu_reg_v & 0x7000) + 0x1000));
+	}
+
+	ppu_reg_v = ((ppu_reg_v & 0x7BE0) | (ppu_reg_t & 0x041F));
+}
+
+void nes_background(unsigned long tile, unsigned long line)
+{
 	unsigned long scroll_t = 0, scroll_l = 0;
 	
 	unsigned long add_t = 0, add_l = 0;
@@ -2521,380 +2562,283 @@ void nes_background(signed short line)
 	unsigned char pixel_high = 0, pixel_low = 0;
 	unsigned char pixel_color = 0;
 	
-	if ((line >= 0 && line < 8) || (line >= 0 && line < 32 && nes_hack_vertical_shift > 0))
-	{
-		ppu_reg_r = ppu_reg_t;
-	}
-	else
-	{
-		ppu_reg_r = ((ppu_reg_r & 0x7BE0) | (ppu_reg_t & 0x041F));
-	}
-	
-	if (nes_hack_bottom_hud > 0)
-	{
-		if ((map_number == 4 && ppu_scanline_interrupt > 0) || (map_number == 1 && ppu_scanline_sprite_0 > 0))
-		{
-			ppu_reg_r = ((ppu_reg_r & 0x041F) | 0x0800); // hack for Mario 3, Kirby, and Double Dragon
-		}
-	}
-	
 	if (ppu_flag_eb > 0)
 	{
-		pixel_y = (line) - ((ppu_reg_r & 0x7000) >> 12);
-		
-		if (nes_hack_vertical_shift > 0) pixel_y += 32;
+		pixel_y = line;
 		
 		if (pixel_y >= 8 && pixel_y < 232) // remove overscan above and below
-		{
-			//for (unsigned char w=0; w<33; w++) // go one more than 32
-			for (unsigned char w=1; w<32; w++) // or remove far edges for speed
-			{					
-				scroll_x = (ppu_reg_r & 0x001F) + w;
-				
-				scroll_y = ((ppu_reg_r & 0x03E0) >> 5) + ((line)>>3);
-				
-				scroll_n = ((ppu_reg_r & 0x0C00) >> 10);
+		{		
+			scroll_t = ((ppu_reg_v&0x0C00) | 0x03C0 | ((ppu_reg_v&0x0380)>>4) | ((ppu_reg_v&0x001C)>>2));
 
-				switch (scroll_n)
+			add_t = ((((ppu_reg_v&0x0040)>>5) | ((ppu_reg_v&0x0002)>>1)) << 1);
+
+			scroll_l = (ppu_reg_v & 0x0FFF);
+			
+			add_l = 0x1000*ppu_flag_b + ((ppu_reg_v&0x7000)>>12);	
+			
+			if (ppu_status_m == 0x0001) // horizontal scrolling
+			{
+				if (scroll_t < 0x0800)
 				{
-					case (0x00):
+					pixel_table = (ppu_ram[(scroll_t)]>>add_t);
+				}
+				else
+				{
+					pixel_table = (ppu_ram[(scroll_t-0x0800)]>>add_t);
+				}
+			}
+			else if (ppu_status_m == 0x0000) // vertical scrolling
+			{
+				if (scroll_t < 0x0400)
+				{
+					pixel_table = (ppu_ram[(scroll_t)]>>add_t);
+				}
+				else if (scroll_t < 0x0800)
+				{
+					pixel_table = (ppu_ram[(scroll_t-0x0400)]>>add_t);
+				}
+				else if (scroll_t < 0x0C00)
+				{
+					pixel_table = (ppu_ram[(scroll_t-0x0400)]>>add_t);
+				}
+				else
+				{
+					pixel_table = (ppu_ram[(scroll_t-0x0800)]>>add_t);
+				}
+			}
+			else if (ppu_status_m == 0x0002) // single, first bank
+			{
+				pixel_table = (ppu_ram[((scroll_t&0x03FF))]>>add_t);
+			}
+			else if (ppu_status_m == 0x0003) // single, second bank
+			{
+				pixel_table = (ppu_ram[((scroll_t&0x03FF)+0x0400)]>>add_t);
+			}
+			
+			if (ppu_status_m == 0x0001) // horizontal scrolling
+			{
+				if (scroll_l < 0x0800)
+				{
+					pixel_lookup = (ppu_ram[(scroll_l)]<<4)+add_l;
+				}
+				else
+				{
+					pixel_lookup = (ppu_ram[(scroll_l-0x0800)]<<4)+add_l;
+				}
+			}
+			else if (ppu_status_m == 0x0000) // vertical scrolling
+			{
+				if (scroll_l < 0x0400)
+				{
+					pixel_lookup = (ppu_ram[(scroll_l)]<<4)+add_l;
+				}
+				else if (scroll_l < 0x0800)
+				{
+					pixel_lookup = (ppu_ram[(scroll_l-0x0400)]<<4)+add_l;
+				}
+				else if (scroll_l < 0x0C00)
+				{
+					pixel_lookup = (ppu_ram[(scroll_l-0x0400)]<<4)+add_l;
+				}
+				else
+				{
+					pixel_lookup = (ppu_ram[(scroll_l-0x0800)]<<4)+add_l;
+				}
+			}
+			else if (ppu_status_m == 0x0002) // single, first bank
+			{
+				pixel_lookup = (ppu_ram[((scroll_l&0x03FF))]<<4)+add_l;
+			}
+			else if (ppu_status_m == 0x0003) // single, second bank
+			{
+				pixel_lookup = (ppu_ram[((scroll_l&0x03FF)+0x0400)]<<4)+add_l;
+			}
+			
+			if ((unsigned char)cart_rom[5] > 0)
+			{
+				if (map_number == 1) // mmc1
+				{
+					if (map_mmc1_chr_mode == 0) // 8KB
 					{
-						if (scroll_x >= 32)
+						if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
 						{
-							scroll_n += 1;
-							scroll_x -= 32;
+							pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0&0x1E);
 						}
-						
-						if (scroll_y >= 30)
+						else
 						{
-							scroll_n += 2;
-							scroll_y -= 30;
+							
 						}
-
-						break;
 					}
-					case (0x01):
+					else if (map_mmc1_chr_mode == 1) // 4KB banked
 					{
-						if (scroll_x >= 32)
+						if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
 						{
-							scroll_n -= 1;
-							scroll_x -= 32;
-						}
-
-						if (scroll_y >= 30)
-						{
-							scroll_n += 2;
-							scroll_y -= 30;
-						}
-
-						break;
-					}
-					case (0x02):
-					{
-						if (scroll_x >= 32)
-						{
-							scroll_n += 1;
-							scroll_x -= 32;
-						}
-
-						if (scroll_y >= 30)
-						{
-							scroll_n -= 2;
-							scroll_y -= 30;
-						}
-
-						break;
-					}
-					case (0x03):
-					{
-						if (scroll_x >= 32)
-						{
-							scroll_n -= 1;
-							scroll_x -= 32;
-						}
-
-						if (scroll_y >= 30)
-						{
-							scroll_n -= 2;
-							scroll_y -= 30;
-						}	
-
-						break;
-					}
-				}
-				
-				scroll_t = (scroll_n<<10)+0x03C0+((scroll_y&0xFC)<<1)+((scroll_x&0xFC)>>2);
-				
-				scroll_l = (scroll_n<<10)+(scroll_y<<5)+(scroll_x);
-				
-				add_t = (((scroll_y&0x02)|((scroll_x>>1)&0x01))<<1);
-				
-				add_l = 0x1000*ppu_flag_b+(line&0x07);	
-				
-				if (ppu_status_m == 0x0001) // horizontal scrolling
-				{
-					if (scroll_t < 0x0800)
-					{
-						pixel_table = (ppu_ram[(scroll_t)]>>add_t);
-					}
-					else
-					{
-						pixel_table = (ppu_ram[(scroll_t-0x0800)]>>add_t);
-					}
-				}
-				else if (ppu_status_m == 0x0000) // vertical scrolling
-				{
-					if (scroll_t < 0x0400)
-					{
-						pixel_table = (ppu_ram[(scroll_t)]>>add_t);
-					}
-					else if (scroll_t < 0x0800)
-					{
-						pixel_table = (ppu_ram[(scroll_t-0x0400)]>>add_t);
-					}
-					else if (scroll_t < 0x0C00)
-					{
-						pixel_table = (ppu_ram[(scroll_t-0x0400)]>>add_t);
-					}
-					else
-					{
-						pixel_table = (ppu_ram[(scroll_t-0x0800)]>>add_t);
-					}
-				}
-				else if (ppu_status_m == 0x0002) // single, first bank
-				{
-					pixel_table = (ppu_ram[((scroll_t&0x03FF))]>>add_t);
-				}
-				else if (ppu_status_m == 0x0003) // single, second bank
-				{
-					pixel_table = (ppu_ram[((scroll_t&0x03FF)+0x0400)]>>add_t);
-				}
-				
-				if (ppu_status_m == 0x0001) // horizontal scrolling
-				{
-					if (scroll_l < 0x0800)
-					{
-						pixel_lookup = (ppu_ram[(scroll_l)]<<4)+add_l;
-					}
-					else
-					{
-						pixel_lookup = (ppu_ram[(scroll_l-0x0800)]<<4)+add_l;
-					}
-				}
-				else if (ppu_status_m == 0x0000) // vertical scrolling
-				{
-					if (scroll_l < 0x0400)
-					{
-						pixel_lookup = (ppu_ram[(scroll_l)]<<4)+add_l;
-					}
-					else if (scroll_l < 0x0800)
-					{
-						pixel_lookup = (ppu_ram[(scroll_l-0x0400)]<<4)+add_l;
-					}
-					else if (scroll_l < 0x0C00)
-					{
-						pixel_lookup = (ppu_ram[(scroll_l-0x0400)]<<4)+add_l;
-					}
-					else
-					{
-						pixel_lookup = (ppu_ram[(scroll_l-0x0800)]<<4)+add_l;
-					}
-				}
-				else if (ppu_status_m == 0x0002) // single, first bank
-				{
-					pixel_lookup = (ppu_ram[((scroll_l&0x03FF))]<<4)+add_l;
-				}
-				else if (ppu_status_m == 0x0003) // single, second bank
-				{
-					pixel_lookup = (ppu_ram[((scroll_l&0x03FF)+0x0400)]<<4)+add_l;
-				}
-				
-				if ((unsigned char)cart_rom[5] > 0)
-				{
-					if (map_number == 1) // mmc1
-					{
-						if (map_mmc1_chr_mode == 0) // 8KB
-						{
-							if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
+							if (pixel_lookup < 0x1000)
 							{
-								pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0&0x1E);
+								pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0);
 							}
 							else
 							{
-								
-							}
-						}
-						else if (map_mmc1_chr_mode == 1) // 4KB banked
-						{
-							if ((unsigned char)cart_rom[4] <= 0x10) // 256KB or less
-							{
-								if (pixel_lookup < 0x1000)
-								{
-									pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0);
-								}
-								else
-								{
-									pixel_lookup += 0x00001000*(map_mmc1_chr_bank_1);
-									pixel_lookup -= 0x00001000;
-								}
-							}
-							else
-							{
-
-							}
-						}
-					}
-					else if (map_number == 3) // cnrom
-					{
-						pixel_lookup += 0x2000*map_cnrom_bank;
-					}
-					else if (map_number == 4) // mmc3
-					{
-						if (map_mmc3_chr_mode == 0x0000)
-						{
-							switch ((pixel_lookup&0xFC00))
-							{
-								case 0x0000:
-								{
-									pixel_lookup += 0x00000800*map_mmc3_bank_r0;
-									break;
-								}
-								case 0x0400:
-								{
-									pixel_lookup += 0x00000800*map_mmc3_bank_r0;
-									break;
-								}
-								case 0x0800:
-								{
-									pixel_lookup += 0x00000800*map_mmc3_bank_r1;
-									pixel_lookup -= 0x0800;
-									break;
-								}
-								case 0x0C00:
-								{
-									pixel_lookup += 0x00000800*map_mmc3_bank_r1;
-									pixel_lookup -= 0x0800;
-									break;
-								}
-								case 0x1000:
-								{
-									pixel_lookup += 0x00000400*map_mmc3_bank_r2;
-									pixel_lookup -= 0x1000;
-									break;
-								}
-								case 0x1400:
-								{
-									pixel_lookup += 0x00000400*map_mmc3_bank_r3;
-									pixel_lookup -= 0x1400;
-									break;
-								}
-								case 0x1800:
-								{
-									pixel_lookup += 0x00000400*map_mmc3_bank_r4;
-									pixel_lookup -= 0x1800;
-									break;
-								}
-								case 0x1C00:
-								{
-									pixel_lookup += 0x00000400*map_mmc3_bank_r5;
-									pixel_lookup -= 0x1C00;
-									break;
-								}
+								pixel_lookup += 0x00001000*(map_mmc1_chr_bank_1);
+								pixel_lookup -= 0x00001000;
 							}
 						}
 						else
 						{
-							switch ((pixel_lookup&0xFC00))
-							{
-								case 0x0000:
-								{
-									pixel_lookup += 0x00000400*map_mmc3_bank_r2;
-									break;
-								}
-								case 0x0400:
-								{
-									pixel_lookup += 0x00000400*map_mmc3_bank_r3;
-									pixel_lookup -= 0x0400;
-									break;
-								}
-								case 0x0800:
-								{
-									pixel_lookup += 0x00000400*map_mmc3_bank_r4;
-									pixel_lookup -= 0x0800;
-									break;
-								}
-								case 0x0C00:
-								{
-									pixel_lookup += 0x00000400*map_mmc3_bank_r5;
-									pixel_lookup -= 0x0C00;
-									break;
-								}
-								case 0x1000:
-								{
-									pixel_lookup += 0x00000800*map_mmc3_bank_r0;
-									pixel_lookup -= 0x1000;
-									break;
-								}
-								case 0x1400:
-								{
-									pixel_lookup += 0x00000800*map_mmc3_bank_r0;
-									pixel_lookup -= 0x1000;
-									break;
-								}
-								case 0x1800:
-								{
-									pixel_lookup += 0x00000800*map_mmc3_bank_r1;
-									pixel_lookup -= 0x1800;
-									break;
-								}
-								case 0x1C00:
-								{
-									pixel_lookup += 0x00000800*map_mmc3_bank_r1;
-									pixel_lookup -= 0x1800;
-									break;
-								}
-							}
+
 						}
 					}
-					
-					pixel_lookup += chr_offset;
-
-					pixel_low = (unsigned char)cart_rom[(pixel_lookup)];
-					pixel_high = (unsigned char)cart_rom[(pixel_lookup+8)];
 				}
-				else
+				else if (map_number == 3) // cnrom
 				{
-					pixel_low = chr_ram[(pixel_lookup)];
-					pixel_high = chr_ram[(pixel_lookup+8)];
+					pixel_lookup += 0x2000*map_cnrom_bank;
 				}
-
-				for (unsigned char i=0; i<8; i++)
+				else if (map_number == 4) // mmc3
 				{
-					pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
-
-					if (pixel_color != 0x00)
+					if (map_mmc3_chr_mode == 0x0000)
 					{
-						pixel_x = w * 8 + i - (ppu_reg_x & 0x07);
-
-						if (pixel_x >= 0 && pixel_x < 256)
+						switch ((pixel_lookup&0xFC00))
 						{
-							if (ppu_flag_lb > 0 || w*8+i >= 8) 
+							case 0x0000:
 							{
-								if (ppu_flag_g > 0)
-								{
-									nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[(((pixel_table&0x03)<<2)+pixel_color)]&0x30)]);
-								}
-								else
-								{
-									nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[(((pixel_table&0x03)<<2)+pixel_color)]]);
-								}
+								pixel_lookup += 0x00000800*map_mmc3_bank_r0;
+								break;
+							}
+							case 0x0400:
+							{
+								pixel_lookup += 0x00000800*map_mmc3_bank_r0;
+								break;
+							}
+							case 0x0800:
+							{
+								pixel_lookup += 0x00000800*map_mmc3_bank_r1;
+								pixel_lookup -= 0x0800;
+								break;
+							}
+							case 0x0C00:
+							{
+								pixel_lookup += 0x00000800*map_mmc3_bank_r1;
+								pixel_lookup -= 0x0800;
+								break;
+							}
+							case 0x1000:
+							{
+								pixel_lookup += 0x00000400*map_mmc3_bank_r2;
+								pixel_lookup -= 0x1000;
+								break;
+							}
+							case 0x1400:
+							{
+								pixel_lookup += 0x00000400*map_mmc3_bank_r3;
+								pixel_lookup -= 0x1400;
+								break;
+							}
+							case 0x1800:
+							{
+								pixel_lookup += 0x00000400*map_mmc3_bank_r4;
+								pixel_lookup -= 0x1800;
+								break;
+							}
+							case 0x1C00:
+							{
+								pixel_lookup += 0x00000400*map_mmc3_bank_r5;
+								pixel_lookup -= 0x1C00;
+								break;
 							}
 						}
 					}
-
-					pixel_high = ((pixel_high << 1) & 0xFF);
-					pixel_low = ((pixel_low << 1) & 0xFF);
+					else
+					{
+						switch ((pixel_lookup&0xFC00))
+						{
+							case 0x0000:
+							{
+								pixel_lookup += 0x00000400*map_mmc3_bank_r2;
+								break;
+							}
+							case 0x0400:
+							{
+								pixel_lookup += 0x00000400*map_mmc3_bank_r3;
+								pixel_lookup -= 0x0400;
+								break;
+							}
+							case 0x0800:
+							{
+								pixel_lookup += 0x00000400*map_mmc3_bank_r4;
+								pixel_lookup -= 0x0800;
+								break;
+							}
+							case 0x0C00:
+							{
+								pixel_lookup += 0x00000400*map_mmc3_bank_r5;
+								pixel_lookup -= 0x0C00;
+								break;
+							}
+							case 0x1000:
+							{
+								pixel_lookup += 0x00000800*map_mmc3_bank_r0;
+								pixel_lookup -= 0x1000;
+								break;
+							}
+							case 0x1400:
+							{
+								pixel_lookup += 0x00000800*map_mmc3_bank_r0;
+								pixel_lookup -= 0x1000;
+								break;
+							}
+							case 0x1800:
+							{
+								pixel_lookup += 0x00000800*map_mmc3_bank_r1;
+								pixel_lookup -= 0x1800;
+								break;
+							}
+							case 0x1C00:
+							{
+								pixel_lookup += 0x00000800*map_mmc3_bank_r1;
+								pixel_lookup -= 0x1800;
+								break;
+							}
+						}
+					}
 				}
+				
+				pixel_lookup += chr_offset;
+
+				pixel_low = (unsigned char)cart_rom[(pixel_lookup)];
+				pixel_high = (unsigned char)cart_rom[(pixel_lookup+8)];
+			}
+			else
+			{
+				pixel_low = chr_ram[(pixel_lookup)];
+				pixel_high = chr_ram[(pixel_lookup+8)];
+			}
+
+			for (unsigned char i=0; i<8; i++)
+			{
+				pixel_color = ((pixel_high>>6)&0x02)|(pixel_low>>7);
+
+				if (pixel_color != 0x00)
+				{
+					pixel_x = tile * 8 + i - (ppu_reg_x & 0x07);
+
+					if (pixel_x >= 0 && pixel_x < 256)
+					{
+						if (ppu_flag_lb > 0 || tile*8+i >= 8) 
+						{
+							if (ppu_flag_g > 0)
+							{
+								nes_pixel(pixel_x, pixel_y, ppu_palette[(pal_ram[(((pixel_table&0x03)<<2)+pixel_color)]&0x30)]);
+							}
+							else
+							{
+								nes_pixel(pixel_x, pixel_y, ppu_palette[pal_ram[(((pixel_table&0x03)<<2)+pixel_color)]]);
+							}
+						}
+					}
+				}
+
+				pixel_high = ((pixel_high << 1) & 0xFF);
+				pixel_low = ((pixel_low << 1) & 0xFF);
 			}
 		}
 	}
@@ -4013,8 +3957,6 @@ void nes_sprite_0_calc()
 	
 	ppu_status_s += oam_ram[0]; // add y-coordinate
 	ppu_status_d = oam_ram[3]; // x-coordinate
-	
-	if (nes_hack_vertical_shift > 0) ppu_status_s += 8;
 }
 
 void nes_init()
@@ -4049,126 +3991,6 @@ void nes_init()
 		// reset
 		cpu_reg_pc = (unsigned char)cart_rom[prg_offset+0x4000*((unsigned char)cart_rom[4]-1)+0x3FFC] + ((unsigned char)cart_rom[prg_offset+0x4000*((unsigned char)cart_rom[4]-1)+0x3FFD] << 8);
 		
-		// hacks
-		nes_hack_top_hud = 0;
-		nes_hack_bottom_hud = 0;
-		nes_hack_sprite_priority = 0;
-		nes_hack_vertical_shift = 0;
-		
-		unsigned long loc = prg_offset+0x4000*((unsigned char)cart_rom[4]-1)+0x3FE0;
-		
-		if (map_number == 1) // mmc1
-		{
-			if ((unsigned char)cart_rom[loc+0] == 0xFB && // Double Dragon
-				(unsigned char)cart_rom[loc+1] == 0x4C &&
-				(unsigned char)cart_rom[loc+2] == 0x6A &&
-				(unsigned char)cart_rom[loc+3] == 0xFC &&
-				(unsigned char)cart_rom[loc+4] == 0x4C &&
-				(unsigned char)cart_rom[loc+5] == 0x9E &&
-				(unsigned char)cart_rom[loc+6] == 0xFA &&
-				(unsigned char)cart_rom[loc+7] == 0x00 &&
-				(unsigned char)cart_rom[loc+8] == 0xEE &&
-				(unsigned char)cart_rom[loc+9] == 0xF1 &&
-				(unsigned char)cart_rom[loc+10] == 0xFF &&
-				(unsigned char)cart_rom[loc+11] == 0xEA &&
-				(unsigned char)cart_rom[loc+12] == 0xEA &&
-				(unsigned char)cart_rom[loc+13] == 0xEA &&
-				(unsigned char)cart_rom[loc+14] == 0x4C &&
-				(unsigned char)cart_rom[loc+15] == 0x3D)
-			{
-				nes_hack_bottom_hud = 1;
-			}
-		}
-		
-		if (map_number == 2) // unrom
-		{
-			if ((unsigned char)cart_rom[loc+0] == 0xAA && // Duck Tales
-				(unsigned char)cart_rom[loc+1] == 0x9D &&
-				(unsigned char)cart_rom[loc+2] == 0xE5 &&
-				(unsigned char)cart_rom[loc+3] == 0xFF &&
-				(unsigned char)cart_rom[loc+4] == 0x60 &&
-				(unsigned char)cart_rom[loc+5] == 0x00 &&
-				(unsigned char)cart_rom[loc+6] == 0x01 &&
-				(unsigned char)cart_rom[loc+7] == 0x02 &&
-				(unsigned char)cart_rom[loc+8] == 0x03 &&
-				(unsigned char)cart_rom[loc+9] == 0x04 &&
-				(unsigned char)cart_rom[loc+10] == 0x05 &&
-				(unsigned char)cart_rom[loc+11] == 0x06 &&
-				(unsigned char)cart_rom[loc+12] == 0x00 &&
-				(unsigned char)cart_rom[loc+13] == 0x00 &&
-				(unsigned char)cart_rom[loc+14] == 0x00 &&
-				(unsigned char)cart_rom[loc+15] == 0x00)
-			{
-				nes_hack_top_hud = 1;
-			}
-		}
-		
-		if (map_number == 4) // mmc3
-		{
-			if ((unsigned char)cart_rom[loc+0] == 0xFF && // Mario 3
-				(unsigned char)cart_rom[loc+1] == 0xFF &&
-				(unsigned char)cart_rom[loc+2] == 0xFF &&
-				(unsigned char)cart_rom[loc+3] == 'S' &&
-				(unsigned char)cart_rom[loc+4] == 'U' &&
-				(unsigned char)cart_rom[loc+5] == 'P' &&
-				(unsigned char)cart_rom[loc+6] == 'E' &&
-				(unsigned char)cart_rom[loc+7] == 'R' &&
-				(unsigned char)cart_rom[loc+8] == ' ' &&
-				(unsigned char)cart_rom[loc+9] == 'M' &&
-				(unsigned char)cart_rom[loc+10] == 'A' &&
-				(unsigned char)cart_rom[loc+11] == 'R' &&
-				(unsigned char)cart_rom[loc+12] == 'I' &&
-				(unsigned char)cart_rom[loc+13] == 'O' &&
-				(unsigned char)cart_rom[loc+14] == ' ' &&
-				(unsigned char)cart_rom[loc+15] == '3')
-			{
-				nes_hack_bottom_hud = 1;
-				nes_hack_sprite_priority = 1;
-			}
-			else if ((unsigned char)cart_rom[loc+0] == 0x00 && // Kirby
-				(unsigned char)cart_rom[loc+1] == 0x52 &&
-				(unsigned char)cart_rom[loc+2] == 0x47 &&
-				(unsigned char)cart_rom[loc+3] == 0x4B &&
-				(unsigned char)cart_rom[loc+4] == 0x4B &&
-				(unsigned char)cart_rom[loc+5] == 0x5F &&
-				(unsigned char)cart_rom[loc+6] == 'S' &&
-				(unsigned char)cart_rom[loc+7] == 'e' &&
-				(unsigned char)cart_rom[loc+8] == 't' &&
-				(unsigned char)cart_rom[loc+9] == 'S' &&
-				(unsigned char)cart_rom[loc+10] == 't' &&
-				(unsigned char)cart_rom[loc+11] == 'i' &&
-				(unsigned char)cart_rom[loc+12] == 'l' &&
-				(unsigned char)cart_rom[loc+13] == 'l' &&
-				(unsigned char)cart_rom[loc+14] == 'X' &&
-				(unsigned char)cart_rom[loc+15] == 0x00)
-			{
-				nes_hack_bottom_hud = 1;
-			}
-		}
-		
-		if (map_number == 7) // anrom
-		{
-			if ((unsigned char)cart_rom[loc+0] == 0x2D && // Battletoads
-				(unsigned char)cart_rom[loc+1] == 0x68 &&
-				(unsigned char)cart_rom[loc+2] == 0x85 &&
-				(unsigned char)cart_rom[loc+3] == 0x13 &&
-				(unsigned char)cart_rom[loc+4] == 0xB9 &&
-				(unsigned char)cart_rom[loc+5] == 0xB3 &&
-				(unsigned char)cart_rom[loc+6] == 0xFF &&
-				(unsigned char)cart_rom[loc+7] == 0x99 &&
-				(unsigned char)cart_rom[loc+8] == 0xB3 &&
-				(unsigned char)cart_rom[loc+9] == 0xFF &&
-				(unsigned char)cart_rom[loc+10] == 0x60 &&
-				(unsigned char)cart_rom[loc+11] == 0xCA &&
-				(unsigned char)cart_rom[loc+12] == 0xD0 &&
-				(unsigned char)cart_rom[loc+13] == 0xFD &&
-				(unsigned char)cart_rom[loc+14] == 0x88 &&
-				(unsigned char)cart_rom[loc+15] == 0xD0)
-			{
-				nes_hack_vertical_shift = 1;
-			}
-		}
-		
 		//SendLongHex(cpu_reg_pc);
 		//SendString("Initialized\n\r\\");
 	}
@@ -4185,6 +4007,44 @@ void nes_init()
 	}
 }
 
+void nes_irq()
+{
+	//SendLongHex(cpu_reg_pc);
+	//SendString("IRQ\n\r\\");
+			
+	cpu_temp_memory = ((cpu_reg_pc)>>8);
+	CPU_PUSH;
+	cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
+	CPU_PUSH;
+	cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
+		(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
+	CPU_PUSH;
+	cpu_reg_pc = (unsigned long)cpu_read(0xFFFE);
+	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFF)<<8);
+	
+	cpu_current_cycles += 7;
+	
+	cpu_flag_i = 1;
+}
+
+void nes_nmi()
+{
+	//SendLongHex(cpu_reg_pc);
+	//SendString("NMI\n\r\\");
+
+	cpu_temp_memory = ((cpu_reg_pc)>>8);
+	CPU_PUSH;
+	cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
+	CPU_PUSH;
+	cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
+		(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
+	CPU_PUSH;
+	cpu_reg_pc = (unsigned long)cpu_read(0xFFFA);
+	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFB)<<8);
+
+	ppu_frame_cycles += 7;
+}
+
 void nes_loop(unsigned long loop_count)
 {	 
 	cpu_current_cycles = 0;
@@ -4197,7 +4057,26 @@ void nes_loop(unsigned long loop_count)
 
 	if (cpu_current_cycles == 0)
 	{
-		nes_error(0x02);
+		nes_error(0x01);
+	}
+
+	ppu_tile_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);
+	
+	while (ppu_tile_cycles >= 8 && ppu_tile_count < 32) // 8 dots per tile
+	{		
+		ppu_tile_cycles -= 8;
+
+		if (ppu_scanline_count >= 0)
+		{
+			if (ppu_frame_count >= loop_count)
+			{	
+				nes_background(ppu_tile_count, ppu_scanline_count);
+
+				if (ppu_flag_eb > 0) nes_horizontal_increment();
+			}
+		}
+
+		ppu_tile_count++;
 	}
 	
 	ppu_scanline_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);
@@ -4205,14 +4084,6 @@ void nes_loop(unsigned long loop_count)
 	if (ppu_scanline_cycles >= 341) // 113.667 cycles per scanline
 	{		
 		ppu_scanline_cycles -= 341;
-
-		if (ppu_scanline_count >= 0)
-		{
-			if (ppu_frame_count >= loop_count)
-			{	
-				nes_background(ppu_scanline_count);
-			}
-		}
 		
 		if (map_number == 4) // mmc3
 		{
@@ -4222,7 +4093,17 @@ void nes_loop(unsigned long loop_count)
 			}
 		}
 		
+		ppu_tile_count = 0;
 		ppu_scanline_count++;
+
+		if (ppu_scanline_count == 0)
+		{
+			if (ppu_flag_eb > 0) ppu_reg_v = ppu_reg_t;
+		}
+		else if (ppu_scanline_count > 0)
+		{
+			if (ppu_flag_eb > 0) nes_vertical_increment();
+		}
 	}
 	
 	apu_sample_cycles += (cpu_current_cycles);
@@ -4245,33 +4126,7 @@ void nes_loop(unsigned long loop_count)
 		if (apu_flag_i == 1 || apu_flag_f == 1 || 
 			(map_number == 4 && map_mmc3_irq_enable > 0 && map_mmc3_irq_interrupt > 0))
 		{	
-			//SendLongHex(cpu_reg_pc);
-			//SendString("IRQ\n\r\\");
-			
-			cpu_temp_memory = ((cpu_reg_pc)>>8);
-			CPU_PUSH;
-			cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
-			CPU_PUSH;
-			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
-			CPU_PUSH;
-			cpu_reg_pc = (unsigned long)cpu_read(0xFFFE);
-			cpu_reg_pc += ((unsigned long)cpu_read(0xFFFF)<<8);
-			
-			cpu_current_cycles += 7;
-			
-			cpu_flag_i = 1;
-			
-			ppu_scanline_interrupt = ppu_scanline_count;
-			
-			if (nes_hack_sprite_priority > 0)
-			{
-				nes_sprites(2, 0, ppu_scanline_count); // hack for Mario 3
-			}
-			else
-			{
-				nes_sprites(0, 0, ppu_scanline_count);
-			}
+			nes_irq();
 		}
 	}
 	
@@ -4298,7 +4153,7 @@ void nes_loop(unsigned long loop_count)
 			{
 				nes_border();
 
-				nes_sprites(1, 0, 255);
+				nes_sprites(1, 0, 255); // background sprites
 			}
 		}
 		
@@ -4310,16 +4165,6 @@ void nes_loop(unsigned long loop_count)
 			ppu_status_0 = 1;
 			
 			ppu_flag_0 = 1;
-			
-			if (nes_hack_top_hud > 0 || nes_hack_bottom_hud > 0)
-			{
-				ppu_scanline_sprite_0 = ppu_scanline_count;
-
-				if (ppu_frame_count >= loop_count)
-				{
-					nes_sprites(0, 0, ppu_scanline_count); // hack for Duck Tales and Double Dragon
-				}
-			}
 		}
 	}
 	else
@@ -4334,53 +4179,29 @@ void nes_loop(unsigned long loop_count)
 		// nmi
 		if (ppu_flag_e != 0x0000)
 		{	
-			//SendLongHex(cpu_reg_pc);
-			//SendString("NMI\n\r\\");
-			
-			cpu_temp_memory = ((cpu_reg_pc)>>8);
-			CPU_PUSH;
-			cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
-			CPU_PUSH;
-			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
-			CPU_PUSH;
-			cpu_reg_pc = (unsigned long)cpu_read(0xFFFA);
-			cpu_reg_pc += ((unsigned long)cpu_read(0xFFFB)<<8);
-			
-			ppu_frame_cycles += 7;
+			nes_nmi();
 		}
+
+		nes_buttons();
 
 		// finish frame drawing
 		if (ppu_frame_count >= loop_count)
 		{
 			ppu_frame_count = 0;
 
-			if (ppu_scanline_sprite_0 > 0)
-			{
-				nes_sprites(0, ppu_scanline_sprite_0, 255);
-			}
-			else
-			{
-				nes_sprites(0, ppu_scanline_interrupt, 255);
-			}
+			nes_sprites(0, 0, 255); // foreground sprites
 
 			nes_frame();
 			
 			nes_wait(loop_count);
 		}
 		
-		ppu_scanline_interrupt = 0;
-		ppu_scanline_sprite_0 = 0;
-		
+		ppu_tile_count = 0;
 		ppu_scanline_count = -21;
-		//ppu_scanline_count = 0;
 		
 		ppu_frame_count++;
-
-		nes_buttons();
 	}
 }
-
 
 void InitializeOpenGLSettings()
 {
@@ -4529,7 +4350,7 @@ int main(const int argc, const char **argv)
 	// loop until closed
 	while (!glfwWindowShouldClose(window))
 	{
-		nes_loop(1); // using 1 here doesn't work?
+		nes_loop(1);
 
 		if (screen_frame > 0)
 		{
