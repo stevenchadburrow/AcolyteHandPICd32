@@ -3748,23 +3748,49 @@ void nes_sprite_0_calc()
 			}
 			else if (map_number == 2) // unrom
 			{
-				if ((unsigned char)cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
-					(unsigned char)cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+				if ((unsigned char)cart_rom[5] > 0)
 				{
-					ppu_status_s = i+1;
+					if ((unsigned char)cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+						(unsigned char)cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+					{
+						ppu_status_s = i+1;
 
-					break;
+						break;
+					}
+				}
+				else
+				{
+					if ((unsigned char)chr_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+						(unsigned char)chr_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+					{
+						ppu_status_s = i+1;
+
+						break;
+					}
 				}
 			}
 			else if (map_number == 3) // cnrom
 			{
-				if ((unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
-					(unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+				if ((unsigned char)cart_rom[5] > 0)
 				{
-					ppu_status_s = i+1;
+					if ((unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+						(unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+					{
+						ppu_status_s = i+1;
 
-					break;
-				}				
+						break;
+					}
+				}
+				else
+				{
+					if ((unsigned char)chr_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+						(unsigned char)chr_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+					{
+						ppu_status_s = i+1;
+
+						break;
+					}
+				}			
 			}
 			else if (map_number == 4) // mmc3
 			{
@@ -3772,14 +3798,50 @@ void nes_sprite_0_calc()
 
 				break;
 			}
+			else if (map_number == 7) // anrom
+			{
+				if ((unsigned char)cart_rom[5] > 0)
+				{
+					if ((unsigned char)cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+						(unsigned char)cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+					{
+						ppu_status_s = i+1;
+
+						break;
+					}
+				}
+				else
+				{
+					if ((unsigned char)chr_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+						(unsigned char)chr_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+					{
+						ppu_status_s = i+1;
+
+						break;
+					}
+				}
+			}
 			else // nrom
 			{
-				if ((unsigned char)cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
-					(unsigned char)cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+				if ((unsigned char)cart_rom[5] > 0)
 				{
-					ppu_status_s = i+1;
+					if ((unsigned char)cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+						(unsigned char)cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+					{
+						ppu_status_s = i+1;
 
-					break;
+						break;
+					}
+				}
+				else
+				{
+					if ((unsigned char)chr_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+						(unsigned char)chr_ram[oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+					{
+						ppu_status_s = i+1;
+
+						break;
+					}
 				}
 			}
 		}
@@ -3856,22 +3918,48 @@ void nes_sprite_0_calc()
 				}
 				else if (map_number == 2) // unrom
 				{
-					if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
-						(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+					if ((unsigned char)cart_rom[5] > 0)
 					{
-						ppu_status_s = i+1;
+						if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+							(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+						{
+							ppu_status_s = i+1;
 
-						break;
+							break;
+						}
+					}
+					else
+					{
+						if ((unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+							(unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+						{
+							ppu_status_s = i+1;
+
+							break;
+						}
 					}
 				}
 				else if (map_number == 3) // cnrom
 				{
-					if ((unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
-						(unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+					if ((unsigned char)cart_rom[5] > 0)
 					{
-						ppu_status_s = i+1;
+						if ((unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+							(unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+						{
+							ppu_status_s = i+1;
 
-						break;
+							break;
+						}
+					}
+					else
+					{
+						if ((unsigned char)cart_rom[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+							(unsigned char)cart_rom[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+						{
+							ppu_status_s = i+1;
+
+							break;
+						}
 					}
 				}
 				else if (map_number == 4) // mmc3
@@ -3880,14 +3968,50 @@ void nes_sprite_0_calc()
 
 					break;
 				}
+				else if (map_number == 7) // anrom
+				{
+					if ((unsigned char)cart_rom[5] > 0)
+					{
+						if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+							(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+						{
+							ppu_status_s = i+1;
+
+							break;
+						}
+					}
+					else
+					{
+						if ((unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+							(unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+						{
+							ppu_status_s = i+1;
+
+							break;
+						}
+					}
+				}
 				else // nrom
 				{
-					if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
-						(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+					if ((unsigned char)cart_rom[5] > 0)
 					{
-						ppu_status_s = i+1;
+						if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+							(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+						{
+							ppu_status_s = i+1;
 
-						break;
+							break;
+						}
+					}
+					else
+					{
+						if ((unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+							(unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+						{
+							ppu_status_s = i+1;
+
+							break;
+						}
 					}
 				}
 			}
@@ -3957,22 +4081,48 @@ void nes_sprite_0_calc()
 				}
 				else if (map_number == 2) // unrom
 				{
-					if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
-						(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+					if ((unsigned char)cart_rom[5] > 0)
 					{
-						ppu_status_s = i+1;
+						if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+							(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+						{
+							ppu_status_s = i+1;
 
-						break;
+							break;
+						}
+					}
+					else
+					{
+						if ((unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+							(unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+						{
+							ppu_status_s = i+1;
+
+							break;
+						}
 					}
 				}
 				else if (map_number == 3) // cnrom
 				{
-					if ((unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
-						(unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+					if ((unsigned char)cart_rom[5] > 0)
 					{
-						ppu_status_s = i+1;
+						if ((unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+							(unsigned char)cart_rom[chr_offset+0x2000*map_cnrom_bank+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+						{
+							ppu_status_s = i+1;
 
-						break;
+							break;
+						}
+					}
+					else
+					{
+						if ((unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+							(unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+						{
+							ppu_status_s = i+1;
+
+							break;
+						}
 					}
 				}
 				else if (map_number == 4) // mmc3
@@ -3981,14 +4131,50 @@ void nes_sprite_0_calc()
 
 					break;
 				}
+				else if (map_number == 7) // anrom
+				{
+					if ((unsigned char)cart_rom[5] > 0)
+					{
+						if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+							(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+						{
+							ppu_status_s = i+1;
+
+							break;
+						}
+					}
+					else
+					{
+						if ((unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+							(unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+						{
+							ppu_status_s = i+1;
+
+							break;
+						}
+					}
+				}
 				else // nrom
 				{
-					if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
-						(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+					if ((unsigned char)cart_rom[5] > 0)
 					{
-						ppu_status_s = i+1;
+						if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+							(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+						{
+							ppu_status_s = i+1;
 
-						break;
+							break;
+						}
+					}
+					else
+					{
+						if ((unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+							(unsigned char)chr_ram[(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+						{
+							ppu_status_s = i+1;
+
+							break;
+						}
 					}
 				}
 			}
