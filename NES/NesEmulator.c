@@ -135,7 +135,7 @@ unsigned long map_mmc3_irq_interrupt = 0x0000;
 
 unsigned long cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
 unsigned long cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
-unsigned long cpu_flag_d = 0x0000, cpu_flag_i = 0x0001;
+unsigned long cpu_flag_d = 0x0000, cpu_flag_i = 0x0000; // was 0x0001
 unsigned long cpu_reg_pc = 0xFFFC;
 
 unsigned long cpu_temp_opcode = 0x0000, cpu_temp_memory = 0x0000, cpu_temp_address = 0x0000; 
@@ -226,7 +226,7 @@ unsigned short apu_flag_t = 0x0000;
 unsigned short apu_flag_2 = 0x0000;
 unsigned short apu_flag_1 = 0x0000;
 unsigned short apu_flag_m = 0x0000;
-unsigned short apu_flag_b = 0x0001;
+unsigned short apu_flag_b = 0x0000; // was 0x0001
 
 unsigned short apu_counter_q = 0x0000;
 unsigned short apu_counter_s = 0x0000;
@@ -469,7 +469,7 @@ unsigned char nes_read_cart_rom(unsigned long addr)
 	return (unsigned char)(unsigned char)cart_rom[addr];
 }
 
-void nes_irq_decrement()
+void nes_mmc3_irq_decrement()
 {
 	if (map_mmc3_irq_counter == 0)
 	{
@@ -838,7 +838,7 @@ unsigned char cpu_read(unsigned long addr)
 	}
 	else if (addr < 0x00006000) // unmapped
 	{
-		return 0xFF; 
+		return (unsigned char)(addr >> 8); 
 	}
 	else if (addr < 0x00008000) // cart ram
 	{	
@@ -1115,7 +1115,7 @@ void cpu_write(unsigned long addr, unsigned char val)
 				
 				//if (map_number == 0x0004) // mmc3
 				//{
-				//	nes_irq_decrement(); // is this right???
+				//	nes_mmc3_irq_decrement(); // is this right???
 				//}
 				
 				break;
@@ -1943,6 +1943,50 @@ void cpu_write(unsigned long addr, unsigned char val)
 	cpu_temp_memory=cpu_ram[(0x0100+(cpu_reg_s&0x00FF))]; }
 
 
+void nes_irq()
+{
+	//SendString("IRQ \\");
+	//SendLongHex(cpu_reg_pc);
+	//SendString("\n\r\\");
+
+	//printf("IRQ %04X\n", (unsigned int)cpu_reg_pc);
+			
+	cpu_temp_memory = ((cpu_reg_pc)>>8);
+	CPU_PUSH;
+	cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
+	CPU_PUSH;
+	cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
+		(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
+	CPU_PUSH;
+	cpu_reg_pc = (unsigned long)cpu_read(0xFFFE);
+	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFF)<<8);
+
+	cpu_current_cycles += 7;
+	
+	cpu_flag_i = 1;
+}
+
+void nes_nmi()
+{
+	//SendString("NMI \\");
+	//SendLongHex(cpu_reg_pc);
+	//SendString("\n\r\\");
+
+	//printf("NMI %04X\n", (unsigned int)cpu_reg_pc);
+
+	cpu_temp_memory = ((cpu_reg_pc)>>8);
+	CPU_PUSH;
+	cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
+	CPU_PUSH;
+	cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
+		(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
+	CPU_PUSH;
+	cpu_reg_pc = (unsigned long)cpu_read(0xFFFA);
+	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFB)<<8);
+
+	ppu_frame_cycles += 7;
+}
+
 unsigned long cpu_run()
 {	
 	cpu_temp_opcode = (unsigned long)cpu_read(cpu_reg_pc++);
@@ -2011,23 +2055,16 @@ unsigned long cpu_run()
 		// BRK
 		case 0x00:
 		{
+			//SendString("BRK \\");
 			//SendLongHex(cpu_reg_pc);
-			//SendString("BRK\n\r\\");
-			
+			//SendString("\n\r\\");
+
+			//printf("BRK %04X\n", (unsigned int)cpu_reg_pc);
+
 			cpu_temp_cycles = 0x0007;
-			cpu_temp_memory = ((cpu_reg_pc+1)>>8); // add one to PC
-			CPU_PUSH;
-			cpu_temp_memory = ((cpu_reg_pc+1)&0x00FF); // add one to PC
-			CPU_PUSH;
-			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
-			CPU_PUSH;
-			cpu_reg_pc = (unsigned long)cpu_read(0xFFFE);
-			cpu_reg_pc += ((unsigned long)cpu_read(0xFFFF)<<8);
+			cpu_reg_pc++; // add one to PC
 			
-			cpu_current_cycles += 7;
-			
-			cpu_flag_i = 1;
+			nes_irq();
 			
 			break;
 		}
@@ -2894,7 +2931,7 @@ void nes_sprites(unsigned char ground, unsigned long min_y, unsigned long max_y)
 											}
 											else
 											{
-
+												pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0&0x01);
 											}
 										}
 										else if (map_mmc1_chr_mode == 1) // 4KB banked
@@ -2913,7 +2950,15 @@ void nes_sprites(unsigned char ground, unsigned long min_y, unsigned long max_y)
 											}
 											else
 											{
-
+												if (pixel_lookup < 0x1000)
+												{
+													pixel_lookup += 0x00001000*(map_mmc1_chr_bank_0&0x01);
+												}
+												else
+												{
+													pixel_lookup += 0x00001000*(map_mmc1_chr_bank_1&0x01);
+													pixel_lookup -= 0x00001000;
+												}
 											}
 										}
 									}
@@ -3677,25 +3722,41 @@ void nes_mixer()
 
 void nes_sprite_0_calc()
 {	
+	ppu_status_s = 0xFF;
+	ppu_status_d = 0xFF;
+
 	// sprite 0
 	if (ppu_flag_h == 0) // 8x8 sprites
 	{
-		ppu_status_s = 8;
-		
+		//ppu_status_s = 8;
+
 		for (unsigned long i=0; i<8; i++)
 		{
 			if (map_number == 1) // mmc1
 			{
 				if (map_mmc1_chr_mode == 0) // 8KB
 				{
-					if ((unsigned char)cart_rom[5] > 0) // && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
+					if ((unsigned char)cart_rom[5] > 0) // using CHR_ROM
 					{
-						if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
-							(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+						if ((unsigned char)cart_rom[4] <= 0x10) // and 256KB or less
 						{
-							ppu_status_s = i+1;
+							if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+								(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+							{
+								ppu_status_s = i+1;
 
-							break;
+								break;
+							}
+						}
+						else
+						{
+							if ((unsigned char)cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+								(unsigned char)cart_rom[chr_offset+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+							{
+								ppu_status_s = i+1;
+
+								break;
+							}
 						}
 					}
 					else
@@ -3711,26 +3772,52 @@ void nes_sprite_0_calc()
 				}
 				else if (map_mmc1_chr_mode == 1) // 4KB banked
 				{
-					if ((unsigned char)cart_rom[5] > 0) // && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
+					if ((unsigned char)cart_rom[5] > 0) // using CHR_ROM
 					{
-						if (ppu_flag_s == 0)
+						if ((unsigned char)cart_rom[4] <= 0x10) // and 256KB or less
 						{
-							if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
-								(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+							if (ppu_flag_s == 0)
 							{
-								ppu_status_s = i+1;
+								if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+									(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+								{
+									ppu_status_s = i+1;
 
-								break;
+									break;
+								}
+							}
+							else
+							{
+								if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+									(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+								{
+									ppu_status_s = i+1;
+
+									break;
+								}
 							}
 						}
 						else
 						{
-							if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
-								(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+							if (ppu_flag_s == 0)
 							{
-								ppu_status_s = i+1;
+								if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x01)+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+									(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x01)+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+								{
+									ppu_status_s = i+1;
 
-								break;
+									break;
+								}
+							}
+							else
+							{
+								if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1&0x01)+oam_ram[1]*16+0x1000*ppu_flag_s+i] != 0x00 ||
+									(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1&0x01)+oam_ram[1]*16+0x1000*ppu_flag_s+i+8] != 0x00)
+								{
+									ppu_status_s = i+1;
+
+									break;
+								}
 							}
 						}
 					}
@@ -3848,8 +3935,8 @@ void nes_sprite_0_calc()
 	}
 	else // 8x16 sprites
 	{
-		ppu_status_s = 16;
-		
+		//ppu_status_s = 16;
+
 		for (unsigned long i=0; i<16; i++)
 		{
 			if (i < 8)
@@ -3858,14 +3945,27 @@ void nes_sprite_0_calc()
 				{
 					if (map_mmc1_chr_mode == 0) // 8KB
 					{
-						if ((unsigned char)cart_rom[5] > 0) // && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
+						if ((unsigned char)cart_rom[5] > 0) // using CHR_ROM
 						{
-							if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
-								(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+							if ((unsigned char)cart_rom[4] <= 0x10) // and 256KB or less
 							{
-								ppu_status_s = i+1;
+								if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+									(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+								{
+									ppu_status_s = i+1;
 
-								break;
+									break;
+								}
+							}
+							else
+							{
+								if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+									(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+								{
+									ppu_status_s = i+1;
+
+									break;
+								}
 							}
 						}
 						else
@@ -3881,26 +3981,52 @@ void nes_sprite_0_calc()
 					}
 					else if (map_mmc1_chr_mode == 1) // 4KB banked
 					{
-						if ((unsigned char)cart_rom[5] > 0) // && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
+						if ((unsigned char)cart_rom[5] > 0) // using CHR_ROM
 						{
-							if (ppu_flag_s == 0)
+							if ((unsigned char)cart_rom[4] <= 0x10) // and 256KB or less
 							{
-								if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
-									(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+								if (ppu_flag_s == 0)
 								{
-									ppu_status_s = i+1;
+									if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+										(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+									{
+										ppu_status_s = i+1;
 
-									break;
+										break;
+									}
+								}
+								else
+								{
+									if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+										(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+									{
+										ppu_status_s = i+1;
+
+										break;
+									}
 								}
 							}
 							else
 							{
-								if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
-									(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+								if (ppu_flag_s == 0)
 								{
-									ppu_status_s = i+1;
+									if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x01)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+										(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x01)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+									{
+										ppu_status_s = i+1;
 
-									break;
+										break;
+									}
+								}
+								else
+								{
+									if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1&0x01)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i] != 0x00 ||
+										(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1&0x01)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00)
+									{
+										ppu_status_s = i+1;
+
+										break;
+									}
 								}
 							}
 						}
@@ -4021,14 +4147,27 @@ void nes_sprite_0_calc()
 				{
 					if (map_mmc1_chr_mode == 0) // 8KB
 					{
-						if ((unsigned char)cart_rom[5] > 0) // && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
+						if ((unsigned char)cart_rom[5] > 0) // using CHR_ROM 
 						{
-							if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
-								(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+							if ((unsigned char)cart_rom[4] <= 0x10) // and 256KB or less
 							{
-								ppu_status_s = i+1;
+								if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+									(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x1E)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+								{
+									ppu_status_s = i+1;
 
-								break;
+									break;
+								}
+							}
+							else
+							{
+								if ((unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+									(unsigned char)cart_rom[chr_offset+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+								{
+									ppu_status_s = i+1;
+
+									break;
+								}
 							}
 						}
 						else
@@ -4044,26 +4183,52 @@ void nes_sprite_0_calc()
 					}
 					else if (map_mmc1_chr_mode == 1) // 4KB banked
 					{
-						if ((unsigned char)cart_rom[5] > 0) // && (unsigned char)cart_rom[4] <= 0x10) // using CHR_ROM and 256KB or less
+						if ((unsigned char)cart_rom[5] > 0) // using CHR_ROM and 256KB or less
 						{
-							if (ppu_flag_s == 0)
+							if ((unsigned char)cart_rom[4] <= 0x10) // and 256KB or less
 							{
-								if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
-									(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+								if (ppu_flag_s == 0)
 								{
-									ppu_status_s = i+1;
+									if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+										(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+									{
+										ppu_status_s = i+1;
 
-									break;
+										break;
+									}
+								}
+								else
+								{
+									if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+										(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+									{
+										ppu_status_s = i+1;
+
+										break;
+									}
 								}
 							}
 							else
 							{
-								if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
-									(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+								if (ppu_flag_s == 0)
 								{
-									ppu_status_s = i+1;
+									if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x01)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+										(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_0&0x01)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+									{
+										ppu_status_s = i+1;
 
-									break;
+										break;
+									}
+								}
+								else
+								{
+									if ((unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1&0x01)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+8] != 0x00 ||
+										(unsigned char)cart_rom[chr_offset+0x00001000*(map_mmc1_chr_bank_1&0x01)+(oam_ram[1]&0xFE)*16+0x1000*(oam_ram[1]&0x01)+i+16] != 0x00)
+									{
+										ppu_status_s = i+1;
+
+										break;
+									}
 								}
 							}
 						}
@@ -4181,8 +4346,11 @@ void nes_sprite_0_calc()
 		}
 	}
 	
-	ppu_status_s += oam_ram[0]; // add y-coordinate
-	ppu_status_d = oam_ram[3]; // x-coordinate
+	if (ppu_status_s < 0xFF)
+	{
+		ppu_status_s += oam_ram[0]; // add y-coordinate
+		ppu_status_d = oam_ram[3]; // x-coordinate
+	}
 }
 
 void nes_init()
@@ -4199,7 +4367,7 @@ void nes_init()
 		end_offset = 16 + (unsigned char)cart_rom[4]*16384 + (unsigned char)cart_rom[5]*8192; // end of cart rom (not used?)
 		
 		// mapper
-		map_number = (((unsigned char)cart_rom[6] & 0xF0) >> 4) + ((unsigned char)cart_rom[7] & 0xF0);
+		map_number = (((unsigned char)cart_rom[6] & 0xF0) >> 4); // + ((unsigned char)cart_rom[7] & 0xF0); // high nibble isn't reliable?
 		
 		// scrolling mask
 		if (((unsigned char)cart_rom[6] & 0x01) == 0x00)
@@ -4231,44 +4399,6 @@ void nes_init()
 		//SendLongHex(cpu_reg_pc);
 		//SendString("Reset\n\r\\");
 	}
-}
-
-void nes_irq()
-{
-	//SendLongHex(cpu_reg_pc);
-	//SendString("IRQ\n\r\\");
-			
-	cpu_temp_memory = ((cpu_reg_pc)>>8);
-	CPU_PUSH;
-	cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
-	CPU_PUSH;
-	cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-		(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
-	CPU_PUSH;
-	cpu_reg_pc = (unsigned long)cpu_read(0xFFFE);
-	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFF)<<8);
-	
-	cpu_current_cycles += 7;
-	
-	cpu_flag_i = 1;
-}
-
-void nes_nmi()
-{
-	//SendLongHex(cpu_reg_pc);
-	//SendString("NMI\n\r\\");
-
-	cpu_temp_memory = ((cpu_reg_pc)>>8);
-	CPU_PUSH;
-	cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
-	CPU_PUSH;
-	cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-		(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
-	CPU_PUSH;
-	cpu_reg_pc = (unsigned long)cpu_read(0xFFFA);
-	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFB)<<8);
-
-	ppu_frame_cycles += 7;
 }
 
 void nes_loop(unsigned long loop_count)
@@ -4315,7 +4445,7 @@ void nes_loop(unsigned long loop_count)
 		{
 			if (ppu_scanline_count > 0)
 			{	
-				nes_irq_decrement();
+				nes_mmc3_irq_decrement();
 			}
 		}
 
@@ -4360,7 +4490,7 @@ void nes_loop(unsigned long loop_count)
 			nes_mixer(); // move this somewhere else?
 		}
 	}
-	
+
 	// irq
 	if (cpu_flag_i == 0 && !(cpu_temp_opcode == 0x58 || cpu_temp_opcode == 0x78 || cpu_temp_opcode == 0x28))
 	{
@@ -4380,9 +4510,9 @@ void nes_loop(unsigned long loop_count)
 		// v-sync
 		ppu_flag_v = 0x0001;
 		
-		ppu_flag_0 = 0;
-		
 		ppu_status_0 = 0;
+
+		ppu_flag_0 = 0;
 	}
 	else if (ppu_frame_cycles < 59565) // 29780.5 cycles per frame
 	{	
@@ -4399,11 +4529,14 @@ void nes_loop(unsigned long loop_count)
 		// v-sync
 		ppu_flag_v = 0x0000;
 		
-		if (ppu_scanline_count >= (ppu_status_s) && ppu_scanline_cycles >= (ppu_status_d) && ppu_status_0 == 0) // very rough math
-		{	
-			ppu_status_0 = 1;
-			
-			ppu_flag_0 = 1;
+		if (ppu_flag_eb > 0 && ppu_flag_es > 0)
+		{
+			if (ppu_scanline_count >= (ppu_status_s) && ppu_scanline_cycles >= (ppu_status_d) && ppu_status_0 == 0) // very rough math
+			{	
+				ppu_status_0 = 1;
+				
+				ppu_flag_0 = 1;
+			}
 		}
 	}
 	else
