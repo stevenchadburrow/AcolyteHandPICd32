@@ -262,6 +262,10 @@ unsigned short apu_period[16] = {
 // change for platform
 void nes_error(unsigned char code)
 {			
+	//SendString("Error \\");
+	//SendHex(code);
+	//SendString("\n\r\\");
+
 	printf("Error %02X\n", code);
 
 	while (1) { }
