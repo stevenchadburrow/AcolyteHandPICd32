@@ -135,7 +135,7 @@ unsigned long map_mmc3_irq_interrupt = 0x0000;
 
 unsigned long cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
 unsigned long cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
-unsigned long cpu_flag_d = 0x0000, cpu_flag_i = 0x0000; // was 0x0001
+unsigned long cpu_flag_d = 0x0000, cpu_flag_i = 0x0001; // needs to be 0x0001
 unsigned long cpu_reg_pc = 0xFFFC;
 
 unsigned long cpu_temp_opcode = 0x0000, cpu_temp_memory = 0x0000, cpu_temp_address = 0x0000; 
@@ -2061,7 +2061,7 @@ unsigned long cpu_run()
 
 			//printf("BRK %04X\n", (unsigned int)cpu_reg_pc);
 
-			cpu_temp_cycles = 0x0007;
+			cpu_temp_cycles = 0x0000;
 			cpu_reg_pc++; // add one to PC
 			
 			nes_irq();
