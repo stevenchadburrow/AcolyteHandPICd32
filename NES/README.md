@@ -9,7 +9,7 @@ Some MMC3 games have issues with IRQ timing:
 Super Mario 3 - Looks great! (except sprite priority issue)<br>
 Kirby - Looks great!<br>
 Wario Woods - Looks great!<br>
-Crystalis - Bottom status bar jumps some scanlines up or down depending on currently nametable.<br>
+Crystalis - Bottom status bar moves some scanlines. (and missing sprites during intro) <br>
 Star Tropics - Bottom status bar has top 8+ pixels missing entirely.<br>
 Ninja Gaiden 2 - Parallax scrolling off a few scanlines.<br>
 
