@@ -4,14 +4,7 @@ These files contain an NES emulator for the PIC32MZ.  It currently is running at
 
 This currently works with these mappers: NROM, UNROM, CNROM, ANROM, MMC1, and MMC3 (only some implementation).
 
-Some MMC3 games have issues with IRQ timing:
-
-Super Mario 3 - Issues when scrolling background both vertical and horizontal. (and sprite priority issue)<br>
-Kirby - Looks great!<br>
-Wario Woods - Looks great!<br>
-Crystalis - Bottom status bar moves some scanlines. (and missing sprites during intro) <br>
-Star Tropics - Bottom status bar has top 8+ pixels missing entirely.<br>
-Ninja Gaiden 2 - Parallax scrolling off a few scanlines.<br>
+Some MMC3 games have issues with IRQ timing, though adjusting both cycle and scanline delays help in most cases.
 
 The journey has been documented on the 6502.org Forum, here: http://forum.6502.org/viewtopic.php?f=1&t=8236
 
