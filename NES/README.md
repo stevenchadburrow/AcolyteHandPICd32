@@ -4,61 +4,14 @@ These files contain an NES emulator for the PIC32MZ.  It currently is running at
 
 This currently works with these mappers: NROM, UNROM, CNROM, ANROM, MMC1, and MMC3 (only some implementation).
 
-The default 55 games chosen for this system include:
+Some MMC3 games have issues with IRQ timing:
 
-1942 - NROM - Great, sound effects are annoying<br>
-1943: Midway - UNROM - Perfect<br>
-Arkanoid - CNROM - Perfect<br>
-Ballon Fight - NROM - Perfect<br>
-Baseball - NROM - Perfect<br>
-Battle Kid - UNROM - Perfect<br>
-Battletoads - ANROM - Fair, (hacked vertical scrolling, but cutscenes are a mess with hacks enabled)<br>
-Bionic Commando - MMC1 - Perfect<br>
-Blades of Steel - UNROM - Perfect<br>
-Blaster Master - MMC1 - Great, minor sprite priority issues<br>
-Bubble Bobble - MMC1 - Perfect<br>
-Castlevania - UNROM - Great, minor sprite priority issues<br>
-Castlevania 2 - MMC1 - Great, minor sprite priority issues<br>
-Championship Rally - MMC1 - Perfect<br>
-Contra - MMC1 - Perfect<br>
-Double Dragon - MMC1 - Great, (hacked bottom status bar)<br>
-Dig Dug - NROM - Perfect<br>
-Donkey Kong - NROM - Great, sound effects are annoying<br>
-Double Dribble - UNROM - Perfect<br>
-Dragon Warrior 3 - MMC1 - Perfect<br>
-Dragon Warrior 4 - MMC1 - Perfect<br>
-Duck Tales - UNROM - Great, a few scanlines in status bar scroll incorrectly, (hacked top status bar)<br>
-Excitebike - NROM - Good, horizontal scrolling split on wrong scanline<br>
-Final Fantasy - MMC1 - Perfect<br>
-Ghosts 'n Goblins - UNROM - Perfect<br>
-Gradius - CNROM - Great, a few scanline in status bar missing<br>
-Ice Climber - NROM - Perfect<br>
-Kid Icarus - MMC1 - Perfect<br>
-Kirby's Adventure - MMC3 - Great, (hacked bottom status bar)<br>
-King's Quest 5 - MMC3, Great, some tiles are wrong<br>
-Kung Fu - NROM - Perfect<br>
-Mach Rider - NROM - Good, horizontal scanlines off a bit<br>
-Mario Bros - NROM - Perfect<br>
-Mega Man - UNROM - Perfect<br>
-Mega Man 2 - MMC1 - Perfect<br>
-Metroid - MMC1 - Perfect<br>
-Micro Mages - NROM - Perfect<br>
-Micro Mages 2 - NROM - Perfect<br>
-Moon Crystal - MMC3 - Perfect<br>
-Ninja Gaiden - MMC1 - Great, missing tiles on some cutscenes<br>
-Paperboy - CNROM - Perfect<br>
-Rampage - MMC3 - Perfect<br>
-R.C. Pro AM 2 - ANROM - Great, single scanline on intro screen off<br>
-River City Ransom - MMC3 - Great, some text disappears too quickly<br>
-Super Mario Bros - NROM - Perfect<br>
-Super Mario Bros 2 - MMC3 - Perfect<br>
-Super Mario Bros 3 - MMC3 - Good, (hacked bottom status bar and sprite priority)<br>
-Super Off Road - ANROM - Good, some tiles off, status bar shifted down<br>
-Tetris - MMC1 - Perfect<br>
-Super Turrican - MMC3 - Great, intro screen has wrong tiles<br>
-Wizardry: Proving Grounds - MMC1 - Perfect<br>
-Zelda - MMC1 - Good, vertical scrolling is off<br>
-Zelda 2 - MMC1 - Good, occasional slowdowns<br>
+Super Mario 3 - Looks great!
+Kirby - Looks great!
+Wario Woods - Looks great!
+Crystalis - Bottom status bar jumps some scanlines up or down depending on currently nametable.
+Star Tropics - Bottom status bar has top 8+ pixels missing entirely.
+Ninja Gaiden 2 - Parallax scrolling off a few scanlines.
 
 The journey has been documented on the 6502.org Forum, here: http://forum.6502.org/viewtopic.php?f=1&t=8236
 
