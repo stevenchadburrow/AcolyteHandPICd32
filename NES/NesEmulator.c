@@ -135,7 +135,7 @@ unsigned long map_mmc3_irq_interrupt = 0x0000;
 
 unsigned long cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
 unsigned long cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
-unsigned long cpu_flag_d = 0x0000, cpu_flag_i = 0x0001; // needs to be 0x0001
+unsigned long cpu_flag_d = 0x0000, cpu_flag_b = 0x0000, cpu_flag_i = 0x0001; // needs to be 0x0001
 unsigned long cpu_reg_pc = 0xFFFC;
 
 unsigned long cpu_temp_opcode = 0x0000, cpu_temp_memory = 0x0000, cpu_temp_address = 0x0000; 
@@ -398,74 +398,74 @@ void nes_wait(unsigned long loop_count)
 
 unsigned char nes_read_cpu_ram(unsigned long addr)
 {
-	return cpu_ram[(addr&2047)];
-	//return cpu_ram[addr];
+	//return cpu_ram[(addr&2047)];
+	return cpu_ram[addr];
 }
 
 void nes_write_cpu_ram(unsigned long addr, unsigned char val)
 {
-	cpu_ram[(addr&2047)] = val;
-	//cpu_ram[addr] = val;
+	//cpu_ram[(addr&2047)] = val;
+	cpu_ram[addr] = val;
 }
 
 unsigned char nes_read_ppu_ram(unsigned long addr)
 {
-	return ppu_ram[(addr&2047)];
-	//return ppu_ram[addr];
+	//return ppu_ram[(addr&2047)];
+	return ppu_ram[addr];
 }
 
 void nes_write_ppu_ram(unsigned long addr, unsigned char val)
 {
-	ppu_ram[(addr&2047)] = val;
-	//ppu_ram[addr] = val;
+	//ppu_ram[(addr&2047)] = val;
+	ppu_ram[addr] = val;
 }
 
 unsigned char nes_read_prg_ram(unsigned long addr)
 {
-	return prg_ram[(addr&8191)];
-	//return prg_ram[addr];
+	//return prg_ram[(addr&8191)];
+	return prg_ram[addr];
 }
 
 void nes_write_prg_ram(unsigned long addr, unsigned char val)
 {
-	prg_ram[(addr&8191)] = val;
-	//prg_ram[addr] = val;
+	//prg_ram[(addr&8191)] = val;
+	prg_ram[addr] = val;
 }
 
 unsigned char nes_read_chr_ram(unsigned long addr)
 {
-	return chr_ram[(addr&8191)];
-	//return chr_ram[addr];
+	//return chr_ram[(addr&8191)];
+	return chr_ram[addr];
 }
 
 void nes_write_chr_ram(unsigned long addr, unsigned char val)
 {
-	chr_ram[(addr&8191)] = val;
-	//chr_ram[addr] = val;
+	//chr_ram[(addr&8191)] = val;
+	chr_ram[addr] = val;
 }
 
 unsigned char nes_read_oam_ram(unsigned long addr)
 {
-	return oam_ram[(addr&255)];
-	//return oam_ram[addr];
+	//return oam_ram[(addr&255)];
+	return oam_ram[addr];
 }
 
 void nes_write_oam_ram(unsigned long addr, unsigned char val)
 {
-	oam_ram[(addr&255)] = val;
-	//oam_ram[addr] = val;
+	//oam_ram[(addr&255)] = val;
+	oam_ram[addr] = val;
 }
 
 unsigned char nes_read_pal_ram(unsigned long addr)
 {
-	return pal_ram[(addr&31)];
-	//return pal_ram[addr];
+	//return pal_ram[(addr&31)];
+	return pal_ram[addr];
 }
 
 void nes_write_pal_ram(unsigned long addr, unsigned char val)
 {
-	pal_ram[(addr&31)] = val;
-	//pal_ram[addr] = val;
+	//pal_ram[(addr&31)] = val;
+	pal_ram[addr] = val;
 }
 
 unsigned char nes_read_cart_rom(unsigned long addr)
@@ -1954,13 +1954,15 @@ void nes_irq()
 	//SendString("\n\r\\");
 
 	//printf("IRQ %04X\n", (unsigned int)cpu_reg_pc);
+
+	cpu_flag_b = 0;
 			
 	cpu_temp_memory = ((cpu_reg_pc)>>8);
 	CPU_PUSH;
 	cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
 	CPU_PUSH;
-	cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-		(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
+	cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|(0x20)|(cpu_flag_b<<4)|
+		(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c);
 	CPU_PUSH;
 	cpu_reg_pc = (unsigned long)cpu_read(0xFFFE);
 	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFF)<<8);
@@ -1978,12 +1980,38 @@ void nes_nmi()
 
 	//printf("NMI %04X\n", (unsigned int)cpu_reg_pc);
 
+	cpu_flag_b = 0;
+
 	cpu_temp_memory = ((cpu_reg_pc)>>8);
 	CPU_PUSH;
 	cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
 	CPU_PUSH;
-	cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-		(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
+	cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|(0x20)|(cpu_flag_b<<4)|
+		(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c);
+	CPU_PUSH;
+	cpu_reg_pc = (unsigned long)cpu_read(0xFFFA);
+	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFB)<<8);
+
+	ppu_frame_cycles += 7;
+}
+
+void nes_brk()
+{
+	//SendString("BRK \\");
+	//SendLongHex(cpu_reg_pc);
+	//SendString("\n\r\\");
+
+	//printf("NMI %04X\n", (unsigned int)cpu_reg_pc);
+
+	cpu_flag_b = 1;
+
+	cpu_reg_pc++; // add one to PC
+	cpu_temp_memory = ((cpu_reg_pc)>>8);
+	CPU_PUSH;
+	cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
+	CPU_PUSH;
+	cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|(0x20)|(cpu_flag_b<<4)|
+		(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c);
 	CPU_PUSH;
 	cpu_reg_pc = (unsigned long)cpu_read(0xFFFA);
 	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFB)<<8);
@@ -2059,17 +2087,8 @@ unsigned long cpu_run()
 		// BRK
 		case 0x00:
 		{
-			//SendString("BRK \\");
-			//SendLongHex(cpu_reg_pc);
-			//SendString("\n\r\\");
-
-			//printf("BRK %04X\n", (unsigned int)cpu_reg_pc);
-
 			cpu_temp_cycles = 0x0000;
-			cpu_reg_pc++; // add one to PC
-			
-			nes_irq();
-			
+			nes_brk();
 			break;
 		}
 		
@@ -2308,8 +2327,9 @@ unsigned long cpu_run()
 		case 0x08:
 		{
 			cpu_temp_cycles = 0x0003;
-			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|
-				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c); //|0x30);
+			cpu_flag_b = 1;
+			cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|(0x20)|(cpu_flag_b<<4)|
+				(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c);
 			CPU_PUSH;
 			break;
 		}
@@ -2566,27 +2586,31 @@ void nes_vertical_increment()
 {
 	if ((ppu_reg_v & 0x7000) == 0x7000)
 	{
-		if ((ppu_reg_v & 0x03E0) >= 0x03A0)
+		if ((ppu_reg_v & 0x03E0) == 0x03A0)
 		{
 			ppu_reg_v = (ppu_reg_v & 0x0C1F);			
 
 			if ((ppu_reg_v & 0x0800) == 0x0800)
 			{
-				ppu_reg_v = (ppu_reg_v & 0x77FF);
+				ppu_reg_v = (ppu_reg_v & 0x07FF);
 			}
 			else
 			{
-				ppu_reg_v = ((ppu_reg_v & 0x77FF) | 0x0800);
+				ppu_reg_v = ((ppu_reg_v & 0x07FF) | 0x0800);
 			}
+		}
+		else if ((ppu_reg_v & 0x03E0) == 0x03E0)
+		{
+			ppu_reg_v = (ppu_reg_v & 0x0C1F);
 		}
 		else
 		{
-			ppu_reg_v = ((ppu_reg_v & 0x0C1F) | ((ppu_reg_v & 0x03E0) + 0x0020));
+			ppu_reg_v = ((ppu_reg_v & 0x0C1F) | (((ppu_reg_v & 0x03E0) + 0x0020) & 0x03E0));
 		}
 	}
 	else
 	{
-		ppu_reg_v = ((ppu_reg_v & 0x0FFF) | ((ppu_reg_v & 0x7000) + 0x1000));
+		ppu_reg_v = ((ppu_reg_v & 0x0FFF) | (((ppu_reg_v & 0x7000) + 0x1000) & 0x7000));
 	}
 
 	ppu_reg_v = ((ppu_reg_v & 0x7BE0) | (ppu_reg_t & 0x041F));
@@ -4369,7 +4393,7 @@ void nes_init()
 		prg_offset = 16; // length of header
 		chr_offset = 16 + (unsigned char)cart_rom[4]*16384; // length of header + prg_rom
 		end_offset = 16 + (unsigned char)cart_rom[4]*16384 + (unsigned char)cart_rom[5]*8192; // end of cart rom (not used?)
-		
+
 		// mapper
 		map_number = (((unsigned char)cart_rom[6] & 0xF0) >> 4); // + ((unsigned char)cart_rom[7] & 0xF0); // high nibble isn't reliable?
 		
@@ -4382,13 +4406,13 @@ void nes_init()
 		{
 			ppu_status_m = 0x0001; // horizontal scrolling
 		}
-		
+
 		// prg ram
 		cpu_status_r = (((unsigned char)cart_rom[6] & 0x02) >> 1); // (not used?)
-		
+
 		// reset
 		cpu_reg_pc = (unsigned char)cart_rom[prg_offset+0x4000*((unsigned char)cart_rom[4]-1)+0x3FFC] + ((unsigned char)cart_rom[prg_offset+0x4000*((unsigned char)cart_rom[4]-1)+0x3FFD] << 8);
-		
+
 		//SendLongHex(cpu_reg_pc);
 		//SendString("Initialized\n\r\\");
 	}
