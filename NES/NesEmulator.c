@@ -91,7 +91,7 @@ unsigned long cpu_current_cycles = 0;
 unsigned long cpu_dma_cycles = 0;
 
 unsigned long ppu_tile_cycles = 0;
-unsigned long ppu_scanline_cycles = 81;
+unsigned long ppu_scanline_cycles = 0;
 unsigned long ppu_frame_cycles = 0;
 
 unsigned long ppu_frame_count = 0;
@@ -134,7 +134,8 @@ unsigned long map_mmc3_irq_previous = 0x0000;
 unsigned long map_mmc3_irq_interrupt = 0x0000;
 unsigned long map_mmc3_irq_reload = 0x0000;
 unsigned long map_mmc3_irq_a12 = 0x0000;
-unsigned long map_mmc3_irq_delay = 0x0020;
+unsigned long map_mmc3_irq_delay = 0x0008; // 0x0008 or 0x0020 // play with these values
+unsigned long map_mmc3_irq_shift = 0x0001; // 0x0001 or 0x0003 // play with these values
 
 unsigned long cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
 unsigned long cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
@@ -482,7 +483,7 @@ void nes_mmc3_irq_toggle(unsigned long a12)
 	{	
 		if (map_mmc3_irq_counter == 0 || map_mmc3_irq_reload == 1)
 		{
-			map_mmc3_irq_counter = map_mmc3_irq_latch - 2; // minus 2 is ok?
+			map_mmc3_irq_counter = map_mmc3_irq_latch - map_mmc3_irq_shift + 1;
 	
 			map_mmc3_irq_reload = 0;
 
@@ -1586,6 +1587,7 @@ void cpu_write(unsigned long addr, unsigned char val)
 					else // prg bank
 					{	
 						map_mmc1_prg_bank = (map_mmc1_shift & 0x0F);
+						map_mmc1_prg_bank = (map_mmc1_prg_bank & ((((unsigned char)cart_rom[4]))-1));
 						map_mmc1_ram = ((map_mmc1_shift & 0x10) >> 4);
 					}
 					
@@ -1648,11 +1650,13 @@ void cpu_write(unsigned long addr, unsigned char val)
 						case 0x06:
 						{
 							map_mmc3_bank_r6 = ((unsigned long)val & 0x3F);
+							map_mmc3_bank_r6 = (map_mmc3_bank_r6 & ((((unsigned char)cart_rom[4])<<1)-1));
 							break;
 						}
 						case 0x07:
 						{
 							map_mmc3_bank_r7 = ((unsigned long)val & 0x3F);
+							map_mmc3_bank_r7 = (map_mmc3_bank_r7 & ((((unsigned char)cart_rom[4])<<1)-1));
 							break;
 						}
 					}
@@ -2645,11 +2649,11 @@ void nes_background(unsigned long tile, unsigned long line)
 		{
 			nes_mmc3_irq_toggle(ppu_flag_b);
 		}
-
-		pixel_y = line;
 		
-		if (pixel_y >= 8 && pixel_y < 232) // remove overscan above and below
+		if (line >= 8 && line < 232 && tile > 0 && tile < 31) // remove overscan
 		{		
+			pixel_y = line;
+
 			scroll_t = ((ppu_reg_v&0x0C00) | 0x03C0 | ((ppu_reg_v&0x0380)>>4) | ((ppu_reg_v&0x001C)>>2));
 
 			add_t = ((((ppu_reg_v&0x0040)>>5) | ((ppu_reg_v&0x0002)>>1)) << 1);
@@ -4406,7 +4410,7 @@ void nes_sprite_0_calc()
 	if (ppu_status_s < 0xFF)
 	{
 		ppu_status_s += oam_ram[0]; // add y-coordinate
-		ppu_status_d = oam_ram[3] - 81; // x-coordinate
+		ppu_status_d = oam_ram[3]; // x-coordinate
 	}
 }
 
