@@ -91,7 +91,7 @@ unsigned long cpu_current_cycles = 0;
 unsigned long cpu_dma_cycles = 0;
 
 unsigned long ppu_tile_cycles = 0;
-unsigned long ppu_scanline_cycles = 0;
+unsigned long ppu_scanline_cycles = 81;
 unsigned long ppu_frame_cycles = 0;
 
 unsigned long ppu_frame_count = 0;
@@ -132,6 +132,9 @@ unsigned long map_mmc3_irq_counter = 0x007F; // start at something above 0??
 unsigned long map_mmc3_irq_enable = 0x0000;
 unsigned long map_mmc3_irq_previous = 0x0000;
 unsigned long map_mmc3_irq_interrupt = 0x0000;
+unsigned long map_mmc3_irq_reload = 0x0000;
+unsigned long map_mmc3_irq_a12 = 0x0000;
+unsigned long map_mmc3_irq_delay = 0x0020;
 
 unsigned long cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
 unsigned long cpu_flag_c = 0x0000, cpu_flag_z = 0x0000, cpu_flag_v = 0x0000, cpu_flag_n = 0x0000;
@@ -473,28 +476,36 @@ unsigned char nes_read_cart_rom(unsigned long addr)
 	return (unsigned char)(unsigned char)cart_rom[addr];
 }
 
-void nes_mmc3_irq_decrement()
+void nes_mmc3_irq_toggle(unsigned long a12)
 {
-	if (map_mmc3_irq_counter == 0)
-	{
-		map_mmc3_irq_counter = map_mmc3_irq_latch;
-		
-		if (map_mmc3_irq_latch == 0)
+	if (map_mmc3_irq_a12 == 0 && a12 == 1)
+	{	
+		if (map_mmc3_irq_counter == 0 || map_mmc3_irq_reload == 1)
 		{
-			map_mmc3_irq_interrupt = 1;
+			map_mmc3_irq_counter = map_mmc3_irq_latch - 2; // minus 2 is ok?
+	
+			map_mmc3_irq_reload = 0;
+
+			if (map_mmc3_irq_latch == 0)
+			{
+				map_mmc3_irq_interrupt = 1;
+			}
+			else
+			{
+				map_mmc3_irq_interrupt = 0;
+			}
 		}
-	}
-	else
-	{
-		if (ppu_flag_s != ppu_flag_b) // only if using different nametables
+		else
 		{
 			map_mmc3_irq_counter = map_mmc3_irq_counter - 1;
-
-			if (map_mmc3_irq_counter == 0 && map_mmc3_irq_previous == 1) map_mmc3_irq_interrupt = 1;
 		}
+
+		if (map_mmc3_irq_counter == 0 && map_mmc3_irq_previous == 1) map_mmc3_irq_interrupt = 1;
+
+		map_mmc3_irq_previous = map_mmc3_irq_counter;
 	}
 
-	map_mmc3_irq_previous = map_mmc3_irq_counter;
+	map_mmc3_irq_a12 = a12;
 }
 
 unsigned char cpu_read(unsigned long addr)
@@ -1116,11 +1127,11 @@ void cpu_write(unsigned long addr, unsigned char val)
 					ppu_reg_v = ppu_reg_t;
 					ppu_reg_w = 0x0000;
 				}
-				
-				//if (map_number == 0x0004) // mmc3
-				//{
-				//	nes_mmc3_irq_decrement(); // is this right???
-				//}
+
+				if (map_number == 0x0004) // mmc3
+				{
+					nes_mmc3_irq_toggle(((ppu_reg_v & 0x1000) >> 12));
+				}
 				
 				break;
 			}
@@ -1673,7 +1684,8 @@ void cpu_write(unsigned long addr, unsigned char val)
 				}
 				else // odd
 				{
-					map_mmc3_irq_counter = 0; // will reload later
+					map_mmc3_irq_counter = 0;
+					map_mmc3_irq_reload = 1;
 				}
 			}
 			else // irq enable
@@ -1953,7 +1965,7 @@ void nes_irq()
 	//SendLongHex(cpu_reg_pc);
 	//SendString("\n\r\\");
 
-	//printf("IRQ %04X\n", (unsigned int)cpu_reg_pc);
+	//printf("IRQ %04X %02X\n", (unsigned int)cpu_reg_pc, (unsigned int)ppu_scanline_count);
 
 	cpu_flag_b = 0;
 			
@@ -1978,7 +1990,7 @@ void nes_nmi()
 	//SendLongHex(cpu_reg_pc);
 	//SendString("\n\r\\");
 
-	//printf("NMI %04X\n", (unsigned int)cpu_reg_pc);
+	//printf("NMI %04X %02X\n", (unsigned int)cpu_reg_pc, (unsigned int)ppu_scanline_count);
 
 	cpu_flag_b = 0;
 
@@ -2001,11 +2013,11 @@ void nes_brk()
 	//SendLongHex(cpu_reg_pc);
 	//SendString("\n\r\\");
 
-	//printf("NMI %04X\n", (unsigned int)cpu_reg_pc);
+	//printf("BRK %04X %02X\n", (unsigned int)cpu_reg_pc, (unsigned int)ppu_scanline_count);
 
 	cpu_flag_b = 1;
 
-	cpu_reg_pc++; // add one to PC
+	cpu_reg_pc += 1; // add one to PC
 	cpu_temp_memory = ((cpu_reg_pc)>>8);
 	CPU_PUSH;
 	cpu_temp_memory = ((cpu_reg_pc)&0x00FF);
@@ -2016,7 +2028,7 @@ void nes_brk()
 	cpu_reg_pc = (unsigned long)cpu_read(0xFFFA);
 	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFB)<<8);
 
-	ppu_frame_cycles += 7;
+	cpu_flag_i = 1;
 }
 
 unsigned long cpu_run()
@@ -2087,7 +2099,7 @@ unsigned long cpu_run()
 		// BRK
 		case 0x00:
 		{
-			cpu_temp_cycles = 0x0000;
+			cpu_temp_cycles = 0x0007;
 			nes_brk();
 			break;
 		}
@@ -2616,7 +2628,7 @@ void nes_vertical_increment()
 	ppu_reg_v = ((ppu_reg_v & 0x7BE0) | (ppu_reg_t & 0x041F));
 }
 
-void nes_background_tile(unsigned long tile, unsigned long line)
+void nes_background(unsigned long tile, unsigned long line)
 {
 	unsigned long scroll_t = 0, scroll_l = 0;
 	
@@ -2629,6 +2641,11 @@ void nes_background_tile(unsigned long tile, unsigned long line)
 	
 	if (ppu_flag_eb > 0)
 	{
+		if (map_number == 0x0004) // mmc3
+		{
+			nes_mmc3_irq_toggle(ppu_flag_b);
+		}
+
 		pixel_y = line;
 		
 		if (pixel_y >= 8 && pixel_y < 232) // remove overscan above and below
@@ -2925,6 +2942,18 @@ void nes_sprites(unsigned char ground, unsigned long min_y, unsigned long max_y)
 		for (signed char s=63; s>=0; s--) // must be signed!
 		{
 			sprite_y = oam_ram[(((s<<2)+0)&0x00FF)];
+
+			if (map_number == 0x0004) // mmc3
+			{
+				if (ppu_flag_h == 0) // 8x8 sprites
+				{
+					nes_mmc3_irq_toggle(ppu_flag_s);
+				}
+				else
+				{
+					nes_mmc3_irq_toggle(ppu_flag_s); // THIS NEEDS WORK!
+				}
+			}
 
 			if (sprite_y >= min_y && sprite_y < max_y)
 			{
@@ -4377,7 +4406,7 @@ void nes_sprite_0_calc()
 	if (ppu_status_s < 0xFF)
 	{
 		ppu_status_s += oam_ram[0]; // add y-coordinate
-		ppu_status_d = oam_ram[3]; // x-coordinate
+		ppu_status_d = oam_ram[3] - 81; // x-coordinate
 	}
 }
 
@@ -4454,7 +4483,7 @@ void nes_loop(unsigned long loop_count)
 		{
 			if (ppu_frame_count >= loop_count)
 			{	
-				nes_background_tile(ppu_tile_count, ppu_scanline_count);
+				nes_background(ppu_tile_count, ppu_scanline_count);
 
 				if (ppu_flag_eb > 0) nes_horizontal_increment();
 			}
@@ -4469,27 +4498,22 @@ void nes_loop(unsigned long loop_count)
 	{		
 		ppu_scanline_cycles -= 341;
 		
-		if (map_number == 4) // mmc3
+		if (ppu_scanline_count >= 0 && ppu_scanline_count <= 240)
 		{
-			if (ppu_scanline_count > 0)
-			{	
-				nes_mmc3_irq_decrement();
+			if (ppu_flag_h == 0) // 8x8 sprites
+			{
+				nes_sprites(1, ppu_scanline_count+1, ppu_scanline_count+2); // background sprites
+
+				nes_sprites(0, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprites
+				//nes_sprites(2, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprite hack
 			}
-		}
+			else // 8x16 sprites
+			{
+				nes_sprites(1, ppu_scanline_count+1, ppu_scanline_count+2); // background sprites
 
-		if (ppu_flag_h == 0) // 8x8 sprites
-		{
-			nes_sprites(1, ppu_scanline_count+1, ppu_scanline_count+2); // background sprites
-
-			nes_sprites(0, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprites
-			//nes_sprites(2, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprite hack
-		}
-		else // 8x16 sprites
-		{
-			nes_sprites(1, ppu_scanline_count+1, ppu_scanline_count+2); // background sprites
-
-			nes_sprites(0, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprites
-			//nes_sprites(2, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprite hack
+				nes_sprites(0, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprites
+				//nes_sprites(2, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprite hack
+			}
 		}
 		
 		ppu_tile_count = 0;
@@ -4522,14 +4546,28 @@ void nes_loop(unsigned long loop_count)
 	// irq
 	if (cpu_flag_i == 0 && !(cpu_temp_opcode == 0x58 || cpu_temp_opcode == 0x78 || cpu_temp_opcode == 0x28))
 	{
-		if (apu_flag_i == 1 || apu_flag_f == 1 || 
-			(map_number == 4 && map_mmc3_irq_enable > 0 && map_mmc3_irq_interrupt > 0))
+		if (apu_flag_i == 1 || apu_flag_f == 1)
 		{	
 			nes_irq();
 		}
 	}
-	
-	if (map_number == 4 && map_mmc3_irq_interrupt > 0) map_mmc3_irq_interrupt = 0;
+		
+	// irq
+	if (cpu_flag_i == 0 && !(cpu_temp_opcode == 0x58 || cpu_temp_opcode == 0x78 || cpu_temp_opcode == 0x28))
+	{
+		if (map_number == 4) // mmc3
+		{
+			if (map_mmc3_irq_enable > 0 && map_mmc3_irq_interrupt > 0)
+			{
+				if (ppu_scanline_cycles > map_mmc3_irq_delay)
+				{
+					nes_irq();
+
+					map_mmc3_irq_interrupt = 0;
+				}
+			}
+		}
+	}
 	
 	ppu_frame_cycles += (cpu_current_cycles<<1);
 	
