@@ -1154,11 +1154,11 @@ void game_loop()
 			else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
 			else if (menu_pos == 3)
 			{
-				
+				nes_hack_sprite_priority = 1;
 			}
 			else if (menu_pos == 4)
 			{
-				
+				nes_hack_sprite_priority = 0;
 			}
 			else if (menu_pos > 4 && menu_pos <= 9) menu_rate = (unsigned long)(menu_pos - 4);
 			else if (menu_pos == 10)

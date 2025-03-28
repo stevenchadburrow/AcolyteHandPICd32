@@ -23,6 +23,8 @@ unsigned long prg_offset = 0x00000000; // offsets in cart_rom
 unsigned long chr_offset = 0x00000000;
 unsigned long end_offset = 0x00000000;
 
+unsigned long nes_hack_sprite_priority = 0;
+
 unsigned char nes_init_flag = 0;
 unsigned char nes_reset_flag = 0;
 unsigned char nes_audio_flag = 1;
@@ -2866,11 +2868,12 @@ void nes_background(unsigned long tile, unsigned long line)
 	
 	if (ppu_flag_eb > 0)
 	{
+		/*
 		if (map_number == 0x0004) // mmc3
 		{
 			nes_mmc3_irq_toggle(ppu_flag_b);
 		}
-		
+		*/
 		if (line >= 8 && line < 232 && tile > 0 && tile < 31) // remove overscan
 		{		
 			pixel_y = line;
@@ -3167,7 +3170,7 @@ void nes_sprites(unsigned char ground, unsigned long min_y, unsigned long max_y)
 		for (signed char s=63; s>=0; s--) // must be signed!
 		{
 			sprite_y = oam_ram[(((s<<2)+0)&0x00FF)];
-
+			/*
 			if (map_number == 0x0004) // mmc3
 			{
 				if (ppu_flag_h == 0) // 8x8 sprites
@@ -3179,7 +3182,7 @@ void nes_sprites(unsigned char ground, unsigned long min_y, unsigned long max_y)
 					nes_mmc3_irq_toggle(ppu_flag_s); // THIS NEEDS WORK!
 				}
 			}
-
+			*/
 			if (sprite_y >= min_y && sprite_y < max_y)
 			{
 				sprite_x = oam_ram[(((s<<2)+3)&0x00FF)];
@@ -4710,7 +4713,15 @@ void nes_loop(unsigned long loop_count)
 			{	
 				nes_background(ppu_tile_count, ppu_scanline_count);
 
-				if (ppu_flag_eb > 0) nes_horizontal_increment();
+				if (ppu_flag_eb > 0)
+				{
+					if (map_number == 4)
+					{
+						nes_mmc3_irq_toggle(ppu_flag_b); // this is a speed hack
+					}
+					
+					nes_horizontal_increment();
+				}
 			}
 		}
 
@@ -4729,15 +4740,35 @@ void nes_loop(unsigned long loop_count)
 			{
 				nes_sprites(1, ppu_scanline_count+1, ppu_scanline_count+2); // background sprites
 
-				nes_sprites(0, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprites
-				//nes_sprites(2, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprite hack
+				if (nes_hack_sprite_priority > 0)
+				{
+					nes_sprites(2, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprite hack
+				}
+				else
+				{
+					nes_sprites(0, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprites
+				}
 			}
 			else // 8x16 sprites
 			{
 				nes_sprites(1, ppu_scanline_count+1, ppu_scanline_count+2); // background sprites
 
-				nes_sprites(0, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprites
-				//nes_sprites(2, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprite hack
+				if (nes_hack_sprite_priority > 0)
+				{
+					nes_sprites(2, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprite hack
+				}
+				else
+				{
+					nes_sprites(0, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprites
+				}
+			}
+			
+			if (ppu_flag_es > 0)
+			{
+				if (map_number == 4)
+				{
+					nes_mmc3_irq_toggle(ppu_flag_s); // this is a speed hack
+				}
 			}
 		}
 		
