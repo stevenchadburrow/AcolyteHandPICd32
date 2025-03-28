@@ -6,7 +6,7 @@ This currently works with these mappers: NROM, UNROM, CNROM, ANROM, MMC1, and MM
 
 Some MMC3 games have issues with IRQ timing:
 
-Super Mario 3 - Looks great!<br>
+Super Mario 3 - Looks great! (except sprite priority issue)<br>
 Kirby - Looks great!<br>
 Wario Woods - Looks great!<br>
 Crystalis - Bottom status bar jumps some scanlines up or down depending on currently nametable.<br>
