@@ -1047,6 +1047,12 @@ unsigned long menu_rate = 3; // default of 3:1 frame rate
 
 void game_loop()
 {
+	nes_timers();
+	
+	nes_init();
+	
+	DelayMS(1000);
+	
 	while (1)
 	{ 
 		if (PORTKbits.RK7 == 0)
@@ -1148,17 +1154,11 @@ void game_loop()
 			else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
 			else if (menu_pos == 3)
 			{
-				nes_hack_top_hud = 1; // Duck Tales
-				nes_hack_bottom_hud = 1; // Mario 3, Kirby, and Double Dragon
-				nes_hack_sprite_priority = 1; // Mario 3
-				nes_hack_vertical_shift = 1; // Battletoads
+				
 			}
 			else if (menu_pos == 4)
 			{
-				nes_hack_top_hud = 0;
-				nes_hack_bottom_hud = 0;
-				nes_hack_sprite_priority = 0;
-				nes_hack_vertical_shift = 0;
+				
 			}
 			else if (menu_pos > 4 && menu_pos <= 9) menu_rate = (unsigned long)(menu_pos - 4);
 			else if (menu_pos == 10)
@@ -1201,6 +1201,10 @@ void game_loop()
 			{
 				nes_save("GAME-D.SAV");
 			}
+			
+			nes_init();
+			
+			DelayMS(1000);
 		}
 		
 		nes_loop(menu_rate); // frame rate divider and external interrupt
