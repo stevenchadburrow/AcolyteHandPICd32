@@ -1079,23 +1079,36 @@ void game_loop()
 			DelayMS(1000);
 
 			display_string(0x0000, 0x0000, "  Return to Game\\");
+			
 			display_string(0x0000, 0x0008, "  Audio Enable\\");
 			display_string(0x0000, 0x0010, "  Audio Disable\\");
+			
 			display_string(0x0000, 0x0018, "  Hacks Enable\\");
 			display_string(0x0000, 0x0020, "  Hacks Disable\\");
+			
 			display_string(0x0000, 0x0028, "  Frames 1:1\\");
 			display_string(0x0000, 0x0030, "  Frames 2:1\\");
 			display_string(0x0000, 0x0038, "  Frames 3:1\\");
 			display_string(0x0000, 0x0040, "  Frames 4:1\\");
 			display_string(0x0000, 0x0048, "  Frames 5:1\\");
-			display_string(0x0000, 0x0050, "  Load Game A\\");
-			display_string(0x0000, 0x0058, "  Load Game B\\");
-			display_string(0x0000, 0x0060, "  Load Game C\\");
-			display_string(0x0000, 0x0068, "  Load Game D\\");
-			display_string(0x0000, 0x0070, "  Save Game A\\");
-			display_string(0x0000, 0x0078, "  Save Game B\\");
-			display_string(0x0000, 0x0080, "  Save Game C\\");
-			display_string(0x0000, 0x0088, "  Save Game D\\");
+			
+			display_string(0x0000, 0x0050, "  IRQ Cycle 0\\");
+			display_string(0x0000, 0x0058, "  IRQ Cycle 8\\");
+			display_string(0x0000, 0x0060, "  IRQ Cycle 16\\");
+			display_string(0x0000, 0x0068, "  IRQ Cycle 32\\");
+			display_string(0x0000, 0x0070, "  IRQ Line -1\\");
+			display_string(0x0000, 0x0078, "  IRQ Line 0\\");
+			display_string(0x0000, 0x0080, "  IRQ Line 1\\");
+			display_string(0x0000, 0x0088, "  IRQ Line 2\\");
+			
+			display_string(0x0000, 0x0090, "  Load Game A\\");
+			display_string(0x0000, 0x0098, "  Load Game B\\");
+			display_string(0x0000, 0x00A0, "  Load Game C\\");
+			display_string(0x0000, 0x00A8, "  Load Game D\\");
+			display_string(0x0000, 0x00B0, "  Save Game A\\");
+			display_string(0x0000, 0x00B8, "  Save Game B\\");
+			display_string(0x0000, 0x00C0, "  Save Game C\\");
+			display_string(0x0000, 0x00C8, "  Save Game D\\");
 
 			DelayMS(1000);
 
@@ -1125,7 +1138,7 @@ void game_loop()
 
 					display_character(0x0000, 0x0008*menu_pos, ' ');
 
-					if (menu_pos < 17) menu_pos++;
+					if (menu_pos < 25) menu_pos++;
 				}
 				else
 				{
@@ -1152,52 +1165,54 @@ void game_loop()
 			if (menu_pos == 0) { }
 			else if (menu_pos == 1) { audio_enable = 1; nes_audio_flag = 1; }
 			else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
-			else if (menu_pos == 3)
-			{
-				nes_hack_sprite_priority = 1;
-			}
-			else if (menu_pos == 4)
-			{
-				nes_hack_sprite_priority = 0;
-			}
-			else if (menu_pos > 4 && menu_pos <= 9) menu_rate = (unsigned long)(menu_pos - 4);
-			else if (menu_pos == 10)
+			else if (menu_pos == 3) { nes_hack_sprite_priority = 1; }
+			else if (menu_pos == 4) { nes_hack_sprite_priority = 0; }
+			else if (menu_pos > 4 && menu_pos <= 9) { menu_rate = (unsigned long)(menu_pos - 4); }
+			else if (menu_pos == 10) { map_mmc3_irq_delay = 0; }
+			else if (menu_pos == 11) { map_mmc3_irq_delay = 8; }
+			else if (menu_pos == 12) { map_mmc3_irq_delay = 16; }
+			else if (menu_pos == 13) { map_mmc3_irq_delay = 32; }
+			else if (menu_pos == 14) { map_mmc3_irq_shift = 0; }
+			else if (menu_pos == 15) { map_mmc3_irq_shift = 1; }
+			else if (menu_pos == 16) { map_mmc3_irq_shift = 2; }
+			else if (menu_pos == 17) { map_mmc3_irq_shift = 3; }
+			else if (menu_pos == 18)
 			{
 				nes_load("GAME-A.SAV");
 
 				nes_reset_flag = 0;
 			}
-			else if (menu_pos == 11)
+			else if (menu_pos == 19)
 			{
 				nes_load("GAME-B.SAV");
 
 				nes_reset_flag = 0;
 			}
-			else if (menu_pos == 12)
+			else if (menu_pos == 20)
 			{
 				nes_load("GAME-C.SAV");
 
 				nes_reset_flag = 0;
 			}
-			else if (menu_pos == 13)
+			else if (menu_pos == 21)
 			{
 				nes_load("GAME-D.SAV");
 
 				nes_reset_flag = 0;
 			}
-			else if (menu_pos == 14)
+			else if (menu_pos == 22)
 			{
 				nes_save("GAME-A.SAV");
 			}
-			else if (menu_pos == 15)
+			else if (menu_pos == 23)
 			{
 				nes_save("GAME-B.SAV");
 			}
-			else if (menu_pos == 16)
+			else if (menu_pos == 24)
 			{
 				nes_save("GAME-C.SAV");
 			}
-			else if (menu_pos == 17)
+			else if (menu_pos == 25)
 			{
 				nes_save("GAME-D.SAV");
 			}
@@ -1219,9 +1234,7 @@ void game_loop()
 // good optimizations: expensive-optimizations,peephole,unroll-loops
 
 int main()
-{
-	unsigned short sdcard_flag = 0;
-	
+{	
 	audio_enable = 0;
 	
 	Setup();
@@ -1248,7 +1261,7 @@ int main()
 	list_name[10] = ' ';
 	list_name[11] = ' ';
 	
-	sdcard_flag = 0;
+	unsigned short sdcard_flag = 0;
 	
 	SendString("Checking SD Card...\n\r\\");
 	
