@@ -1,6 +1,6 @@
 *** These files are for the AcolyteHandPICd32 project, but do not show off it's full capability. ***
 
-*** NesEmulator.c is my Linux/OpenGL port, but without audio. ***
+*** NesEmulator.c is my Linux/OpenGL port, but without audio.  It was made for debugging purposes. ***
 
 These files contain an NES emulator for the PIC32MZ.  It currently is running at 216 MHz.  Most games run at perfect speed at 20 FPS with audio enabled.  To represent more intensive games, Super Mario Bros 3 was run on both the PIC32MZ and Linux desktop using Mesen for a speed comparison.  At 20 FPS the PIC32MZ ran about 12% too slow.  At 12 FPS the PIC32MZ ran about 2% too slow.  
 
