@@ -395,7 +395,8 @@ void nes_wait(unsigned long loop_count)
 		open_clock_current = clock();
 	} 
 	
-	nes_interrupt_count -= loop_count;
+	//nes_interrupt_count -= loop_count;
+	nes_interrupt_count = 1;
 
 	open_clock_previous = open_clock_current;
 }
