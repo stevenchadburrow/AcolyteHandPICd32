@@ -620,7 +620,8 @@ void nes_wait(unsigned long loop_count)
 	// wait for interrupts to catch up
 	while (nes_interrupt_count < (loop_count)) { }
 	
-	nes_interrupt_count -= loop_count;
+	//nes_interrupt_count -= loop_count;
+	nes_interrupt_count = 1;
 }
 
 unsigned char nes_read_cpu_ram(unsigned long addr)
@@ -4012,7 +4013,7 @@ void nes_sprite_0_calc()
 	// sprite 0
 	if (ppu_flag_h == 0) // 8x8 sprites
 	{
-		ppu_status_s = 8;
+		//ppu_status_s = 8;
 
 		for (unsigned long i=0; i<8; i++)
 		{
@@ -4219,7 +4220,7 @@ void nes_sprite_0_calc()
 	}
 	else // 8x16 sprites
 	{
-		ppu_status_s = 16;
+		//ppu_status_s = 16;
 
 		for (unsigned long i=0; i<16; i++)
 		{
