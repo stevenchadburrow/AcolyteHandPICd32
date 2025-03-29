@@ -1,10 +1,12 @@
 *** These are just backups of files that are not fully implemented yet.  NesEmulator.c is my Linux/OpenGL port. ***
 
-These files contain an NES emulator for the PIC32MZ.  It currently is running at 216 MHz, and if emulating the NES at around 20 FPS with audio it is nearly at full speed.
+These files contain an NES emulator for the PIC32MZ.  It currently is running at 216 MHz.  Most games run at perfect speed at 20 FPS with audio enabled.  To represent more intensive games, Super Mario Bros 3 was run on both the PIC32MZ and Linux desktop using Mesen for a speed comparison.  At 20 FPS the PIC32MZ ran about 12% too slow.  At 12 FPS the PIC32MZ ran about 2% too slow.  
 
 This currently works with these mappers: NROM, UNROM, CNROM, ANROM, MMC1, and MMC3 (only some implementation).
 
 Some MMC3 games have issues with IRQ timing, though adjusting both cycle and scanline delays help in most cases.
+
+Only one hack is currently employed: Sprite priority in Super Mario Bros 3.
 
 The journey has been documented on the 6502.org Forum, here: http://forum.6502.org/viewtopic.php?f=1&t=8236
 
