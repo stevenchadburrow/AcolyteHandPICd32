@@ -12,12 +12,12 @@
 // but it also slows down the whole system!
 volatile unsigned char *cart_rom = (volatile unsigned char *)0x9D100000;
 
-volatile unsigned char __attribute__((address(0x8004E000))) cpu_ram[2048]; // only cpu ram from 0x0000 to 0x07FF
-volatile unsigned char __attribute__((address(0x80050000))) ppu_ram[2048]; // ppu ram from 0x2000 to 0x2FFF (halved, mirrored)
-volatile unsigned char __attribute__((address(0x80052000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
-volatile unsigned char __attribute__((address(0x80054000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
-volatile unsigned char __attribute__((address(0x8004F700))) oam_ram[256]; // special sprite ram inside of ppu
-volatile unsigned char __attribute__((address(0x8004F600))) pal_ram[32]; // special palette ram inside of ppu
+volatile unsigned char __attribute__((address(0x80070000))) cpu_ram[2048]; // only cpu ram from 0x0000 to 0x07FF
+volatile unsigned char __attribute__((address(0x80072000))) ppu_ram[2048]; // ppu ram from 0x2000 to 0x2FFF (halved, mirrored)
+volatile unsigned char __attribute__((address(0x80074000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
+volatile unsigned char __attribute__((address(0x80076000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
+volatile unsigned char __attribute__((address(0x80078000))) oam_ram[256]; // special sprite ram inside of ppu
+volatile unsigned char __attribute__((address(0x8007A000))) pal_ram[32]; // special palette ram inside of ppu
 
 unsigned long prg_offset = 0x00000000; // offsets in cart_rom
 unsigned long chr_offset = 0x00000000;
@@ -242,7 +242,7 @@ void nes_timers()
 	T8CON = 0x0000; // reset
 	T8CON = 0x0000; // prescale of 1:1, 16-bit
 	TMR8 = 0x0000; // zero out counter
-	PR8 = 0xA0C5; // approx three scanlines (minus one)
+	PR8 = 0xC2FD; // approx three scanlines (minus one)
 
 	IPC9bits.T8IP = 0x2; // interrupt priority 2
 	IPC9bits.T8IS = 0x0; // interrupt sub-priority 0
@@ -250,9 +250,9 @@ void nes_timers()
 	IEC1bits.T8IE = 1; // T8 interrupt on
 
 	T9CON = 0x0000; // reset
-	T9CON = 0x0060; // prescale of 1:64, 16-bit
+	T9CON = 0x0070; // prescale of 1:256, 16-bit
 	TMR9 = 0x0000; // zero out counter
-	PR9 = 0xDB5E;  // one whole frame (minus one)
+	PR9 = 0x4284;  // one whole frame (minus one)
 
 	IPC10bits.T9IP = 0x3; // interrupt priority 3
 	IPC10bits.T9IS = 0x0; // interrupt sub-priority 0
@@ -583,9 +583,10 @@ unsigned char nes_burn(char *filename)
 // change for platform
 void nes_pixel(unsigned short pos_x, unsigned short pos_y, unsigned char color)
 {
-	nes_pixel_location = ((pos_y))*SCREEN_X+((pos_x<<1))+(1-screen_frame)*SCREEN_XY;
+	nes_pixel_location = ((pos_y))*SCREEN_X+((pos_x*3))+(1-screen_frame)*SCREEN_XY;
 	screen_buffer[(nes_pixel_location)] = color;
 	screen_buffer[(nes_pixel_location+1)] = color;
+	screen_buffer[(nes_pixel_location+2)] = color;
 }
 
 // change for platform
@@ -615,13 +616,13 @@ void nes_buttons()
 }
 
 // needs to be unoptimized else it will be deleted
-void nes_wait(unsigned long loop_count)
+void __attribute__((optimize("O0"))) nes_wait(unsigned long loop_count)
 {
 	// wait for interrupts to catch up
 	while (nes_interrupt_count < (loop_count)) { }
 	
-	//nes_interrupt_count -= loop_count;
-	nes_interrupt_count = 1;
+	nes_interrupt_count -= loop_count;
+	//nes_interrupt_count = 1; // for super slow games???
 }
 
 unsigned char nes_read_cpu_ram(unsigned long addr)

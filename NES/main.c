@@ -294,23 +294,23 @@ void _general_exception_handler(void)
 }
 
 
-#define SCREEN_X 512
-#define SCREEN_X2 1024
+#define SCREEN_X 768
+#define SCREEN_X2 1536
 #define SCREEN_Y 240
-#define SCREEN_XY 122880
-#define SCREEN_XY2 245760
+#define SCREEN_XY 184320
+#define SCREEN_XY2 368640
 
 // video
-volatile unsigned char __attribute__((coherent,address(0x8004F800))) screen_line[SCREEN_X2];
 volatile unsigned char __attribute__((coherent,address(0x80010000))) screen_buffer[SCREEN_XY2]; // visible portion of screen
+volatile unsigned char __attribute__((address(0x8007E000))) screen_line[SCREEN_X]; // black line
 volatile unsigned char screen_frame = 0;
-volatile unsigned int screen_scanline = 1025; // start of vertical sync
+volatile unsigned int screen_scanline = 771; //1025; // start of vertical sync
 volatile unsigned char __attribute__((coherent)) screen_zero[2] = { 0x00, 0x00 }; // zero value for black
 
 #define AUDIO_LEN 256
 
 // audio
-volatile unsigned char __attribute__((coherent,address(0x8004D000))) audio_buffer[AUDIO_LEN];
+volatile unsigned char __attribute__((address(0x8007C000))) audio_buffer[AUDIO_LEN];
 volatile unsigned int audio_read = 0;
 volatile unsigned int audio_write = 0;
 volatile unsigned int audio_enable = 0;
@@ -1016,8 +1016,9 @@ void list_picture(unsigned short pos)
 				
 				color = (color | ((buffer[0] & 0xE0)));
 				
-				screen_buffer[(180-i)*SCREEN_X + 256 + j*2] = color;
-				screen_buffer[(180-i)*SCREEN_X + 256 + j*2 + 1] = color;
+				screen_buffer[(180-i)*SCREEN_X + 256 + j*3] = color;
+				screen_buffer[(180-i)*SCREEN_X + 256 + j*3 + 1] = color;
+				screen_buffer[(180-i)*SCREEN_X + 256 + j*3 + 2] = color;
 			}
 		}
 		
@@ -1302,7 +1303,7 @@ int main()
 			
 			for (unsigned int i=0; i<240; i++)
 			{
-				for (unsigned int j=0; j<256; j++)
+				for (unsigned int j=0; j<384; j++)
 				{
 					screen_buffer[(240-i)*SCREEN_X + 256 + j] = 0x00;
 				}
@@ -1323,7 +1324,7 @@ int main()
 			
 			for (unsigned int i=0; i<240; i++)
 			{
-				for (unsigned int j=0; j<256; j++)
+				for (unsigned int j=0; j<384; j++)
 				{
 					screen_buffer[(240-i)*SCREEN_X + 256 + j] = 0x00;
 				}

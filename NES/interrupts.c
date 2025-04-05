@@ -1,15 +1,254 @@
 
 
 
+volatile void controller_update()
+{
+	if (controller_enable > 0)
+	{
+		if (TRISKbits.TRISK6 > 0)
+		{
+			controller_status_1 = (controller_status_1 & 0x0C);
+
+			controller_status_1 = controller_status_1 | 
+				((!PORTKbits.RK0) << 4) | // up
+				((!PORTKbits.RK1) << 5) | // down
+				((!PORTKbits.RK2) << 6) | // left
+				((!PORTKbits.RK3) << 7) | // right
+				((!PORTKbits.RK4) << 1) | // B
+				((!PORTKbits.RK5)); // A
+
+			controller_status_2 = (controller_status_2 & 0x0C);
+
+			controller_status_2 = controller_status_2 | 
+				((!PORTFbits.RF0) << 4) | // up
+				((!PORTFbits.RF1) << 5) | // down
+				((!PORTFbits.RF2) << 6) | // left
+				((!PORTFbits.RF4) << 7) | // right
+				((!PORTFbits.RF5) << 1) | // B
+				((!PORTFbits.RF8)); // A
+
+			PORTKbits.RK6 = 0; // ground when not floating
+			TRISKbits.TRISK6 = 0;
+		}
+		else
+		{
+			controller_status_1 = (controller_status_1 & 0xF3);
+
+			controller_status_1 = controller_status_1 |
+				((!PORTKbits.RK4) << 2) | // select
+				((!PORTKbits.RK5) << 3); // start
+
+			controller_status_2 = (controller_status_2 & 0xF3);
+
+			controller_status_2 = controller_status_2 |
+				((!PORTFbits.RF5) << 2) | // select
+				((!PORTFbits.RF8) << 3); // start
+
+			PORTKbits.RK6 = 0;
+			TRISKbits.TRISK6 = 1; // high when floating
+		}
+
+
+		if (ps2_ready[0] == 0x01 && ps2_mode[0] == 0x00) // ready and keyboard
+		{
+			char value = 0x00;
+
+			while (ps2_readpos[0] != ps2_writepos[0])
+			{
+				if (ps2_state_array[0][ps2_readpos[0]] == 0x0B) // release
+				{
+					ps2_readpos[0]++;
+
+					while (ps2_readpos[0] == ps2_writepos[0]) { }
+
+					value = (char)ps2_state_array[0][ps2_readpos[0]];
+
+					if (value == 'X' || value == 'x')
+					{
+						controller_status_3 = (controller_status_3 & 0xFE);
+					}
+					else if (value == 'Z' || value == 'z')
+					{
+						controller_status_3 = (controller_status_3 & 0xFD);
+					}
+					else if (value == 0x20) // space
+					{
+						controller_status_3 = (controller_status_3 & 0xFB);
+					}
+					else if (value == 0x0D) // return
+					{
+						controller_status_3 = (controller_status_3 & 0xF7);
+					}
+					else if (value == 0x11) // up
+					{
+						controller_status_3 = (controller_status_3 & 0xEF);
+					}
+					else if (value == 0x12) // down
+					{
+						controller_status_3 = (controller_status_3 & 0xDF);
+					}
+					else if (value == 0x13) // left
+					{
+						controller_status_3 = (controller_status_3 & 0xBF);
+					}
+					else if (value == 0x14) // right
+					{
+						controller_status_3 = (controller_status_3 & 0x7F);
+					}
+
+					ps2_readpos[0]++;
+				}
+				else
+				{
+					value = (char)ps2_state_array[0][ps2_readpos[0]];
+
+					if (value == 'X' || value == 'x')
+					{
+						controller_status_3 = (controller_status_3 | 0x01);
+					}
+					else if (value == 'Z' || value == 'z')
+					{
+						controller_status_3 = (controller_status_3 | 0x02);
+					}
+					else if (value == 0x20) // space
+					{
+						controller_status_3 = (controller_status_3 | 0x04);
+					}
+					else if (value == 0x0D) // return
+					{
+						controller_status_3 = (controller_status_3 | 0x08);
+					}
+					else if (value == 0x11) // up
+					{
+						controller_status_3 = (controller_status_3 | 0x10);
+					}
+					else if (value == 0x12) // down
+					{
+						controller_status_3 = (controller_status_3 | 0x20);
+					}
+					else if (value == 0x13) // left
+					{
+						controller_status_3 = (controller_status_3 | 0x40);
+					}
+					else if (value == 0x14) // right
+					{
+						controller_status_3 = (controller_status_3 | 0x80);
+					}
+
+					ps2_readpos[0]++;
+				}
+			}
+		}
+
+		if (ps2_ready[1] == 0x01 && ps2_mode[1] == 0x00) // ready and keyboard
+		{
+			char value = 0x00;
+
+			while (ps2_readpos[1] != ps2_writepos[1])
+			{
+				if (ps2_state_array[1][ps2_readpos[1]] == 0x0B) // release
+				{
+					ps2_readpos[1]++;
+
+					while (ps2_readpos[1] == ps2_writepos[1]) { }
+
+					value = (char)ps2_state_array[1][ps2_readpos[1]];
+
+					if (value == 'X' || value == 'x')
+					{
+						controller_status_4 = (controller_status_4 & 0xFE);
+					}
+					else if (value == 'Z' || value == 'z')
+					{
+						controller_status_4 = (controller_status_4 & 0xFD);
+					}
+					else if (value == 0x20) // space
+					{
+						controller_status_4 = (controller_status_4 & 0xFB);
+					}
+					else if (value == 0x0D) // return
+					{
+						controller_status_4 = (controller_status_4 & 0xF7);
+					}
+					else if (value == 0x11) // up
+					{
+						controller_status_4 = (controller_status_4 & 0xEF);
+					}
+					else if (value == 0x12) // down
+					{
+						controller_status_4 = (controller_status_4 & 0xDF);
+					}
+					else if (value == 0x13) // left
+					{
+						controller_status_4 = (controller_status_4 & 0xBF);
+					}
+					else if (value == 0x14) // right
+					{
+						controller_status_4 = (controller_status_4 & 0x7F);
+					}
+
+					ps2_readpos[1]++;
+				}
+				else
+				{
+					value = (char)ps2_state_array[1][ps2_readpos[1]];
+
+					if (value == 'X' || value == 'x')
+					{
+						controller_status_4 = (controller_status_4 | 0x01);
+					}
+					else if (value == 'Z' || value == 'z')
+					{
+						controller_status_4 = (controller_status_4 | 0x02);
+					}
+					else if (value == 0x20) // space
+					{
+						controller_status_4 = (controller_status_4 | 0x04);
+					}
+					else if (value == 0x0D) // return
+					{
+						controller_status_4 = (controller_status_4 | 0x08);
+					}
+					else if (value == 0x11) // up
+					{
+						controller_status_4 = (controller_status_4 | 0x10);
+					}
+					else if (value == 0x12) // down
+					{
+						controller_status_4 = (controller_status_4 | 0x20);
+					}
+					else if (value == 0x13) // left
+					{
+						controller_status_4 = (controller_status_4 | 0x40);
+					}
+					else if (value == 0x14) // right
+					{
+						controller_status_4 = (controller_status_4 | 0x80);
+					}
+
+					ps2_readpos[1]++;
+				}
+			}
+		}
+	}
+	else
+	{
+		PORTKbits.RK6 = 0;
+		TRISKbits.TRISK6 = 1; // high when floating
+	}
+}
+
+
+
 volatile void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_handler()
-{		
-    IFS0bits.OC3IF = 0;  // clear interrupt flag
+{	
+	IFS0bits.OC3IF = 0;  // clear interrupt flag
 	
 	PORTH = 0;
 	
 	screen_scanline = screen_scanline + 1; // increment scanline
 	
-	if (screen_scanline == 1066)
+	if (screen_scanline == 806)
 	{
 		screen_scanline = 0;
 	}
@@ -23,16 +262,16 @@ volatile void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs
 		DCH1CSIZ = SCREEN_X; // X byte per event
 		DCH1CONbits.CHEN = 1; // enable channel
 	}
-	else if (screen_scanline < SCREEN_Y*4)
+	else if (screen_scanline < SCREEN_Y*3)
 	{	
 		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-		DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*SCREEN_Y*screen_frame + SCREEN_X*((screen_scanline)>>2)); // transfer source physical address
+		DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*SCREEN_Y*screen_frame + SCREEN_X*(unsigned long)(((screen_scanline)/3))); // transfer source physical address
 		DCH1SSIZ = SCREEN_X; // source size
 		DCH1DSIZ = 1; // dst size 
 		DCH1CSIZ = SCREEN_X; // X byte per event
 		DCH1CONbits.CHEN = 1; // enable channel
 	}
-	else if (screen_scanline == SCREEN_Y*4)
+	else if (screen_scanline == SCREEN_Y*3)
 	{
 		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
 		DCH1SSA = VirtToPhys(screen_line); // transfer source physical address
@@ -41,241 +280,9 @@ volatile void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs
 		DCH1CSIZ = SCREEN_X; // X byte per event
 		DCH1CONbits.CHEN = 1; // enable channel
 	}
-	else if (screen_scanline == SCREEN_Y*4+1)
+	else if (screen_scanline == SCREEN_Y*3+1)
 	{
-		if (controller_enable > 0)
-		{
-			if (TRISKbits.TRISK6 > 0)
-			{
-				controller_status_1 = (controller_status_1 & 0x0C);
-
-				controller_status_1 = controller_status_1 | 
-					((!PORTKbits.RK0) << 4) | // up
-					((!PORTKbits.RK1) << 5) | // down
-					((!PORTKbits.RK2) << 6) | // left
-					((!PORTKbits.RK3) << 7) | // right
-					((!PORTKbits.RK4) << 1) | // B
-					((!PORTKbits.RK5)); // A
-
-				controller_status_2 = (controller_status_2 & 0x0C);
-
-				controller_status_2 = controller_status_2 | 
-					((!PORTFbits.RF0) << 4) | // up
-					((!PORTFbits.RF1) << 5) | // down
-					((!PORTFbits.RF2) << 6) | // left
-					((!PORTFbits.RF4) << 7) | // right
-					((!PORTFbits.RF5) << 1) | // B
-					((!PORTFbits.RF8)); // A
-
-				PORTKbits.RK6 = 0; // ground when not floating
-				TRISKbits.TRISK6 = 0;
-			}
-			else
-			{
-				controller_status_1 = (controller_status_1 & 0xF3);
-
-				controller_status_1 = controller_status_1 |
-					((!PORTKbits.RK4) << 2) | // select
-					((!PORTKbits.RK5) << 3); // start
-
-				controller_status_2 = (controller_status_2 & 0xF3);
-
-				controller_status_2 = controller_status_2 |
-					((!PORTFbits.RF5) << 2) | // select
-					((!PORTFbits.RF8) << 3); // start
-
-				PORTKbits.RK6 = 0;
-				TRISKbits.TRISK6 = 1; // high when floating
-			}
-			
-			
-			if (ps2_ready[0] == 0x01 && ps2_mode[0] == 0x00) // ready and keyboard
-			{
-				char value = 0x00;
-				
-				while (ps2_readpos[0] != ps2_writepos[0])
-				{
-					if (ps2_state_array[0][ps2_readpos[0]] == 0x0B) // release
-					{
-						ps2_readpos[0]++;
-
-						while (ps2_readpos[0] == ps2_writepos[0]) { }
-
-						value = (char)ps2_state_array[0][ps2_readpos[0]];
-						
-						if (value == 'X' || value == 'x')
-						{
-							controller_status_3 = (controller_status_3 & 0xFE);
-						}
-						else if (value == 'Z' || value == 'z')
-						{
-							controller_status_3 = (controller_status_3 & 0xFD);
-						}
-						else if (value == 0x20) // space
-						{
-							controller_status_3 = (controller_status_3 & 0xFB);
-						}
-						else if (value == 0x0D) // return
-						{
-							controller_status_3 = (controller_status_3 & 0xF7);
-						}
-						else if (value == 0x11) // up
-						{
-							controller_status_3 = (controller_status_3 & 0xEF);
-						}
-						else if (value == 0x12) // down
-						{
-							controller_status_3 = (controller_status_3 & 0xDF);
-						}
-						else if (value == 0x13) // left
-						{
-							controller_status_3 = (controller_status_3 & 0xBF);
-						}
-						else if (value == 0x14) // right
-						{
-							controller_status_3 = (controller_status_3 & 0x7F);
-						}
-						
-						ps2_readpos[0]++;
-					}
-					else
-					{
-						value = (char)ps2_state_array[0][ps2_readpos[0]];
-						
-						if (value == 'X' || value == 'x')
-						{
-							controller_status_3 = (controller_status_3 | 0x01);
-						}
-						else if (value == 'Z' || value == 'z')
-						{
-							controller_status_3 = (controller_status_3 | 0x02);
-						}
-						else if (value == 0x20) // space
-						{
-							controller_status_3 = (controller_status_3 | 0x04);
-						}
-						else if (value == 0x0D) // return
-						{
-							controller_status_3 = (controller_status_3 | 0x08);
-						}
-						else if (value == 0x11) // up
-						{
-							controller_status_3 = (controller_status_3 | 0x10);
-						}
-						else if (value == 0x12) // down
-						{
-							controller_status_3 = (controller_status_3 | 0x20);
-						}
-						else if (value == 0x13) // left
-						{
-							controller_status_3 = (controller_status_3 | 0x40);
-						}
-						else if (value == 0x14) // right
-						{
-							controller_status_3 = (controller_status_3 | 0x80);
-						}
-						
-						ps2_readpos[0]++;
-					}
-				}
-			}
-			
-			if (ps2_ready[1] == 0x01 && ps2_mode[1] == 0x00) // ready and keyboard
-			{
-				char value = 0x00;
-				
-				while (ps2_readpos[1] != ps2_writepos[1])
-				{
-					if (ps2_state_array[1][ps2_readpos[1]] == 0x0B) // release
-					{
-						ps2_readpos[1]++;
-
-						while (ps2_readpos[1] == ps2_writepos[1]) { }
-
-						value = (char)ps2_state_array[1][ps2_readpos[1]];
-						
-						if (value == 'X' || value == 'x')
-						{
-							controller_status_4 = (controller_status_4 & 0xFE);
-						}
-						else if (value == 'Z' || value == 'z')
-						{
-							controller_status_4 = (controller_status_4 & 0xFD);
-						}
-						else if (value == 0x20) // space
-						{
-							controller_status_4 = (controller_status_4 & 0xFB);
-						}
-						else if (value == 0x0D) // return
-						{
-							controller_status_4 = (controller_status_4 & 0xF7);
-						}
-						else if (value == 0x11) // up
-						{
-							controller_status_4 = (controller_status_4 & 0xEF);
-						}
-						else if (value == 0x12) // down
-						{
-							controller_status_4 = (controller_status_4 & 0xDF);
-						}
-						else if (value == 0x13) // left
-						{
-							controller_status_4 = (controller_status_4 & 0xBF);
-						}
-						else if (value == 0x14) // right
-						{
-							controller_status_4 = (controller_status_4 & 0x7F);
-						}
-						
-						ps2_readpos[1]++;
-					}
-					else
-					{
-						value = (char)ps2_state_array[1][ps2_readpos[1]];
-						
-						if (value == 'X' || value == 'x')
-						{
-							controller_status_4 = (controller_status_4 | 0x01);
-						}
-						else if (value == 'Z' || value == 'z')
-						{
-							controller_status_4 = (controller_status_4 | 0x02);
-						}
-						else if (value == 0x20) // space
-						{
-							controller_status_4 = (controller_status_4 | 0x04);
-						}
-						else if (value == 0x0D) // return
-						{
-							controller_status_4 = (controller_status_4 | 0x08);
-						}
-						else if (value == 0x11) // up
-						{
-							controller_status_4 = (controller_status_4 | 0x10);
-						}
-						else if (value == 0x12) // down
-						{
-							controller_status_4 = (controller_status_4 | 0x20);
-						}
-						else if (value == 0x13) // left
-						{
-							controller_status_4 = (controller_status_4 | 0x40);
-						}
-						else if (value == 0x14) // right
-						{
-							controller_status_4 = (controller_status_4 | 0x80);
-						}
-						
-						ps2_readpos[1]++;
-					}
-				}
-			}
-		}
-		else
-		{
-			PORTKbits.RK6 = 0;
-			TRISKbits.TRISK6 = 1; // high when floating
-		}
+		controller_update();
 	}
 	
 	return;

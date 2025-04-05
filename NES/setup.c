@@ -1,4 +1,5 @@
 
+
 void Setup()
 {
 	// turn off analog
@@ -104,18 +105,18 @@ void Setup()
 	CFGCONbits.OCACLK = 1; // use alternate OC/TMR table
 	
 	PB1DIV = 0x00008001; // divide by 2
-	PB2DIV = 0x00008004; // change PB2 clock to 216 / 5 = 43.2 MHz for SPI and UART
+	PB2DIV = 0x00008004; // change PB2 clock to 260 / 5 = 52 MHz for SPI and UART
 	PB3DIV = 0x00008000; // set OC and TMR clock division by 1
 	PB4DIV = 0x00008001; // divide by 2
 	PB5DIV = 0x00008001; // divide by 2
 	//PB6DIV = 0x00008001; // divide by 2
 	PB7DIV = 0x00008000; // CPU clock divide by 1
-	SPLLCON = 0x01110001; // use PLL to bring external 24 MHz into 216 MHz
+	SPLLCON = 0x01400201; // use PLL to bring external 24 MHz into 260 MHz
 	
 	// PRECON - Set up prefetch
 	PRECONbits.PFMSECEN = 0; // Flash SEC Interrupt Enable (Do not generate an interrupt when the PFMSEC bit is set)
 	PRECONbits.PREFEN = 0b11; // Predictive Prefetch Enable (Enable predictive prefetch for any address)
-	PRECONbits.PFMWS = 0b010; // PFM Access Time Defined in Terms of SYSCLK Wait States (Two wait states)
+	PRECONbits.PFMWS = 0b100; // PFM Access Time Defined in Terms of SYSCLK Wait States (Four wait states)
     
 	CFGCONbits.USBSSEN = 1; // USB?
 
@@ -147,34 +148,34 @@ void Setup()
 	// set OC2 and OC3 and TMR5, horizontal visible and sync clocks
 	OC2CON = 0x0; // reset OC2
 	OC2CON = 0x0000000D; // toggle, use Timer5
-	OC2R = 0x02D0; // h-visible rise
-	OC2RS = 0x0CD0; // h-blank fall
+	OC2R = 0x04A0; // h-visible rise
+	OC2RS = 0x14A0; // h-blank fall
 	OC3CON = 0x0; // reset OC3
 	OC3CON = 0x0000000D; // toggle, use Timer5
-	OC3R = 0x0000; // h-sync rise
-	OC3RS = 0x00E0; // h-sync fall
+	OC3R = 0x0220; // h-sync rise
+	OC3RS = 0x14FF; // h-sync fall
 	T5CON = 0x0000; // reset Timer5, prescale of 1:1
 	TMR5 = 0x0000; // zero out counter (offset some cycles)
-	PR5 = 0x0D2F; // h-reset (minus one)
+	PR5 = 0x14FF; // h-reset (minus one)
 	
 	// set OC7 and TMR6, vertical sync clock
 	OC7CON = 0x0; // reset OC7
 	OC7CON = 0x0025; // toggle, use Timer6, 32-bit
-	OC7R = 0x00000000; // v-sync rise
-	OC7RS = 0x00002790; // v-sync fall
+	OC7R = 0x00001F80; // v-sync rise
+	OC7RS = 0x00421DFF; // v-sync fall
 	T6CON = 0x0008; // prescale of 1:1, 32-bit
 	TMR6 = 0x00000000; // zero out counter (offset some cycles)
-	PR6 = 0x0036E9DF; // v-reset (minus one)
+	PR6 = 0x00421DFF; // v-reset (minus one)
 	
 	// TMR3, start of scanline
 	T3CON = 0x0000; // reset Timer3, prescale of 1:1
-	TMR3 = 0x0A60; // zero out counter (offset some cycles)
-	PR3 = 0x0D2F; // h-reset (minus one)
+	TMR3 = 0x1060; // zero out counter (offset some cycles)
+	PR3 = 0x14FF; // h-reset (minus one)
 	
 	// TMR4, end of scanline
 	T4CON = 0x0000; // rest Timer4, prescale of 1:1
-	TMR4 = 0x0260; // zero out counter
-	PR4 = 0x0D2F; // h-reset (minus one)
+	TMR4 = 0x0860; // zero out counter
+	PR4 = 0x14FF; // h-reset (minus one)
 	
 	IPC4bits.OC3IP = 0x7; // interrupt priority 7
 	IPC4bits.OC3IS = 0x0; // interrupt sub-priority 0
@@ -254,7 +255,7 @@ void Setup()
 	IEC3bits.CNDIE = 1; // enable interrupts
 
 	// set up UART here
-	U3BRG = 0x0118; // 43.2 MHz to 9600 baud = 43200000/(16*9600)-1 = 280.25 = 0x0118
+	U3BRG = 0x0152; // 52 MHz to 9600 baud = 52000000/(16*9600)-1 = 337.54 = 0x0152
 	
 	U3MODEbits.STSEL = 0; // 1-Stop bit
 	U3MODEbits.PDSEL = 0; // No Parity, 8-Data bits
@@ -320,8 +321,6 @@ void Setup()
 	// turn LED off by default
 	PORTDbits.RD11 = 1;
 
-	
-	for (unsigned short i=0; i<SCREEN_X*2; i++) screen_line[i] = 0x00;
 
 	for (unsigned short i=0; i<AUDIO_LEN; i++)
 	{
@@ -337,6 +336,11 @@ void Setup()
 		}
 	}
 	
+	for (unsigned short i=0; i<SCREEN_X; i++)
+	{
+		screen_line[i] = 0x00;
+	}
+	
 	// clear ps2 buffers
 	for (unsigned int i=0; i<256; i++)
 	{
@@ -347,11 +351,11 @@ void Setup()
 		ps2_cursor_y[0][i] = 0x0000;
 		ps2_cursor_y[1][i] = 0x0000;
 		
-		/*
-		usb_state_array[i] = 0x00;
-		usb_cursor_x[i] = 0x0000;
-		usb_cursor_y[i] = 0x0000;
-		*/
+		
+		//usb_state_array[i] = 0x00;
+		//usb_cursor_x[i] = 0x0000;
+		//usb_cursor_y[i] = 0x0000;
+		
 	}	
 	
 	// turn on video timers
@@ -361,8 +365,9 @@ void Setup()
 	T6CONbits.ON = 1; // turn on TMR6 vertical sync (cycle offset pre-calculated above)
 	
 	// for debug purposes
-	TRISKbits.TRISK7 = 1;
-	while (PORTKbits.RK7 == 0) { }
+	//TRISKbits.TRISK7 = 1;
+	//while (PORTKbits.RK7 == 0) { }
 	
 	return;
 }
+
