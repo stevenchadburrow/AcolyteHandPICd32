@@ -105,7 +105,7 @@ void Setup()
 	CFGCONbits.OCACLK = 1; // use alternate OC/TMR table
 	
 	PB1DIV = 0x00008001; // divide by 2
-	PB2DIV = 0x00008004; // change PB2 clock to 260 / 5 = 52 MHz for SPI and UART
+	PB2DIV = 0x00008005; // change PB2 clock to 260 / 6 = 43.333 MHz for SPI and UART
 	PB3DIV = 0x00008000; // set OC and TMR clock division by 1
 	PB4DIV = 0x00008001; // divide by 2
 	PB5DIV = 0x00008001; // divide by 2
@@ -255,7 +255,7 @@ void Setup()
 	IEC3bits.CNDIE = 1; // enable interrupts
 
 	// set up UART here
-	U3BRG = 0x0152; // 52 MHz to 9600 baud = 52000000/(16*9600)-1 = 337.54 = 0x0152
+	U3BRG = 0x0119; // 43.333 MHz to 9600 baud = 43333000/(16*9600)-1 = 281.12 = 0x0119
 	
 	U3MODEbits.STSEL = 0; // 1-Stop bit
 	U3MODEbits.PDSEL = 0; // No Parity, 8-Data bits

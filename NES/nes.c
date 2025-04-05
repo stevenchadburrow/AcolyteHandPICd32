@@ -104,6 +104,7 @@ unsigned long ppu_flag_g = 0x0000, ppu_flag_lb = 0x0000, ppu_flag_ls = 0x0000;
 unsigned long ppu_flag_eb = 0x0000, ppu_flag_es = 0x0000;
 
 unsigned long ppu_status_0 = 0x0000;
+unsigned long ppu_status_v = 0x0000;
 signed long ppu_status_s = 0x0000; // needs to be signed
 signed long ppu_status_d = 0x0000;
 unsigned long ppu_status_m = 0x0000;
@@ -583,6 +584,7 @@ unsigned char nes_burn(char *filename)
 // change for platform
 void nes_pixel(unsigned short pos_x, unsigned short pos_y, unsigned char color)
 {
+	
 	nes_pixel_location = ((pos_y))*SCREEN_X+((pos_x*3))+(1-screen_frame)*SCREEN_XY;
 	screen_buffer[(nes_pixel_location)] = color;
 	screen_buffer[(nes_pixel_location+1)] = color;
@@ -4837,6 +4839,8 @@ void nes_loop(unsigned long loop_count)
 	if (ppu_frame_cycles < 4546) // 2273 cycles in v-blank
 	{
 		// v-sync
+		ppu_status_v = 0x0001;
+		
 		ppu_flag_v = 0x0001;
 		
 		ppu_status_0 = 0;
@@ -4845,17 +4849,19 @@ void nes_loop(unsigned long loop_count)
 	}
 	else if (ppu_frame_cycles < 59565) // 29780.5 cycles per frame
 	{	
-		if (ppu_flag_v == 0x0001)
+		if (ppu_status_v == 0x0001)
 		{	
 			nes_sprite_0_calc();
 
 			if (ppu_frame_count >= loop_count)
-			{
+			{	
 				nes_border();
 			}
 		}
 		
 		// v-sync
+		ppu_status_v = 0x0000;
+		
 		ppu_flag_v = 0x0000;
 		
 		if (ppu_flag_eb > 0 && ppu_flag_es > 0)
@@ -4873,6 +4879,8 @@ void nes_loop(unsigned long loop_count)
 		ppu_frame_cycles -= 59565;
 		
 		// v-sync
+		ppu_status_v = 0x0001;
+		
 		ppu_flag_v = 0x0001;
 		
 		ppu_reg_a = 0;	
@@ -4889,7 +4897,7 @@ void nes_loop(unsigned long loop_count)
 		if (ppu_frame_count >= loop_count)
 		{
 			ppu_frame_count = 0;
-
+			
 			nes_frame();
 			
 			nes_wait(loop_count);
