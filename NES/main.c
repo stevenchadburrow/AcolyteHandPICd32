@@ -1122,9 +1122,9 @@ void game_loop()
 			display_string(0x0000, 0x0040, "  Frames 4:1\\");
 			display_string(0x0000, 0x0048, "  Frames 5:1\\");
 			
-			display_string(0x0000, 0x0050, "  IRQ Cycle 0\\");
-			display_string(0x0000, 0x0058, "  IRQ Cycle 8\\");
-			display_string(0x0000, 0x0060, "  IRQ Cycle 16\\");
+			display_string(0x0000, 0x0050, "  IRQ Cycle -8\\");
+			display_string(0x0000, 0x0058, "  IRQ Cycle 0\\");
+			display_string(0x0000, 0x0060, "  IRQ Cycle 8\\");
 			display_string(0x0000, 0x0068, "  IRQ Cycle 32\\");
 			display_string(0x0000, 0x0070, "  IRQ Line -1\\");
 			display_string(0x0000, 0x0078, "  IRQ Line 0\\");
@@ -1201,7 +1201,7 @@ void game_loop()
 			else if (menu_pos == 10) { map_mmc3_irq_delay = 0; }
 			else if (menu_pos == 11) { map_mmc3_irq_delay = 8; }
 			else if (menu_pos == 12) { map_mmc3_irq_delay = 16; }
-			else if (menu_pos == 13) { map_mmc3_irq_delay = 32; }
+			else if (menu_pos == 13) { map_mmc3_irq_delay = 40; }
 			else if (menu_pos == 14) { map_mmc3_irq_shift = 0; }
 			else if (menu_pos == 15) { map_mmc3_irq_shift = 1; }
 			else if (menu_pos == 16) { map_mmc3_irq_shift = 2; }

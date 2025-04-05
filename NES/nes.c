@@ -51,6 +51,7 @@ unsigned long map_unrom_bank = 0x0000;
 unsigned long map_cnrom_bank = 0x0000;
 unsigned long map_anrom_bank = 0x0000;
 
+unsigned long map_mmc1_ready = 0x0000;
 unsigned long map_mmc1_shift = 0x0000;
 unsigned long map_mmc1_count = 0x0000;
 unsigned long map_mmc1_prg_mode = 0x0003; // should be 0x0003
@@ -79,7 +80,7 @@ unsigned long map_mmc3_irq_previous = 0x0000;
 unsigned long map_mmc3_irq_interrupt = 0x0000;
 unsigned long map_mmc3_irq_reload = 0x0000;
 unsigned long map_mmc3_irq_a12 = 0x0000;
-unsigned long map_mmc3_irq_delay = 0x0008; // 0x0008 or 0x0020 // play with these values
+unsigned long map_mmc3_irq_delay = 0x0010; // 0x0010 or 0x0028 // play with these values
 unsigned long map_mmc3_irq_shift = 0x0001; // 0x0001 or 0x0003 // play with these values
 
 unsigned long cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
@@ -714,6 +715,7 @@ void nes_mmc3_irq_toggle(unsigned long a12)
 	
 			map_mmc3_irq_reload = 0;
 
+			// Sharp MMC3 behavior??? (not NEC compatible!!!)
 			if (map_mmc3_irq_latch == 0)
 			{
 				map_mmc3_irq_interrupt = 1;
@@ -1761,8 +1763,10 @@ void cpu_write(unsigned long addr, unsigned char val)
 				map_mmc1_prg_bank = 0x0000;
 				map_mmc1_ram = 0x0000;
 			}
-			else
+			else if (map_mmc1_ready > 0)
 			{
+				map_mmc1_ready = 0;
+				
 				map_mmc1_shift = ((map_mmc1_shift >> 1) | (((unsigned long)val & 0x01) << 4));
 				map_mmc1_count = map_mmc1_count + 1;
 				
@@ -4698,10 +4702,18 @@ void nes_loop(unsigned long loop_count)
 	cpu_current_cycles += cpu_dma_cycles;
 	
 	cpu_dma_cycles = 0;
+	
+	//SendLongHex(cpu_reg_pc);
+	//SendString("\n\r\\");
 
 	if (cpu_current_cycles == 0)
 	{
 		nes_error(0x02);
+	}
+	
+	if (map_number == 1) // mmc1
+	{
+		map_mmc1_ready = 1;
 	}
 
 	ppu_tile_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);
@@ -4824,9 +4836,12 @@ void nes_loop(unsigned long loop_count)
 		{
 			if (map_mmc3_irq_enable > 0 && map_mmc3_irq_interrupt > 0)
 			{
-				if (ppu_scanline_cycles > map_mmc3_irq_delay)
+				if (ppu_scanline_cycles + 8 > map_mmc3_irq_delay)
 				{
-					nes_irq();
+					if (map_mmc3_irq_delay > 0)
+					{
+						nes_irq();
+					}
 
 					map_mmc3_irq_interrupt = 0;
 				}
