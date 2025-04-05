@@ -4643,6 +4643,11 @@ void nes_sprite_0_calc()
 		ppu_status_s += oam_ram[0]; // add y-coordinate
 		ppu_status_d = oam_ram[3]; // x-coordinate
 	}
+	else
+	{
+		ppu_status_s = oam_ram[0]; // default in case Sprite 0 is blank???
+		ppu_status_d = oam_ram[3];
+	}
 }
 
 void nes_init()
@@ -4702,9 +4707,6 @@ void nes_loop(unsigned long loop_count)
 	cpu_current_cycles += cpu_dma_cycles;
 	
 	cpu_dma_cycles = 0;
-	
-	//SendLongHex(cpu_reg_pc);
-	//SendString("\n\r\\");
 
 	if (cpu_current_cycles == 0)
 	{

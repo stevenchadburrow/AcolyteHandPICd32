@@ -841,7 +841,7 @@ volatile unsigned char ps2_conversion[256] =
 
 
 
-volatile char __attribute__((coherent)) list_name[100*12];
+volatile char __attribute__((coherent)) list_name[128*12];
 volatile unsigned short list_total = 1; // start at 1
 
 void list_generate()
@@ -908,7 +908,7 @@ void list_generate()
 				list_total++;
 			}
 			
-			if (list_total >= 100) break;
+			if (list_total >= 128) break;
 		}
 	}
 	
