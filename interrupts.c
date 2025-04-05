@@ -1,120 +1,294 @@
 
 
 
-void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_handler()
-{		
-    IFS0bits.OC3IF = 0;  // clear interrupt flag
+volatile void controller_update()
+{
+	if (controller_enable > 0)
+	{
+		if (TRISKbits.TRISK6 > 0)
+		{
+			controller_status_1 = (controller_status_1 & 0x0C);
+
+			controller_status_1 = controller_status_1 | 
+				((!PORTKbits.RK0) << 4) | // up
+				((!PORTKbits.RK1) << 5) | // down
+				((!PORTKbits.RK2) << 6) | // left
+				((!PORTKbits.RK3) << 7) | // right
+				((!PORTKbits.RK4) << 1) | // B
+				((!PORTKbits.RK5)); // A
+
+			controller_status_2 = (controller_status_2 & 0x0C);
+
+			controller_status_2 = controller_status_2 | 
+				((!PORTFbits.RF0) << 4) | // up
+				((!PORTFbits.RF1) << 5) | // down
+				((!PORTFbits.RF2) << 6) | // left
+				((!PORTFbits.RF4) << 7) | // right
+				((!PORTFbits.RF5) << 1) | // B
+				((!PORTFbits.RF8)); // A
+
+			PORTKbits.RK6 = 0; // ground when not floating
+			TRISKbits.TRISK6 = 0;
+		}
+		else
+		{
+			controller_status_1 = (controller_status_1 & 0xF3);
+
+			controller_status_1 = controller_status_1 |
+				((!PORTKbits.RK4) << 2) | // select
+				((!PORTKbits.RK5) << 3); // start
+
+			controller_status_2 = (controller_status_2 & 0xF3);
+
+			controller_status_2 = controller_status_2 |
+				((!PORTFbits.RF5) << 2) | // select
+				((!PORTFbits.RF8) << 3); // start
+
+			PORTKbits.RK6 = 0;
+			TRISKbits.TRISK6 = 1; // high when floating
+		}
+
+
+		if (ps2_ready[0] == 0x01 && ps2_mode[0] == 0x00) // ready and keyboard
+		{
+			char value = 0x00;
+
+			while (ps2_readpos[0] != ps2_writepos[0])
+			{
+				if (ps2_state_array[0][ps2_readpos[0]] == 0x0B) // release
+				{
+					ps2_readpos[0]++;
+
+					while (ps2_readpos[0] == ps2_writepos[0]) { }
+
+					value = (char)ps2_state_array[0][ps2_readpos[0]];
+
+					if (value == 'X' || value == 'x')
+					{
+						controller_status_3 = (controller_status_3 & 0xFE);
+					}
+					else if (value == 'Z' || value == 'z')
+					{
+						controller_status_3 = (controller_status_3 & 0xFD);
+					}
+					else if (value == 0x20) // space
+					{
+						controller_status_3 = (controller_status_3 & 0xFB);
+					}
+					else if (value == 0x0D) // return
+					{
+						controller_status_3 = (controller_status_3 & 0xF7);
+					}
+					else if (value == 0x11) // up
+					{
+						controller_status_3 = (controller_status_3 & 0xEF);
+					}
+					else if (value == 0x12) // down
+					{
+						controller_status_3 = (controller_status_3 & 0xDF);
+					}
+					else if (value == 0x13) // left
+					{
+						controller_status_3 = (controller_status_3 & 0xBF);
+					}
+					else if (value == 0x14) // right
+					{
+						controller_status_3 = (controller_status_3 & 0x7F);
+					}
+
+					ps2_readpos[0]++;
+				}
+				else
+				{
+					value = (char)ps2_state_array[0][ps2_readpos[0]];
+
+					if (value == 'X' || value == 'x')
+					{
+						controller_status_3 = (controller_status_3 | 0x01);
+					}
+					else if (value == 'Z' || value == 'z')
+					{
+						controller_status_3 = (controller_status_3 | 0x02);
+					}
+					else if (value == 0x20) // space
+					{
+						controller_status_3 = (controller_status_3 | 0x04);
+					}
+					else if (value == 0x0D) // return
+					{
+						controller_status_3 = (controller_status_3 | 0x08);
+					}
+					else if (value == 0x11) // up
+					{
+						controller_status_3 = (controller_status_3 | 0x10);
+					}
+					else if (value == 0x12) // down
+					{
+						controller_status_3 = (controller_status_3 | 0x20);
+					}
+					else if (value == 0x13) // left
+					{
+						controller_status_3 = (controller_status_3 | 0x40);
+					}
+					else if (value == 0x14) // right
+					{
+						controller_status_3 = (controller_status_3 | 0x80);
+					}
+
+					ps2_readpos[0]++;
+				}
+			}
+		}
+
+		if (ps2_ready[1] == 0x01 && ps2_mode[1] == 0x00) // ready and keyboard
+		{
+			char value = 0x00;
+
+			while (ps2_readpos[1] != ps2_writepos[1])
+			{
+				if (ps2_state_array[1][ps2_readpos[1]] == 0x0B) // release
+				{
+					ps2_readpos[1]++;
+
+					while (ps2_readpos[1] == ps2_writepos[1]) { }
+
+					value = (char)ps2_state_array[1][ps2_readpos[1]];
+
+					if (value == 'X' || value == 'x')
+					{
+						controller_status_4 = (controller_status_4 & 0xFE);
+					}
+					else if (value == 'Z' || value == 'z')
+					{
+						controller_status_4 = (controller_status_4 & 0xFD);
+					}
+					else if (value == 0x20) // space
+					{
+						controller_status_4 = (controller_status_4 & 0xFB);
+					}
+					else if (value == 0x0D) // return
+					{
+						controller_status_4 = (controller_status_4 & 0xF7);
+					}
+					else if (value == 0x11) // up
+					{
+						controller_status_4 = (controller_status_4 & 0xEF);
+					}
+					else if (value == 0x12) // down
+					{
+						controller_status_4 = (controller_status_4 & 0xDF);
+					}
+					else if (value == 0x13) // left
+					{
+						controller_status_4 = (controller_status_4 & 0xBF);
+					}
+					else if (value == 0x14) // right
+					{
+						controller_status_4 = (controller_status_4 & 0x7F);
+					}
+
+					ps2_readpos[1]++;
+				}
+				else
+				{
+					value = (char)ps2_state_array[1][ps2_readpos[1]];
+
+					if (value == 'X' || value == 'x')
+					{
+						controller_status_4 = (controller_status_4 | 0x01);
+					}
+					else if (value == 'Z' || value == 'z')
+					{
+						controller_status_4 = (controller_status_4 | 0x02);
+					}
+					else if (value == 0x20) // space
+					{
+						controller_status_4 = (controller_status_4 | 0x04);
+					}
+					else if (value == 0x0D) // return
+					{
+						controller_status_4 = (controller_status_4 | 0x08);
+					}
+					else if (value == 0x11) // up
+					{
+						controller_status_4 = (controller_status_4 | 0x10);
+					}
+					else if (value == 0x12) // down
+					{
+						controller_status_4 = (controller_status_4 | 0x20);
+					}
+					else if (value == 0x13) // left
+					{
+						controller_status_4 = (controller_status_4 | 0x40);
+					}
+					else if (value == 0x14) // right
+					{
+						controller_status_4 = (controller_status_4 | 0x80);
+					}
+
+					ps2_readpos[1]++;
+				}
+			}
+		}
+	}
+	else
+	{
+		PORTKbits.RK6 = 0;
+		TRISKbits.TRISK6 = 1; // high when floating
+	}
+}
+
+
+
+volatile void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs))) oc3_handler()
+{	
+	IFS0bits.OC3IF = 0;  // clear interrupt flag
 	
 	PORTH = 0;
 	
-	usbhost_device_delay = usbhost_device_delay + 1;
-	
-	if (usbhost_device_delay >= 48) // makes it about each 1 ms
-	{
-		usbhost_device_delay = 0;
-		usbhost_device_millis++;
-	}
-	
-	if (audio_switch > 0)
-	{
-		// 8-bit signed audio, this seems to help
-		PORTJ = (unsigned short)(((audio_buffer[audio_bank][audio_position]) + 0x80) + 
-			(((audio_buffer[audio_bank][audio_position]) + 0x80) << 8));
-		audio_position++;
-		if (audio_position >= audio_length)
-		{
-			audio_bank = 1 - audio_bank;
-			audio_position = 0;
-			audio_switch--;
-		}
-	}
-	
-	frame_position++;
-	
 	screen_scanline = screen_scanline + 1; // increment scanline
 	
-	if (screen_scanline == 666)
+	if (screen_scanline == 806)
 	{
 		screen_scanline = 0;
 	}
 	
-	if (screen_mode == 0) // 256-color mode
+	if (screen_scanline == 0)
 	{
-		if (screen_scanline < 43)
-		{
-			// do nothing
-		}
-		else if (screen_scanline < 44)
-		{
-			DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-			DCH1SSA = VirtToPhys(screen_blank); // transfer source physical address
-			DCH1CONbits.CHEN = 1; // enable channel
-		}
-		else if (screen_scanline < 556)
-		{
-			DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-			DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*(screen_scanline-44)); // transfer source physical address
-			DCH1CONbits.CHEN = 1; // enable channel
-		}
-		else if (screen_scanline == 665)
-		{
-			// do nothing
-		}
+		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+		DCH1SSA = VirtToPhys(screen_line); // transfer source physical address
+		DCH1SSIZ = SCREEN_X; // source size
+		DCH1DSIZ = 1; // dst size 
+		DCH1CSIZ = SCREEN_X; // X byte per event
+		DCH1CONbits.CHEN = 1; // enable channel
 	}
-	else if (screen_mode == 1) // 65K-color mode
+	else if (screen_scanline < SCREEN_Y*3)
+	{	
+		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+		DCH1SSA = VirtToPhys(screen_buffer + SCREEN_X*SCREEN_Y*screen_frame + SCREEN_X*(unsigned long)(((screen_scanline)/3))); // transfer source physical address
+		DCH1SSIZ = SCREEN_X; // source size
+		DCH1DSIZ = 1; // dst size 
+		DCH1CSIZ = SCREEN_X; // X byte per event
+		DCH1CONbits.CHEN = 1; // enable channel
+	}
+	else if (screen_scanline == SCREEN_Y*3)
 	{
-		if (screen_scanline < 59)
-		{
-			// do nothing
-		}
-		else if (screen_scanline < 108)
-		{
-			DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-			DCH1SSA = VirtToPhys(screen_blank); // transfer source physical address
-			DCH1CONbits.CHEN = 1; // enable channel
-		}
-		else if (screen_scanline < 492)
-		{
-			DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
-			DCH1SSA = VirtToPhys(screen_buffer + HI_SCREEN_X*2*(screen_scanline-108)); // transfer source physical address
-			DCH1CONbits.CHEN = 1; // enable channel
-		}
-		else if (screen_scanline == 665)
-		{
-			// do nothing
-		}
+		DCH1INTbits.CHBCIF = 0; // clear transfer complete flag
+		DCH1SSA = VirtToPhys(screen_line); // transfer source physical address
+		DCH1SSIZ = SCREEN_X; // source size
+		DCH1DSIZ = 1; // dst size 
+		DCH1CSIZ = SCREEN_X; // X byte per event
+		DCH1CONbits.CHEN = 1; // enable channel
+	}
+	else if (screen_scanline == SCREEN_Y*3+1)
+	{
+		controller_update();
 	}
 	
 	return;
 }
 
-void __attribute__((vector(_USB_VECTOR), interrupt(ipl6srs), nomips16)) usb_handler()
-{
-	unsigned long CSR0 = USBCSR0; // must read to clear?
-	unsigned long CSR1 = USBCSR1;
-	unsigned long CSR2 = USBCSR2;
-
-	if ((CSR0 & 0x00010000) > 0) // EP0IF bit
-	{
-		USBCSR0bits.EP0IF = 0; // clear flag
-		usbhost_ep0_interrupt = 1; // set flag
-	}
-	
-	if ((CSR1 & 0x00000002) > 0) // EP1RXIF bit
-	{
-		USBCSR1bits.EP1RXIF = 0; // clear flag
-		usbhost_ep1_interrupt++; // increment flag
-	}
-
-	if ((CSR2 & 0x00100000) > 0) // CONNIF bit
-	{
-		usbhost_connected = 1; // set flag
-	}
-
-	IFS4bits.USBIF = 0; // clear flag
-}
-
-void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl4srs))) cnd_handler()
+volatile void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR),interrupt(ipl5srs))) cnd_handler()
 {
 	IFS3bits.CNDIF = 0;  // clear interrupt flag
 	
@@ -343,7 +517,7 @@ void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR), interrupt(ipl4srs))) cnd_ha
 	return;
 }
 
-void __attribute__((vector(_UART3_RX_VECTOR), interrupt(ipl3srs))) u3rx_handler() //, nomips16)) u3rx_handler()
+volatile void __attribute__((vector(_UART3_RX_VECTOR), interrupt(ipl4srs))) u3rx_handler() //, nomips16)) u3rx_handler()
 {	
 	IFS4bits.U3RXIF = 0;  // clear interrupt flag
 	
@@ -377,3 +551,4 @@ void __attribute__((vector(_UART3_RX_VECTOR), interrupt(ipl3srs))) u3rx_handler(
 	
 	return;
 }
+
