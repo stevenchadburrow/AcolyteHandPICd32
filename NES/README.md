@@ -115,7 +115,7 @@ Skate or Die<br>
 Slalom<br>
 Super Mario Bros<br>
 Super Mario Bros 2<br>
-Super Mario Bros 3 - Sprite priority hack helps a lot, can unadjust IRQ to be perfect on some levels<br>
+Super Mario Bros 3 - Sprite priority hack helps a lot, can unadjust IRQ to make multi-scrolling perfect<br>
 Smash TV<br>
 Super Off Road<br>
 Solstice<br>
