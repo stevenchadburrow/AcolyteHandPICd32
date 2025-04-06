@@ -399,8 +399,8 @@ void nes_wait(unsigned long loop_count)
 		open_clock_current = clock();
 	} 
 	
-	//nes_interrupt_count -= loop_count;
-	nes_interrupt_count = 1;
+	nes_interrupt_count -= loop_count;
+	//nes_interrupt_count = 1; // for super slow games???
 
 	open_clock_previous = open_clock_current;
 }
@@ -1996,12 +1996,8 @@ void nes_irq()
 	cpu_flag_i = 1;
 }
 
-unsigned long report = 0;
-
 void nes_nmi()
-{
-	report = 1;
-	
+{	
 	//SendString("NMI \\");
 	//SendLongHex(cpu_reg_pc);
 	//SendString("\n\r\\");
@@ -2029,7 +2025,7 @@ void nes_brk()
 	//SendLongHex(cpu_reg_pc);
 	//SendString("\n\r\\");
 
-	//printf("BRK %04X %02X\n", (unsigned int)cpu_reg_pc, (unsigned int)ppu_scanline_count);
+	//printf("BRK %04X %d\n", (unsigned int)cpu_reg_pc, (signed int)ppu_scanline_count);
 
 	cpu_flag_b = 1;
 
@@ -2041,8 +2037,8 @@ void nes_brk()
 	cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|(0x20)|(cpu_flag_b<<4)|
 		(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c);
 	CPU_PUSH;
-	cpu_reg_pc = (unsigned long)cpu_read(0xFFFA);
-	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFB)<<8);
+	cpu_reg_pc = (unsigned long)cpu_read(0xFFFE);
+	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFF)<<8);
 
 	cpu_flag_i = 1;
 }
@@ -2666,13 +2662,13 @@ void nes_background(unsigned long tile, unsigned long line)
 		{		
 			pixel_y = line;
 
-			scroll_t = ((ppu_reg_v&0x0C00) | 0x03C0 | ((ppu_reg_v&0x0380)>>4) | ((ppu_reg_v&0x001C)>>2));
+			scroll_t = ((ppu_reg_t & 0x0C00) | 0x03C0 | ((ppu_reg_v & 0x0380)>>4) | ((ppu_reg_v & 0x001C)>>2));
 
-			add_t = ((((ppu_reg_v&0x0040)>>5) | ((ppu_reg_v&0x0002)>>1)) << 1);
+			add_t = ((((ppu_reg_v & 0x0040)>>5) | ((ppu_reg_v & 0x0002)>>1)) << 1);
 
 			scroll_l = (ppu_reg_v & 0x0FFF);
 			
-			add_l = 0x1000*ppu_flag_b + ((ppu_reg_v&0x7000)>>12);	
+			add_l = 0x1000*ppu_flag_b + ((ppu_reg_v & 0x7000)>>12);	
 			
 			if (ppu_status_m == 0x0001) // horizontal scrolling
 			{
