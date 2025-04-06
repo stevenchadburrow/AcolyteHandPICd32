@@ -48,7 +48,55 @@ Double Dragon<br>
 Double Dragon 2<br>
 Dig Dug<br>
 Donkey Kong<br>
-Donkey Kong Jr.<br>
+Donkey Kong Jr<br>
 Double Dribble<br>
-
+Dragon Warrior - Screen flickers sometimes<br>
+Dragon Warrior 2<br>
+Dragon Warrior 3<br>
+Dragon Warrior 4<br>
+Dr. Mario<br>
+Duck Tales<br>
+Excitebike - Scroll scanline is too high<br>
+Faria<br>
+Faxanadu<br>
+Final Fantasy<br>
+Formula One: Built to Win<br>
+Galaga<br>
+Gauntlet 2 - Needs IRQ adjustments to help seam and status bar, though never perfect<br>
+Ghost Lion<br>
+Ghosts and Goblins<br>
+Golf<br>
+Gradius<br>
+Guardian Legend - Bottom status bar comes in and out sometimes<br>
+Ice Climber<br>
+Joust<br>
+Jurassic Park<br>
+Kid Icarus<br>
+King's Quest 5<br>
+Kirby's Adventure<br>
+Kung Fu<br>
+Legacy of Wizards<br>
+Lemmings<br>
+Life Force<br>
+Little Mermaid<br>
+Little Samson<br>
+Lode Runner<br>
+Mach Rider<br>
+Marble Madness<br>
+Mario Bros<br>
+Mega Man<br>
+Mega Man 2<br>
+Mega Man 3 - Must have IRQ turned off at boot to run<br>
+Mega Man 4 - Must have IRQ turned off at boot to run<br>
+Mega Man 5<br>
+Mega Man 6<br>
+Metal Gear<br>
+Metroid<br>
+Micro Mages<br>
+Micro Mages: Second Quest<br>
+Moon Crystal<br>
+Metal Storm<br>
+Ninja Gaiden<br>
+Ninja Gaiden 2 - Needs IRQ adjusted to game to not pause<br>
+Ninja Gaiden 3<br>
 
