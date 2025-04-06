@@ -2219,8 +2219,12 @@ void nes_irq()
 	cpu_flag_i = 1;
 }
 
+unsigned long report = 0;
+
 void nes_nmi()
 {
+	report = 1;
+	
 	//SendString("NMI \\");
 	//SendLongHex(cpu_reg_pc);
 	//SendString("\n\r\\");
@@ -4707,7 +4711,7 @@ void nes_loop(unsigned long loop_count)
 	cpu_current_cycles += cpu_dma_cycles;
 	
 	cpu_dma_cycles = 0;
-
+	
 	if (cpu_current_cycles == 0)
 	{
 		nes_error(0x02);
@@ -4858,7 +4862,7 @@ void nes_loop(unsigned long loop_count)
 		// v-sync
 		ppu_status_v = 0x0001;
 		
-		ppu_flag_v = 0x0001;
+		//ppu_flag_v = 0x0001; // do not keep it high, just set it high once??? (see below)
 		
 		ppu_status_0 = 0;
 
