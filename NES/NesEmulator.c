@@ -2662,7 +2662,7 @@ void nes_background(unsigned long tile, unsigned long line)
 		{		
 			pixel_y = line;
 
-			scroll_t = ((ppu_reg_t & 0x0C00) | 0x03C0 | ((ppu_reg_v & 0x0380)>>4) | ((ppu_reg_v & 0x001C)>>2));
+			scroll_t = ((ppu_reg_v & 0x0C00) | 0x03C0 | ((ppu_reg_v & 0x0380)>>4) | ((ppu_reg_v & 0x001C)>>2));
 
 			add_t = ((((ppu_reg_v & 0x0040)>>5) | ((ppu_reg_v & 0x0002)>>1)) << 1);
 
