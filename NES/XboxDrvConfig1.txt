@@ -1,0 +1,40 @@
+# might need to 'sudo rmmod xpad' beforehand!  Then do: 'sudo xboxdrv -s -c XboxDrvConfig1.txt'.
+# if you need to use the mouse, use REL_X:500:-1 and REL_Y:500:-1 on an axismap, with BTN_LEFT and BTN_RIGHT
+
+[xboxdrv]
+ui-clear=true
+
+[ui-axismap]
+# x2^dead:1000 = KEY_A:KEY_D 
+# y2^dead:1000 = KEY_W:KEY_S 
+# x2^dead:1000 = REL_X:500:-1 
+# y2^dead:1000 = REL_Y:500:-1
+
+[ui-buttonmap]
+# lt = KEY_F
+# rt = KEY_F
+# lt = BTN_LEFT
+# rt = BTN_RIGHT
+
+[ui-axismap]
+# x1^dead:1000 = KEY_A:KEY_D
+# y1^dead:1000 = KEY_W:KEY_S
+# x1^dead:1500 = REL_HWHEEL:5:10
+# y1^dead:1500 = REL_WHEEL:5:10
+
+[ui-buttonmap]
+a = KEY_Z
+b = KEY_X
+x = KEY_X
+y = KEY_Z
+du = KEY_UP
+dd = KEY_DOWN
+dl = KEY_LEFT
+dr = KEY_RIGHT
+# a = BTN_MIDDLE
+
+start = KEY_ENTER
+back = KEY_SPACE
+# start = KEY_ESC
+
+
