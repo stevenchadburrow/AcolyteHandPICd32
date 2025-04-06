@@ -1,3 +1,5 @@
+<b>NES Emulator for PIC32MZ</b>
+
 *** These files are for the AcolyteHandPICd32 project, but do not show off it's full capability. ***
 
 *** NesEmulator.c is my Linux/OpenGL port, but without audio.  It was made for debugging purposes. ***
@@ -99,4 +101,42 @@ Metal Storm<br>
 Ninja Gaiden<br>
 Ninja Gaiden 2 - Needs IRQ adjusted to game to not pause<br>
 Ninja Gaiden 3<br>
+Pac-man<br>
+Paperboy<br>
+Paperboy 2<br>
+Prince of Persia - Sprite priority hack only helps a little when behind columns<br>
+Rad Racer<br>
+Rampage<br>
+RC Pro AM<br>
+RC Pro AM 2<br>
+River City Ransom<br>
+S.C.A.T.<br>
+Skate or Die<br>
+Slalom<br>
+Super Mario Bros<br>
+Super Mario Bros 2<br>
+Super Mario Bros 3 - Needs IRQ unadjusted to be perfect<br>
+Smash TV<br>
+Super Off Road<br>
+Solstice<br>
+Spy Hunter<br>
+Silver Surfer<br>
+Star Tropics - Top tiles of bottom status bar are cut off<br>
+Strider<br>
+Super C<br>
+Tecmo Super Bowl<br>
+Tetris<br>
+Time Lord<br>
+TMNT<br>
+TMNT 2<br>
+TMNT 3<br>
+Turrican<br>
+Ultima - Quest of the Avatar<br>
+Wario's Woods<br>
+Wizardry - Proving Grounds<br>
+Wizards and Warriors<br>
+Pro Wrestling<br>
+Legend of Zelda<br>
+Zelda 2: Link's Adventure<br>
+
 
