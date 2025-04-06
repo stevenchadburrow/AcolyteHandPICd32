@@ -331,7 +331,7 @@ void _general_exception_handler(void)
 
 // video
 volatile unsigned char __attribute__((coherent,address(0x80010000))) screen_buffer[SCREEN_XY2]; // visible portion of screen
-volatile unsigned char __attribute__((address(0x8007E000))) screen_line[SCREEN_X]; // black line
+volatile unsigned char __attribute__((address(0x80077000))) screen_line[SCREEN_X]; // black line
 volatile unsigned char screen_frame = 0;
 volatile unsigned int screen_scanline = 771; //1025; // start of vertical sync
 volatile unsigned char __attribute__((coherent)) screen_zero[2] = { 0x00, 0x00 }; // zero value for black
@@ -339,7 +339,7 @@ volatile unsigned char __attribute__((coherent)) screen_zero[2] = { 0x00, 0x00 }
 #define AUDIO_LEN 256
 
 // audio
-volatile unsigned char __attribute__((address(0x8007C000))) audio_buffer[AUDIO_LEN];
+volatile unsigned char __attribute__((address(0x80077800))) audio_buffer[AUDIO_LEN];
 volatile unsigned int audio_read = 0;
 volatile unsigned int audio_write = 0;
 volatile unsigned int audio_enable = 0;

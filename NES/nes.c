@@ -13,11 +13,11 @@
 volatile unsigned char *cart_rom = (volatile unsigned char *)0x9D100000;
 
 volatile unsigned char __attribute__((address(0x80070000))) cpu_ram[2048]; // only cpu ram from 0x0000 to 0x07FF
-volatile unsigned char __attribute__((address(0x80072000))) ppu_ram[2048]; // ppu ram from 0x2000 to 0x2FFF (halved, mirrored)
-volatile unsigned char __attribute__((address(0x80074000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
-volatile unsigned char __attribute__((address(0x80076000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
-volatile unsigned char __attribute__((address(0x80078000))) oam_ram[256]; // special sprite ram inside of ppu
-volatile unsigned char __attribute__((address(0x8007A000))) pal_ram[32]; // special palette ram inside of ppu
+volatile unsigned char __attribute__((address(0x80071000))) ppu_ram[2048]; // ppu ram from 0x2000 to 0x2FFF (halved, mirrored)
+volatile unsigned char __attribute__((address(0x80072000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
+volatile unsigned char __attribute__((address(0x80074000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
+volatile unsigned char __attribute__((address(0x80076000))) oam_ram[256]; // special sprite ram inside of ppu
+volatile unsigned char __attribute__((address(0x80076800))) pal_ram[32]; // special palette ram inside of ppu
 
 unsigned long prg_offset = 0x00000000; // offsets in cart_rom
 unsigned long chr_offset = 0x00000000;
