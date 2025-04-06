@@ -23,7 +23,7 @@ unsigned long prg_offset = 0x00000000; // offsets in cart_rom
 unsigned long chr_offset = 0x00000000;
 unsigned long end_offset = 0x00000000;
 
-unsigned long nes_hack_sprite_priority = 0;
+unsigned long nes_hack_sprite_priority = 0; // change this accordingly
 
 unsigned char nes_init_flag = 0;
 unsigned char nes_reset_flag = 0;
@@ -2264,8 +2264,8 @@ void nes_brk()
 	cpu_temp_memory = ((cpu_flag_n<<7)|(cpu_flag_v<<6)|(0x20)|(cpu_flag_b<<4)|
 		(cpu_flag_d<<3)|(cpu_flag_i<<2)|(cpu_flag_z<<1)|cpu_flag_c);
 	CPU_PUSH;
-	cpu_reg_pc = (unsigned long)cpu_read(0xFFFA);
-	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFB)<<8);
+	cpu_reg_pc = (unsigned long)cpu_read(0xFFFE);
+	cpu_reg_pc += ((unsigned long)cpu_read(0xFFFF)<<8);
 
 	cpu_flag_i = 1;
 }
