@@ -52,7 +52,7 @@ Dig Dug<br>
 Donkey Kong<br>
 Donkey Kong Jr<br>
 Double Dribble<br>
-Dragon Warrior - Screen flickers sometimes<br>
+Dragon Warrior<br>
 Dragon Warrior 2<br>
 Dragon Warrior 3<br>
 Dragon Warrior 4<br>
