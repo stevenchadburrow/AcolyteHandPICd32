@@ -80,6 +80,8 @@ unsigned long prg_offset = 0x00000000; // offsets in cart_rom
 unsigned long chr_offset = 0x00000000;
 unsigned long end_offset = 0x00000000;
 
+unsigned long nes_hack_sprite_priority = 0; // change this accordingly
+
 unsigned char nes_init_flag = 0;
 unsigned char nes_reset_flag = 0;
 unsigned char nes_audio_flag = 1;
@@ -106,6 +108,7 @@ unsigned long map_unrom_bank = 0x0000;
 unsigned long map_cnrom_bank = 0x0000;
 unsigned long map_anrom_bank = 0x0000;
 
+unsigned long map_mmc1_ready = 0x0000;
 unsigned long map_mmc1_shift = 0x0000;
 unsigned long map_mmc1_count = 0x0000;
 unsigned long map_mmc1_prg_mode = 0x0003; // should be 0x0003
@@ -134,7 +137,7 @@ unsigned long map_mmc3_irq_previous = 0x0000;
 unsigned long map_mmc3_irq_interrupt = 0x0000;
 unsigned long map_mmc3_irq_reload = 0x0000;
 unsigned long map_mmc3_irq_a12 = 0x0000;
-unsigned long map_mmc3_irq_delay = 0x0008; // 0x0008 or 0x0020 // play with these values
+unsigned long map_mmc3_irq_delay = 0x0010; // 0x0010 or 0x0028 // play with these values
 unsigned long map_mmc3_irq_shift = 0x0001; // 0x0001 or 0x0003 // play with these values
 
 unsigned long cpu_reg_a = 0x0000, cpu_reg_x = 0x0000, cpu_reg_y = 0x0000, cpu_reg_s = 0x00FD;
@@ -159,6 +162,7 @@ unsigned long ppu_flag_g = 0x0000, ppu_flag_lb = 0x0000, ppu_flag_ls = 0x0000;
 unsigned long ppu_flag_eb = 0x0000, ppu_flag_es = 0x0000;
 
 unsigned long ppu_status_0 = 0x0000;
+unsigned long ppu_status_v = 0x0000;
 signed long ppu_status_s = 0x0000; // needs to be signed
 signed long ppu_status_d = 0x0000;
 unsigned long ppu_status_m = 0x0000;
@@ -488,6 +492,7 @@ void nes_mmc3_irq_toggle(unsigned long a12)
 	
 			map_mmc3_irq_reload = 0;
 
+			// Sharp MMC3 behavior??? (not NEC compatible!!!)
 			if (map_mmc3_irq_latch == 0)
 			{
 				map_mmc3_irq_interrupt = 1;
@@ -1535,8 +1540,10 @@ void cpu_write(unsigned long addr, unsigned char val)
 				map_mmc1_prg_bank = 0x0000;
 				map_mmc1_ram = 0x0000;
 			}
-			else
+			else if (map_mmc1_ready > 0)
 			{
+				map_mmc1_ready = 0;
+				
 				map_mmc1_shift = ((map_mmc1_shift >> 1) | (((unsigned long)val & 0x01) << 4));
 				map_mmc1_count = map_mmc1_count + 1;
 				
@@ -1989,8 +1996,12 @@ void nes_irq()
 	cpu_flag_i = 1;
 }
 
+unsigned long report = 0;
+
 void nes_nmi()
 {
+	report = 1;
+	
 	//SendString("NMI \\");
 	//SendLongHex(cpu_reg_pc);
 	//SendString("\n\r\\");
@@ -2947,7 +2958,7 @@ void nes_sprites(unsigned char ground, unsigned long min_y, unsigned long max_y)
 		for (signed char s=63; s>=0; s--) // must be signed!
 		{
 			sprite_y = oam_ram[(((s<<2)+0)&0x00FF)];
-
+			
 			//if (map_number == 0x0004) // mmc3
 			//{
 			//	if (ppu_flag_h == 0) // 8x8 sprites
@@ -2959,7 +2970,7 @@ void nes_sprites(unsigned char ground, unsigned long min_y, unsigned long max_y)
 			//		nes_mmc3_irq_toggle(ppu_flag_s); // THIS NEEDS WORK!
 			//	}
 			//}
-
+			
 			if (sprite_y >= min_y && sprite_y < max_y)
 			{
 				sprite_x = oam_ram[(((s<<2)+3)&0x00FF)];
@@ -3790,7 +3801,7 @@ void nes_sprite_0_calc()
 	// sprite 0
 	if (ppu_flag_h == 0) // 8x8 sprites
 	{
-		ppu_status_s = 8;
+		//ppu_status_s = 8;
 
 		for (unsigned long i=0; i<8; i++)
 		{
@@ -3997,7 +4008,7 @@ void nes_sprite_0_calc()
 	}
 	else // 8x16 sprites
 	{
-		ppu_status_s = 16;
+		//ppu_status_s = 16;
 
 		for (unsigned long i=0; i<16; i++)
 		{
@@ -4413,6 +4424,11 @@ void nes_sprite_0_calc()
 		ppu_status_s += oam_ram[0]; // add y-coordinate
 		ppu_status_d = oam_ram[3]; // x-coordinate
 	}
+	else
+	{
+		ppu_status_s = oam_ram[0]; // default in case Sprite 0 is blank???
+		ppu_status_d = oam_ram[3];
+	}
 }
 
 void nes_init()
@@ -4472,10 +4488,15 @@ void nes_loop(unsigned long loop_count)
 	cpu_current_cycles += cpu_dma_cycles;
 	
 	cpu_dma_cycles = 0;
-
+	
 	if (cpu_current_cycles == 0)
 	{
-		nes_error(0x01);
+		nes_error(0x02);
+	}
+	
+	if (map_number == 1) // mmc1
+	{
+		map_mmc1_ready = 1;
 	}
 
 	ppu_tile_cycles += ((cpu_current_cycles<<1)+cpu_current_cycles);
@@ -4493,12 +4514,12 @@ void nes_loop(unsigned long loop_count)
 					nes_mmc3_irq_toggle(ppu_flag_b); // this is a speed hack
 				}
 			}
-
+			
 			if (ppu_frame_count >= loop_count)
 			{	
 				nes_background(ppu_tile_count, ppu_scanline_count);
 			}
-
+			
 			if (ppu_flag_eb > 0)
 			{
 				nes_horizontal_increment();
@@ -4523,22 +4544,34 @@ void nes_loop(unsigned long loop_count)
 					nes_mmc3_irq_toggle(ppu_flag_s); // this is a speed hack
 				}
 			}
-
+			
 			if (ppu_frame_count >= loop_count)
 			{
 				if (ppu_flag_h == 0) // 8x8 sprites
 				{
 					nes_sprites(1, ppu_scanline_count+1, ppu_scanline_count+2); // background sprites
 
-					nes_sprites(0, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprites
-					//nes_sprites(2, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprite hack
+					if (nes_hack_sprite_priority > 0)
+					{
+						nes_sprites(2, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprite hack
+					}
+					else
+					{
+						nes_sprites(0, ppu_scanline_count-8, ppu_scanline_count-7); // foreground sprites
+					}
 				}
 				else // 8x16 sprites
 				{
 					nes_sprites(1, ppu_scanline_count+1, ppu_scanline_count+2); // background sprites
 
-					nes_sprites(0, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprites
-					//nes_sprites(2, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprite hack
+					if (nes_hack_sprite_priority > 0)
+					{
+						nes_sprites(2, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprite hack
+					}
+					else
+					{
+						nes_sprites(0, ppu_scanline_count-16, ppu_scanline_count-15); // foreground sprites
+					}
 				}
 			}
 		}
@@ -4586,9 +4619,12 @@ void nes_loop(unsigned long loop_count)
 		{
 			if (map_mmc3_irq_enable > 0 && map_mmc3_irq_interrupt > 0)
 			{
-				if (ppu_scanline_cycles > map_mmc3_irq_delay)
+				if (ppu_scanline_cycles + 8 > map_mmc3_irq_delay)
 				{
-					nes_irq();
+					if (map_mmc3_irq_delay > 0)
+					{
+						nes_irq();
+					}
 
 					map_mmc3_irq_interrupt = 0;
 				}
@@ -4601,7 +4637,9 @@ void nes_loop(unsigned long loop_count)
 	if (ppu_frame_cycles < 4546) // 2273 cycles in v-blank
 	{
 		// v-sync
-		ppu_flag_v = 0x0001;
+		ppu_status_v = 0x0001;
+		
+		//ppu_flag_v = 0x0001; // do not keep it high, just set it high once??? (see below)
 		
 		ppu_status_0 = 0;
 
@@ -4609,17 +4647,19 @@ void nes_loop(unsigned long loop_count)
 	}
 	else if (ppu_frame_cycles < 59565) // 29780.5 cycles per frame
 	{	
-		if (ppu_flag_v == 0x0001)
+		if (ppu_status_v == 0x0001)
 		{	
 			nes_sprite_0_calc();
 
 			if (ppu_frame_count >= loop_count)
-			{
+			{	
 				nes_border();
 			}
 		}
 		
 		// v-sync
+		ppu_status_v = 0x0000;
+		
 		ppu_flag_v = 0x0000;
 		
 		if (ppu_flag_eb > 0 && ppu_flag_es > 0)
@@ -4637,6 +4677,8 @@ void nes_loop(unsigned long loop_count)
 		ppu_frame_cycles -= 59565;
 		
 		// v-sync
+		ppu_status_v = 0x0001;
+		
 		ppu_flag_v = 0x0001;
 		
 		ppu_reg_a = 0;	
@@ -4653,7 +4695,7 @@ void nes_loop(unsigned long loop_count)
 		if (ppu_frame_count >= loop_count)
 		{
 			ppu_frame_count = 0;
-
+			
 			nes_frame();
 			
 			nes_wait(loop_count);
