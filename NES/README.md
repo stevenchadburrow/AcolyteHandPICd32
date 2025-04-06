@@ -99,7 +99,7 @@ Micro Mages: Second Quest<br>
 Moon Crystal<br>
 Metal Storm<br>
 Ninja Gaiden<br>
-Ninja Gaiden 2 - Needs IRQ adjusted to game to not pause<br>
+Ninja Gaiden 2 - Needs IRQ adjusted so game is not halted<br>
 Ninja Gaiden 3<br>
 Pac-man<br>
 Paperboy<br>
