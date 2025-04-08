@@ -14,6 +14,8 @@ Only one hack is currently employed: Sprite priority for Super Mario Bros 3 (tho
 
 The journey has been documented on the 6502.org Forum, here: http://forum.6502.org/viewtopic.php?f=1&t=8236
 
+Link to a demo video featuring Super Mario Bros 3 here: https://youtu.be/WGrEMQLWrP4
+
 Here is a list of games that are supported, with notes:
 
 1942<br>
