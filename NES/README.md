@@ -134,7 +134,7 @@ TMNT<br>
 TMNT 2<br>
 TMNT 3<br>
 Turrican<br>
-Ultima - Quest of the Avatar<br>
+Ultima: Quest of the Avatar<br>
 Wario's Woods<br>
 Wizardry - Proving Grounds<br>
 Wizards and Warriors<br>
