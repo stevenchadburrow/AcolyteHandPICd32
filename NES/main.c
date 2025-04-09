@@ -1133,12 +1133,12 @@ void game_loop()
 			
 			display_string(0x0000, 0x0090, "  Load Game A\\");
 			display_string(0x0000, 0x0098, "  Load Game B\\");
-			display_string(0x0000, 0x00A0, "  Load Game C\\");
-			display_string(0x0000, 0x00A8, "  Load Game State\\");
+			display_string(0x0000, 0x00A0, "  Load State C\\");
+			display_string(0x0000, 0x00A8, "  Load State D\\");
 			display_string(0x0000, 0x00B0, "  Save Game A\\");
 			display_string(0x0000, 0x00B8, "  Save Game B\\");
-			display_string(0x0000, 0x00C0, "  Save Game C\\");
-			display_string(0x0000, 0x00C8, "  Save Game State\\");
+			display_string(0x0000, 0x00C0, "  Save State C\\");
+			display_string(0x0000, 0x00C8, "  Save State D\\");
 
 			DelayMS(1000);
 
@@ -1220,13 +1220,11 @@ void game_loop()
 			}
 			else if (menu_pos == 20)
 			{
-				nes_load("GAME-C.SAV");
-
-				nes_reset_flag = 0;
+				nes_state_load("GAME-C.SAV");
 			}
 			else if (menu_pos == 21)
 			{
-				nes_state_load("GAME-S.SAV");
+				nes_state_load("GAME-D.SAV");
 			}
 			else if (menu_pos == 22)
 			{
@@ -1238,11 +1236,11 @@ void game_loop()
 			}
 			else if (menu_pos == 24)
 			{
-				nes_save("GAME-C.SAV");
+				nes_state_save("GAME-C.SAV");
 			}
 			else if (menu_pos == 25)
 			{
-				nes_state_save("GAME-S.SAV");
+				nes_state_save("GAME-D.SAV");
 			}
 			
 			nes_init();
