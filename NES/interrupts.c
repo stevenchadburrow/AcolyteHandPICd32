@@ -1,21 +1,68 @@
 
 
+volatile void update_usb()
+{
+	usbhost_device_delay = usbhost_device_delay + 1;
+	
+	if (usbhost_device_delay >= 48) // makes it about each 1 ms
+	{
+		usbhost_device_delay = 0;
+		usbhost_device_millis++;
+	}
+}
 
-volatile void controller_update()
+volatile void update_controllers()
 {
 	if (controller_enable > 0)
 	{
+		if (usb_mode == 0x02) // xbox 360 controller
+		{
+			if (usb_readpos != usb_writepos)
+			{
+				controller_status_1 = 0x00;
+				
+				while (usb_readpos != usb_writepos)
+				{
+					if ((usb_buttons[usb_readpos] & 0x0100) == 0x0100) controller_status_1 = (controller_status_1 | 0x10); // up
+					if ((usb_buttons[usb_readpos] & 0x0200) == 0x0200) controller_status_1 = (controller_status_1 | 0x20); // down
+					if ((usb_buttons[usb_readpos] & 0x0400) == 0x0400) controller_status_1 = (controller_status_1 | 0x40); // left
+					if ((usb_buttons[usb_readpos] & 0x0800) == 0x0800) controller_status_1 = (controller_status_1 | 0x80); // right
+					if ((usb_buttons[usb_readpos] & 0x0010) == 0x0010) controller_status_1 = (controller_status_1 | 0x02); // B
+					if ((usb_buttons[usb_readpos] & 0x0020) == 0x0020) controller_status_1 = (controller_status_1 | 0x01); // A
+					if ((usb_buttons[usb_readpos] & 0x0040) == 0x0040) controller_status_1 = (controller_status_1 | 0x04); // select
+					if ((usb_buttons[usb_readpos] & 0x0080) == 0x0080) controller_status_1 = (controller_status_1 | 0x08); // start
+
+					usb_readpos++;
+				}
+			}
+		}
+		
 		if (TRISKbits.TRISK6 > 0)
 		{
-			controller_status_1 = (controller_status_1 & 0x0C);
+			if (usb_mode == 0x02)
+			{
+				controller_status_3 = (controller_status_3 & 0x0C);
 
-			controller_status_1 = controller_status_1 | 
-				((!PORTKbits.RK0) << 4) | // up
-				((!PORTKbits.RK1) << 5) | // down
-				((!PORTKbits.RK2) << 6) | // left
-				((!PORTKbits.RK3) << 7) | // right
-				((!PORTKbits.RK4) << 1) | // B
-				((!PORTKbits.RK5)); // A
+				controller_status_3 = controller_status_3 | 
+					((!PORTKbits.RK0) << 4) | // up
+					((!PORTKbits.RK1) << 5) | // down
+					((!PORTKbits.RK2) << 6) | // left
+					((!PORTKbits.RK3) << 7) | // right
+					((!PORTKbits.RK4) << 1) | // B
+					((!PORTKbits.RK5)); // A
+			}
+			else
+			{
+				controller_status_1 = (controller_status_1 & 0x0C);
+
+				controller_status_1 = controller_status_1 | 
+					((!PORTKbits.RK0) << 4) | // up
+					((!PORTKbits.RK1) << 5) | // down
+					((!PORTKbits.RK2) << 6) | // left
+					((!PORTKbits.RK3) << 7) | // right
+					((!PORTKbits.RK4) << 1) | // B
+					((!PORTKbits.RK5)); // A
+			}
 
 			controller_status_2 = (controller_status_2 & 0x0C);
 
@@ -32,11 +79,22 @@ volatile void controller_update()
 		}
 		else
 		{
-			controller_status_1 = (controller_status_1 & 0xF3);
+			if (usb_mode == 0x02)
+			{
+				controller_status_3 = (controller_status_3 & 0xF3);
 
-			controller_status_1 = controller_status_1 |
-				((!PORTKbits.RK4) << 2) | // select
-				((!PORTKbits.RK5) << 3); // start
+				controller_status_3 = controller_status_3 |
+					((!PORTKbits.RK4) << 2) | // select
+					((!PORTKbits.RK5) << 3); // start
+			}
+			else
+			{
+				controller_status_1 = (controller_status_1 & 0xF3);
+
+				controller_status_1 = controller_status_1 |
+					((!PORTKbits.RK4) << 2) | // select
+					((!PORTKbits.RK5) << 3); // start
+			}
 
 			controller_status_2 = (controller_status_2 & 0xF3);
 
@@ -47,7 +105,6 @@ volatile void controller_update()
 			PORTKbits.RK6 = 0;
 			TRISKbits.TRISK6 = 1; // high when floating
 		}
-
 
 		if (ps2_ready[0] == 0x01 && ps2_mode[0] == 0x00) // ready and keyboard
 		{
@@ -282,10 +339,38 @@ volatile void __attribute__((vector(_OUTPUT_COMPARE_3_VECTOR), interrupt(ipl7srs
 	}
 	else if (screen_scanline == SCREEN_Y*3+1)
 	{
-		controller_update();
+		update_controllers();
 	}
 	
+	update_usb();
+	
 	return;
+}
+
+void __attribute__((vector(_USB_VECTOR), interrupt(ipl6srs), nomips16)) usb_handler()
+{
+	unsigned long CSR0 = USBCSR0; // must read to clear?
+	unsigned long CSR1 = USBCSR1;
+	unsigned long CSR2 = USBCSR2;
+
+	if ((CSR0 & 0x00010000) > 0) // EP0IF bit
+	{
+		USBCSR0bits.EP0IF = 0; // clear flag
+		usbhost_ep0_interrupt = 1; // set flag
+	}
+	
+	if ((CSR1 & 0x00000002) > 0) // EP1RXIF bit
+	{
+		USBCSR1bits.EP1RXIF = 0; // clear flag
+		usbhost_ep1_interrupt++; // increment flag
+	}
+
+	if ((CSR2 & 0x00100000) > 0) // CONNIF bit
+	{
+		usbhost_connected = 1; // set flag
+	}
+
+	IFS4bits.USBIF = 0; // clear flag
 }
 
 volatile void __attribute__((vector(_CHANGE_NOTICE_D_VECTOR),interrupt(ipl5srs))) cnd_handler()

@@ -351,10 +351,9 @@ void Setup()
 		ps2_cursor_y[0][i] = 0x0000;
 		ps2_cursor_y[1][i] = 0x0000;
 		
-		
-		//usb_state_array[i] = 0x00;
-		//usb_cursor_x[i] = 0x0000;
-		//usb_cursor_y[i] = 0x0000;
+		usb_state_array[i] = 0x00;
+		usb_cursor_x[i] = 0x0000;
+		usb_cursor_y[i] = 0x0000;
 		
 	}	
 	
