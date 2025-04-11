@@ -25,7 +25,7 @@ uint8_t frame_count = 0;
 
 char *cart_rom = (char *)0x9D100000;
 
-volatile uint8_t __attribute__((coherent,address(0x80078000))) cart_ram[32768];
+volatile uint8_t __attribute__((address(0x80078000))) cart_ram[32768];
 uint8_t __attribute__((coherent)) boot_rom[256];
 uint8_t selected_palette[3][4];
 uint8_t custom_palette[3][4];
