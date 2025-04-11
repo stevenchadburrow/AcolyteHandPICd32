@@ -31,7 +31,7 @@ unsigned char usbhost_keyboard_previous[8];
 unsigned int usbhost_keyboard_repeat;
 
 
-void __attribute__((optimize("O0"))) usbhost_initialize_endpoints(int address)
+void __attribute__((optimize("O1"))) usbhost_initialize_endpoints(int address)
 {
 	USBCSR3bits.ENDPOINT = 0; // EP0 register select
 	USBFIFOA = 0x00000000; // set EP0 buffer location
@@ -69,7 +69,7 @@ void __attribute__((optimize("O0"))) usbhost_initialize_endpoints(int address)
 	USBCSR3bits.ENDPOINT = 1; // set current endpoint to EP1
 }
 
-void __attribute__((optimize("O0"))) usbhost_ep0_send_setup(unsigned char *buffer, unsigned long length)
+void __attribute__((optimize("O1"))) usbhost_ep0_send_setup(unsigned char *buffer, unsigned long length)
 {
 	unsigned char *fifo = (unsigned char *)&USBFIFO0;
 	
@@ -88,7 +88,7 @@ void __attribute__((optimize("O0"))) usbhost_ep0_send_setup(unsigned char *buffe
 	*((unsigned char*)&USBE0CSR0 + 0x2) = 0xA; // set both SETUPPKT and TXPKTRDY at the same time	
 }
 
-void __attribute__((optimize("O0"))) usbhost_ep0_send(unsigned char *buffer, unsigned long length)
+void __attribute__((optimize("O1"))) usbhost_ep0_send(unsigned char *buffer, unsigned long length)
 {
 	unsigned char *fifo = (unsigned char *)&USBFIFO0;
 	
@@ -107,7 +107,7 @@ void __attribute__((optimize("O0"))) usbhost_ep0_send(unsigned char *buffer, uns
 	USBE0CSR0bits.TXRDY = 1; // data packet is now loaded
 }
 
-void __attribute__((optimize("O0"))) usbhost_ep0_receive(unsigned char *buffer, unsigned long length)
+void __attribute__((optimize("O1"))) usbhost_ep0_receive(unsigned char *buffer, unsigned long length)
 {
 	
 	unsigned char *fifo = (unsigned char *)&USBFIFO0;
@@ -120,7 +120,7 @@ void __attribute__((optimize("O0"))) usbhost_ep0_receive(unsigned char *buffer, 
 	USBE0CSR0bits.RXRDY = 1; // data packet has been received
 }
 
-unsigned int __attribute__((optimize("O0"))) usbhost_ep0_receive_long(unsigned char *buffer, unsigned long length)
+unsigned int __attribute__((optimize("O1"))) usbhost_ep0_receive_long(unsigned char *buffer, unsigned long length)
 {
 	unsigned int total = length;
 	
@@ -153,7 +153,7 @@ unsigned int __attribute__((optimize("O0"))) usbhost_ep0_receive_long(unsigned c
 	return total;
 }
 
-void __attribute__((optimize("O0"))) usbhost_ep1_receive(unsigned char *buffer)
+void __attribute__((optimize("O1"))) usbhost_ep1_receive(unsigned char *buffer)
 {
 	USBCSR3bits.ENDPOINT = 1; // set current endpoint to EP1 (just in case)
 
@@ -171,7 +171,7 @@ void __attribute__((optimize("O0"))) usbhost_ep1_receive(unsigned char *buffer)
 	USBIENCSR1bits.RXPKTRDY = 0; // packet has been unloaded
 }
 
-void __attribute__((optimize("O0"))) usbhost_reset()
+void __attribute__((optimize("O1"))) usbhost_reset()
 {
 	USBCSR0bits.RESET = 1;
 	DelayMS(100);
@@ -180,7 +180,7 @@ void __attribute__((optimize("O0"))) usbhost_reset()
 }
 
 // public, before loop
-void __attribute__((optimize("O0"))) USBHostSetup()
+void __attribute__((optimize("O1"))) USBHostSetup()
 {
 	usb_mode = 0xFF; // no device
 	
@@ -230,7 +230,7 @@ void __attribute__((optimize("O0"))) USBHostSetup()
 }
 
 // public, in loop
-void __attribute__((optimize("O0"))) USBHostTasks()
+void __attribute__((optimize("O1"))) USBHostTasks()
 {
 	if (usbhost_connected > 0)
 	{

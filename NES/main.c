@@ -1132,7 +1132,10 @@ void game_loop()
 	
 	while (1)
 	{ 
-		USBHostTasks();
+		if (usb_mode != 0xFF)
+		{
+			USBHostTasks();
+		}
 		
 		if (PORTKbits.RK7 == 0)
 		{
