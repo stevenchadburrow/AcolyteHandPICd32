@@ -1155,7 +1155,7 @@ void game_loop()
 				}
 			}
 
-			audio_enable = 0;
+			//audio_enable = 0;
 			controller_enable = 1;
 			screen_frame = 0;
 
