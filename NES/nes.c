@@ -5496,7 +5496,17 @@ void nes_loop(unsigned long loop_count)
 	
 	ppu_frame_cycles += (cpu_current_cycles<<1);
 	
-	if (ppu_frame_cycles < 4546) // 2273 cycles in v-blank
+	if (ppu_frame_cycles < 227) // only one scanline
+	{
+		ppu_status_v = 0x0001;
+
+		ppu_flag_v = 0x0001; // keep it high for only one scanline...
+
+		ppu_status_0 = 0;
+
+		ppu_flag_0 = 0;
+	}
+	else if (ppu_frame_cycles < 4546) // 2273 cycles in v-blank
 	{
 		// v-sync
 		ppu_status_v = 0x0001;
