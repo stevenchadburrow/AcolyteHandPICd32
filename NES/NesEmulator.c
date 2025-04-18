@@ -94,7 +94,7 @@ unsigned long cpu_dma_cycles = 0;
 
 unsigned long ppu_tile_cycles = 0;
 unsigned long ppu_scanline_cycles = 0;
-unsigned long ppu_frame_cycles = 0;
+unsigned long ppu_frame_cycles = 0; //4546;
 
 unsigned long ppu_frame_count = 0;
 signed long ppu_scanline_count = 0; // needs to be signed
@@ -541,7 +541,7 @@ unsigned char cpu_read(unsigned long addr)
 			{				
 				unsigned char val = ((ppu_flag_v << 7) | (ppu_flag_0 << 6) | (ppu_flag_o << 5));
 				
-				ppu_flag_v = 0x0000;
+				ppu_flag_v = 0x0000; // this breaks some games?
 				
 				ppu_reg_w = 0x0000;
 				
@@ -1486,6 +1486,9 @@ void cpu_write(unsigned long addr, unsigned char val)
 				apu_flag_b = ((val>>6)&0x01);
 				
 				if (apu_flag_b > 0) apu_flag_f = 0x0000;
+
+				apu_counter_q = 0;
+				apu_counter_s = 0;
 				
 				break;
 			}
@@ -1977,7 +1980,7 @@ void nes_irq()
 	//SendLongHex(cpu_reg_pc);
 	//SendString("\n\r\\");
 
-	printf("IRQ %04X %02X\n", (unsigned int)cpu_reg_pc, (unsigned int)ppu_scanline_count);
+	//printf("IRQ %04X %02X\n", (unsigned int)cpu_reg_pc, (unsigned int)ppu_scanline_count);
 
 	cpu_flag_b = 0;
 			
@@ -2002,7 +2005,7 @@ void nes_nmi()
 	//SendLongHex(cpu_reg_pc);
 	//SendString("\n\r\\");
 
-	printf("NMI %04X %02X\n", (unsigned int)cpu_reg_pc, (unsigned int)ppu_scanline_count);
+	//printf("NMI %04X %02X\n", (unsigned int)cpu_reg_pc, (unsigned int)ppu_scanline_count);
 
 	cpu_flag_b = 0;
 
@@ -2025,7 +2028,7 @@ void nes_brk()
 	//SendLongHex(cpu_reg_pc);
 	//SendString("\n\r\\");
 
-	printf("BRK %04X %d\n", (unsigned int)cpu_reg_pc, (signed int)ppu_scanline_count);
+	//printf("BRK %04X %d\n", (unsigned int)cpu_reg_pc, (signed int)ppu_scanline_count);
 
 	cpu_flag_b = 1;
 
@@ -4630,11 +4633,11 @@ void nes_loop(unsigned long loop_count)
 	
 	ppu_frame_cycles += (cpu_current_cycles<<1);
 	
-	if (ppu_frame_cycles < 227) // only one scanline
+	if (ppu_frame_cycles < 14) // at least one instruction
 	{
 		ppu_status_v = 0x0001;
 
-		ppu_flag_v = 0x0001; // keep it high for only one scanline...
+		ppu_flag_v = 0x0001; // keep it high
 
 		ppu_status_0 = 0;
 
