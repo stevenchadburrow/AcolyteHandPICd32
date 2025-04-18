@@ -2353,6 +2353,9 @@ void cpu_write(unsigned long addr, unsigned char val)
 				
 				if (apu_flag_b > 0) apu_flag_f = 0x0000;
 				
+				apu_counter_q = 0;
+				apu_counter_s = 0;
+				
 				break;
 			}
 			default:
@@ -5496,11 +5499,11 @@ void nes_loop(unsigned long loop_count)
 	
 	ppu_frame_cycles += (cpu_current_cycles<<1);
 	
-	if (ppu_frame_cycles < 227) // only one scanline
+	if (ppu_frame_cycles < 14) // at least one instruction
 	{
 		ppu_status_v = 0x0001;
 
-		ppu_flag_v = 0x0001; // keep it high for only one scanline...
+		ppu_flag_v = 0x0001; // keep it high
 
 		ppu_status_0 = 0;
 
