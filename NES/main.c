@@ -1361,6 +1361,9 @@ int main()
 	{
 		SendString("SD Card Not Found!\n\r\\");
 		
+		audio_enable = 1;
+		controller_enable = 1;
+		
 		game_loop();
 		
 		while (1) { }
