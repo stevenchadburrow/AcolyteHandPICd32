@@ -35,14 +35,17 @@ Baseball<br>
 Battle Kid<br>
 Battletoads<Br>
 Batman<br>
+Battle of Olympus<br>
 Bionic Commando<br>
 Blades of Steel<br>
 Blaster Master<br>
+Boulder Dash<br>
 Battletoads and Double Dragon<br>
 Bubble Bobble<br>
 Castlevania<br>
 Castlevania 2<br>
 Chip and Dale<br>
+Clash at Demonhead<br>
 Clu Clu Land<br>
 Cobra Triangle<br>
 Contra<br>
@@ -77,6 +80,7 @@ Joust<br>
 Jurassic Park<br>
 Kid Icarus<br>
 King's Quest 5<br>
+Kira Kira Star Night<br>
 Kirby's Adventure<br>
 Kung Fu<br>
 Legacy of Wizards<br>
@@ -99,6 +103,7 @@ Metal Gear<br>
 Metroid<br>
 Micro Mages<br>
 Micro Mages: Second Quest<br>
+Miedow<br>
 Moon Crystal<br>
 Metal Storm<br>
 Ninja Gaiden<br>
@@ -141,5 +146,6 @@ Wizards and Warriors<br>
 Pro Wrestling<br>
 Legend of Zelda<br>
 Zelda 2: Link's Adventure<br>
+Zen: Intergalagic Ninja<br>
 
 
