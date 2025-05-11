@@ -20,7 +20,7 @@ volatile unsigned char __attribute__((address(0x80071000))) ppu_ram[2048]; // pp
 volatile unsigned char __attribute__((address(0x80072000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
 volatile unsigned char __attribute__((address(0x80074000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
 volatile unsigned char __attribute__((address(0x80076000))) oam_ram[256]; // special sprite ram inside of ppu
-volatile unsigned char __attribute__((address(0x80076800))) pal_ram[32]; // special palette ram inside of ppu
+volatile unsigned char __attribute__((address(0x80076200))) pal_ram[32]; // special palette ram inside of ppu
 
 unsigned long nes_hack_sprite_priority = 0; // change this accordingly
 
@@ -2061,14 +2061,17 @@ void cpu_write(unsigned long addr, unsigned char val)
 						}
 					}
 				}
-				else if (ppu_reg_v == 0x3F00 || ppu_reg_v == 0x3F10)
-				{
-					nes_write_pal_ram(0x00, val);
-					nes_write_pal_ram(0x10, val);
-				}
 				else if (ppu_reg_v > 0x3F00 && ppu_reg_v < 0x4000)
 				{
-					nes_write_pal_ram((ppu_reg_v&0x001F), val);
+					if ((ppu_reg_v&0x001F) == 0x0000 || (ppu_reg_v&0x001F) == 0x0010)
+					{
+						nes_write_pal_ram(0x00, val);
+						nes_write_pal_ram(0x10, val);
+					}
+					else
+					{
+						nes_write_pal_ram((ppu_reg_v&0x001F), val);
+					}
 				}
 					
 				if (ppu_flag_i == 0x0000)
@@ -3443,7 +3446,7 @@ void nes_border()
 {
 	unsigned char pixel_color = 0;
 
-	pixel_color = ppu_palette[pal_ram[0]];
+	pixel_color = ppu_palette[pal_ram[0x00]];
 	
 	for (unsigned short y=8; y<232; y++) // remove overscan
 	{
@@ -5381,7 +5384,7 @@ void nes_loop(unsigned long loop_count)
 			}
 			
 			if (ppu_frame_count >= loop_count)
-			{	
+			{					
 				nes_background(ppu_tile_count, ppu_scanline_count);
 			}
 			
@@ -5500,7 +5503,7 @@ void nes_loop(unsigned long loop_count)
 	ppu_frame_cycles += (cpu_current_cycles<<1);
 	
 	if (ppu_frame_cycles < 14) // at least one instruction
-	{
+	{		
 		ppu_status_v = 0x0001;
 
 		ppu_flag_v = 0x0001; // keep it high
