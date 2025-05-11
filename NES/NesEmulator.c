@@ -405,6 +405,8 @@ void nes_wait(unsigned long loop_count)
 	open_clock_previous = open_clock_current;
 }
 
+
+
 unsigned char nes_read_cpu_ram(unsigned long addr)
 {
 	//return cpu_ram[(addr&2047)];
@@ -541,7 +543,7 @@ unsigned char cpu_read(unsigned long addr)
 			{				
 				unsigned char val = ((ppu_flag_v << 7) | (ppu_flag_0 << 6) | (ppu_flag_o << 5));
 				
-				ppu_flag_v = 0x0000; // this breaks some games?
+				ppu_flag_v = 0x0000;
 				
 				ppu_reg_w = 0x0000;
 				
@@ -1195,14 +1197,17 @@ void cpu_write(unsigned long addr, unsigned char val)
 						}
 					}
 				}
-				else if (ppu_reg_v == 0x3F00 || ppu_reg_v == 0x3F10)
-				{
-					nes_write_pal_ram(0x00, val);
-					nes_write_pal_ram(0x10, val);
-				}
 				else if (ppu_reg_v > 0x3F00 && ppu_reg_v < 0x4000)
 				{
-					nes_write_pal_ram((ppu_reg_v&0x001F), val);
+					if ((ppu_reg_v&0x001F) == 0x0000 || (ppu_reg_v&0x001F) == 0x0010)
+					{
+						nes_write_pal_ram(0x00, val);
+						nes_write_pal_ram(0x10, val);
+					}
+					else
+					{
+						nes_write_pal_ram((ppu_reg_v&0x001F), val);
+					}
 				}
 					
 				if (ppu_flag_i == 0x0000)
@@ -1486,7 +1491,7 @@ void cpu_write(unsigned long addr, unsigned char val)
 				apu_flag_b = ((val>>6)&0x01);
 				
 				if (apu_flag_b > 0) apu_flag_f = 0x0000;
-
+				
 				apu_counter_q = 0;
 				apu_counter_s = 0;
 				
@@ -2577,7 +2582,7 @@ void nes_border()
 {
 	unsigned char pixel_color = 0;
 
-	pixel_color = ppu_palette[pal_ram[0]];
+	pixel_color = ppu_palette[pal_ram[0x00]];
 	
 	for (unsigned short y=8; y<232; y++) // remove overscan
 	{
@@ -4515,7 +4520,7 @@ void nes_loop(unsigned long loop_count)
 			}
 			
 			if (ppu_frame_count >= loop_count)
-			{	
+			{					
 				nes_background(ppu_tile_count, ppu_scanline_count);
 			}
 			
@@ -4634,7 +4639,7 @@ void nes_loop(unsigned long loop_count)
 	ppu_frame_cycles += (cpu_current_cycles<<1);
 	
 	if (ppu_frame_cycles < 14) // at least one instruction
-	{
+	{		
 		ppu_status_v = 0x0001;
 
 		ppu_flag_v = 0x0001; // keep it high
@@ -4716,6 +4721,8 @@ void nes_loop(unsigned long loop_count)
 		ppu_frame_count++;
 	}
 }
+
+
 
 void InitializeOpenGLSettings()
 {
