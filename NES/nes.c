@@ -15,12 +15,13 @@ unsigned long prg_offset = 0x00000000; // offsets in cart_rom
 unsigned long chr_offset = 0x00000000;
 unsigned long end_offset = 0x00000000;
 
+volatile unsigned char __attribute__((coherent, aligned(8))) pal_ram[32]; // special palette ram inside of ppu
+volatile unsigned char __attribute__((coherent, aligned(8))) oam_ram[256]; // special sprite ram inside of ppu
+
 volatile unsigned char __attribute__((address(0x80070000))) cpu_ram[2048]; // only cpu ram from 0x0000 to 0x07FF
 volatile unsigned char __attribute__((address(0x80071000))) ppu_ram[2048]; // ppu ram from 0x2000 to 0x2FFF (halved, mirrored)
 volatile unsigned char __attribute__((address(0x80072000))) prg_ram[8192]; // cpu ram from 0x6000 to 0x7FFF (if used)
 volatile unsigned char __attribute__((address(0x80074000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
-volatile unsigned char __attribute__((address(0x80076000))) oam_ram[256]; // special sprite ram inside of ppu
-volatile unsigned char __attribute__((address(0x80076200))) pal_ram[32]; // special palette ram inside of ppu
 
 unsigned long nes_hack_sprite_priority = 0; // change this accordingly
 
@@ -1964,7 +1965,7 @@ void cpu_write(unsigned long addr, unsigned char val)
 			}
 			case 0x04: // oamdata
 			{
-				nes_write_oam_ram(ppu_reg_a, val);
+				nes_write_oam_ram((ppu_reg_a&0x00FF), val);
 				ppu_reg_a++;
 				
 				break;
@@ -3446,7 +3447,7 @@ void nes_border()
 {
 	unsigned char pixel_color = 0;
 
-	pixel_color = ppu_palette[pal_ram[0x00]];
+	pixel_color = ppu_palette[(pal_ram[0x00]&0x3F)];
 	
 	for (unsigned short y=8; y<232; y++) // remove overscan
 	{
