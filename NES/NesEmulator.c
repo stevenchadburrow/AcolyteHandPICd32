@@ -1197,7 +1197,7 @@ void cpu_write(unsigned long addr, unsigned char val)
 						}
 					}
 				}
-				else if (ppu_reg_v > 0x3F00 && ppu_reg_v < 0x4000)
+				else if (ppu_reg_v >= 0x3F00 && ppu_reg_v < 0x4000)
 				{
 					if ((ppu_reg_v&0x001F) == 0x0000 || (ppu_reg_v&0x001F) == 0x0010)
 					{
