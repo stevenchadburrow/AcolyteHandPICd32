@@ -1100,7 +1100,7 @@ void cpu_write(unsigned long addr, unsigned char val)
 			}
 			case 0x04: // oamdata
 			{
-				nes_write_oam_ram(ppu_reg_a, val);
+				nes_write_oam_ram((ppu_reg_a&0x00FF), val);
 				ppu_reg_a++;
 				
 				break;
@@ -2582,7 +2582,7 @@ void nes_border()
 {
 	unsigned char pixel_color = 0;
 
-	pixel_color = ppu_palette[pal_ram[0x00]];
+	pixel_color = ppu_palette[(pal_ram[0x00]&0x3F)];
 	
 	for (unsigned short y=8; y<232; y++) // remove overscan
 	{
