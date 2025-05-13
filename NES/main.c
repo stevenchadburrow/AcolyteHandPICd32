@@ -888,7 +888,7 @@ const unsigned char usb_conversion[256] =
 
 
 
-volatile char __attribute__((coherent)) list_name[128*12];
+volatile char __attribute__((coherent)) list_name[136*12];
 volatile unsigned short list_total = 1; // start at 1
 
 void list_generate()
@@ -955,7 +955,7 @@ void list_generate()
 				list_total++;
 			}
 			
-			if (list_total >= 128) break;
+			if (list_total >= 136) break;
 		}
 	}
 	
@@ -1250,8 +1250,8 @@ void game_loop()
 			if (menu_pos == 0) { }
 			else if (menu_pos == 1) { audio_enable = 1; nes_audio_flag = 1; }
 			else if (menu_pos == 2) { audio_enable = 0; nes_audio_flag = 0; }
-			else if (menu_pos == 3) { nes_hack_sprite_priority = 1; }
-			else if (menu_pos == 4) { nes_hack_sprite_priority = 0; }
+			else if (menu_pos == 3) { nes_hack_sprite_priority = 1; nes_hack_vsync_flag = 1; }
+			else if (menu_pos == 4) { nes_hack_sprite_priority = 0; nes_hack_vsync_flag = 0; }
 			else if (menu_pos > 4 && menu_pos <= 9) { menu_rate = (unsigned long)(menu_pos - 4); }
 			else if (menu_pos == 10) { map_mmc3_irq_delay = 0; }
 			else if (menu_pos == 11) { map_mmc3_irq_delay = 8; }

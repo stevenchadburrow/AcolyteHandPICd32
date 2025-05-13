@@ -24,6 +24,7 @@ volatile unsigned char __attribute__((address(0x80072000))) prg_ram[8192]; // cp
 volatile unsigned char __attribute__((address(0x80074000))) chr_ram[8192]; // ppu ram from 0x0000 to 0x1FFF (if used)
 
 unsigned long nes_hack_sprite_priority = 0; // change this accordingly
+unsigned long nes_hack_vsync_flag = 0; // change this accordingly
 
 unsigned long nes_init_flag = 0;
 unsigned long nes_reset_flag = 0;
@@ -5518,7 +5519,10 @@ void nes_loop(unsigned long loop_count)
 		// v-sync
 		ppu_status_v = 0x0001;
 		
-		//ppu_flag_v = 0x0001; // do not keep it high, just set it high once??? (see below)
+		if (nes_hack_vsync_flag > 0)
+		{
+			ppu_flag_v = 0x0001; // do not keep it high, just set it high once??? (see below)
+		}
 		
 		ppu_status_0 = 0;
 
