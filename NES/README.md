@@ -143,7 +143,7 @@ Ultima: Quest of the Avatar<br>
 Wario's Woods<br>
 Wizardry - Proving Grounds<br>
 Wizards and Warriors<br>
-Pro Wrestling<br>
+Pro Wrestling - Needs v-sync flag hack after title screen<br>
 Legend of Zelda<br>
 Zelda 2: Link's Adventure<br>
 Zen: Intergalagic Ninja<br>
