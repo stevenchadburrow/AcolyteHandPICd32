@@ -81,6 +81,7 @@ unsigned long chr_offset = 0x00000000;
 unsigned long end_offset = 0x00000000;
 
 unsigned long nes_hack_sprite_priority = 0; // change this accordingly
+unsigned long nes_hack_vsync_flag = 0; // change this accordingly
 
 unsigned char nes_init_flag = 0;
 unsigned char nes_reset_flag = 0;
@@ -4653,7 +4654,10 @@ void nes_loop(unsigned long loop_count)
 		// v-sync
 		ppu_status_v = 0x0001;
 		
-		//ppu_flag_v = 0x0001; // do not keep it high, just set it high once??? (see below)
+		if (nes_hack_vsync_flag > 0)
+		{
+			ppu_flag_v = 0x0001; // do not keep it high, just set it high once??? (see below)
+		}
 		
 		ppu_status_0 = 0;
 
@@ -4695,7 +4699,7 @@ void nes_loop(unsigned long loop_count)
 		
 		ppu_flag_v = 0x0001;
 		
-		ppu_reg_a = 0;	
+		ppu_reg_a = 0;
 		
 		// nmi
 		if (ppu_flag_e != 0x0000)
