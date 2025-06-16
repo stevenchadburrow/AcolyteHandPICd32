@@ -69,6 +69,7 @@ Tested with many games, including: Tetris, Dr. Mario, Balloon Kid, Zelda: Link's
 <a href="https://www.aidanmocke.com/">https://www.aidanmocke.com/</a> for a bunch of PIC32MZ projects (without Harmony), including USB.<br>
 <a href="http://elm-chan.org/">http://elm-chan.org/</a> for a bunch of projects, including MMC (aka SDcard) and FatFs.<br>
 <a href="https://github.com/deltabeard/">https://github.com/deltabeard/</a> for a bunch of projects, including Peanut-GB and MiniGB-APU projects.<br>
+<a href="https://hackaday.com/2025/01/13/homebrew-retro-console-runs-on-pic32/">https://hackaday.com/2025/01/13/homebrew-retro-console-runs-on-pic32/</a> for the Hack-A-Day article!<br>
 
 <b>Look Ma, no bodges! (showing Version 2 board)</b>
 <br>
