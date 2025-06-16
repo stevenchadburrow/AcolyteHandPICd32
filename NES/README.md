@@ -27,6 +27,7 @@ Adventure Island 3<br>
 Adventures of Lolo<br>
 Adventures of Lolo 2<br>
 Adventures of Lolo 3<br>
+Alwa's Awakening<br>
 Arkanoid<br>
 Arkista's Ring<br>
 Athena<br>
@@ -37,6 +38,7 @@ Battletoads<Br>
 Batman<br>
 Battle of Olympus<br>
 Bionic Commando<br>
+Blade Buster<br>
 Blades of Steel<br>
 Blaster Master<br>
 Boulder Dash<br>
@@ -72,6 +74,7 @@ Galaga<br>
 Gauntlet 2 - Needs IRQ adjustments to help seam and status bar, though never perfect<br>
 Ghost Lion<br>
 Ghosts and Goblins<br>
+Golden Guardian Gun Girl<br>
 Golf<br>
 Gradius<br>
 Guardian Legend - Bottom status bar comes in and out sometimes<br>
@@ -83,12 +86,14 @@ King's Quest 5<br>
 Kira Kira Star Night<br>
 Kirby's Adventure<br>
 Kung Fu<br>
+Layla<br>
 Legacy of Wizards<br>
 Lemmings<br>
 Life Force<br>
 Little Mermaid<br>
 Little Nemo<br>
 Little Samson<br>
+LJ-65<br>
 Lode Runner<br>
 Mach Rider<br>
 Marble Madness<br>
@@ -113,6 +118,7 @@ Pac-man<br>
 Paperboy<br>
 Paperboy 2<br>
 Prince of Persia - Sprite priority hack only helps a little when behind columns<br>
+Project Blue<br>
 Rad Racer<br>
 Rampage<br>
 RC Pro AM<br>
@@ -121,9 +127,11 @@ River City Ransom<br>
 S.C.A.T.<br>
 Skate or Die<br>
 Slalom<br>
+Sokoban<br>
 Super Mario Bros<br>
 Super Mario Bros 2<br>
 Super Mario Bros 3 - Sprite priority hack helps a lot, can unadjust IRQ to make multi-scrolling perfect<br>
+Super Mario Bros: Lost Levels<br>
 Smash TV<br>
 Super Off Road<br>
 Solstice<br>
@@ -141,6 +149,7 @@ TMNT 3<br>
 Turrican<br>
 Ultima: Quest of the Avatar<br>
 Wario's Woods<br>
+Witch N' Wiz<br>
 Wizardry - Proving Grounds<br>
 Wizards and Warriors<br>
 Pro Wrestling - Needs v-sync flag hack after title screen<br>
